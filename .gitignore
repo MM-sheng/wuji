@@ -1,3 +1,7 @@
 indexer/data/
 node_modules/
 .DS_Store
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/test/fixtures/real-hashes.json

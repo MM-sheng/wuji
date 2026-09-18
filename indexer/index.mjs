@@ -13,34 +13,39 @@ const RPCS = (process.env.RPC || 'https://bsc-dataseed.binance.org,https://bsc-d
 const PORT = +(process.env.PORT || 8787);
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const GENESIS_BLOCK = +(process.env.GENESIS_BLOCK || 122616000);
-const SIGMA = 1.4e-4;          // per-block log vol  (≈6%/day at ~192k blocks/day)
+const UNIT = 3.3e-7;           // log-increment per unit of (byteSum − 4080); contract: UNIT = 3.3e11 wad
+const MEAN = 4080;             // 32 · 127.5
+const SIGMA = UNIT * Math.sqrt(32 * 65535 / 12);  // ≈1.38e-4 per block (≈6%/day at ~192k blocks/day)
 const CONFIRM = 8;             // stay this many blocks behind head (reorg safety)
 const BATCH = 100;             // blocks per JSON-RPC batch
-const REC = 20;                // bytes per stored block: f64 S, f64 A, u32 ts
+const PAR = 6;                 // parallel batches while catching up
+const REC = 12;                // bytes per stored block: f64 U (exact integer Σ(byteSum−4080)), u32 ts
 const STATIC_DIR = path.join(__dirname, '..', 'apps', 'terminal');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
-const FILE = path.join(DATA_DIR, `blocks-${GENESIS_BLOCK}.bin`);
+const FILE = path.join(DATA_DIR, `blocks-v2-${GENESIS_BLOCK}.bin`);
 
-// ---------- deterministic increment from a block hash (see docs/ARCHITECTURE.md §1) ----------
-export function zFromHash(hash) {
-  const h = hash.startsWith('0x') ? hash.slice(2) : hash;
-  const u1 = Math.max(Number(BigInt('0x' + h.slice(0, 16))) / 2 ** 64, 2 ** -53);
-  const u2 = Number(BigInt('0x' + h.slice(16, 32))) / 2 ** 64;
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+// ---------- deterministic increment from a block hash (see docs/ARCHITECTURE.md §1, contracts/src/WujiIndex.sol) ----------
+// byteSum: sum of the 32 bytes of the hash. Integer, exact, identical to the contract's SWAR byteSum().
+export function byteSum(hash) {
+  const h = hash.startsWith('0x') ? hash.slice(2) : hash; let s = 0;
+  for (let i = 0; i < 64; i += 2) s += parseInt(h.slice(i, i + 2), 16);
+  return s;
 }
+// U accumulates the exact integer Σ(byteSum − MEAN); S = U · UNIT. Float64 holds U exactly for millennia.
+const S_of = u => u * UNIT;
 
 // ---------- storage (typed arrays, append-only file) ----------
 let cap = 1 << 20, n = 0;
-let S = new Float64Array(cap), A = new Float64Array(cap), TS = new Uint32Array(cap);
+let U = new Float64Array(cap), TS = new Uint32Array(cap);
 let lastHash = null;           // hash of block GENESIS_BLOCK+n-1, for parent linkage
-function grow() { cap *= 2; const s = new Float64Array(cap), a = new Float64Array(cap), t = new Uint32Array(cap); s.set(S); a.set(A); t.set(TS); S = s; A = a; TS = t; }
-function push(s, a, ts) { if (n === cap) grow(); S[n] = s; A[n] = a; TS[n] = ts; n++; }
+function grow() { cap *= 2; const u = new Float64Array(cap), t = new Uint32Array(cap); u.set(U); t.set(TS); U = u; TS = t; }
+function push(u, ts) { if (n === cap) grow(); U[n] = u; TS[n] = ts; n++; }
 
 function loadFile() {
   if (!fs.existsSync(FILE)) return;
   const buf = fs.readFileSync(FILE); const cnt = Math.floor(buf.length / REC);
-  for (let i = 0; i < cnt; i++) { const o = i * REC; push(buf.readDoubleLE(o), buf.readDoubleLE(o + 8), buf.readUInt32LE(o + 16)); }
+  for (let i = 0; i < cnt; i++) { const o = i * REC; push(buf.readDoubleLE(o), buf.readUInt32LE(o + 8)); }
   const meta = path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`);
   if (fs.existsSync(meta)) lastHash = JSON.parse(fs.readFileSync(meta, 'utf8')).lastHash;
   console.log(`loaded ${n} blocks from disk (up to #${GENESIS_BLOCK + n - 1})`);
@@ -49,14 +54,14 @@ let pending = [];
 function persist() {
   if (!pending.length) return;
   const buf = Buffer.alloc(pending.length * REC);
-  pending.forEach((i, k) => { const o = k * REC; buf.writeDoubleLE(S[i], o); buf.writeDoubleLE(A[i], o + 8); buf.writeUInt32LE(TS[i], o + 16); });
+  pending.forEach((i, k) => { const o = k * REC; buf.writeDoubleLE(U[i], o); buf.writeUInt32LE(TS[i], o + 8); });
   fs.appendFileSync(FILE, buf); pending = [];
   fs.writeFileSync(path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`), JSON.stringify({ lastHash, n }));
 }
 function truncate(to) { // reorg: drop blocks >= to (index), rewrite file
   n = to; lastHash = null; pending = [];
   const buf = Buffer.alloc(n * REC);
-  for (let i = 0; i < n; i++) { const o = i * REC; buf.writeDoubleLE(S[i], o); buf.writeDoubleLE(A[i], o + 8); buf.writeUInt32LE(TS[i], o + 16); }
+  for (let i = 0; i < n; i++) { const o = i * REC; buf.writeDoubleLE(U[i], o); buf.writeUInt32LE(TS[i], o + 8); }
   fs.writeFileSync(FILE, buf);
 }
 
@@ -92,32 +97,32 @@ async function syncOnce() {
   head = await headNumber();
   const target = head - CONFIRM;
   while (GENESIS_BLOCK + n <= target) {
-    const from = GENESIS_BLOCK + n, to = Math.min(target, from + BATCH - 1);
-    const blocks = await getBlocks(from, to);
-    for (const b of blocks) {
+    const from = GENESIS_BLOCK + n;
+    const ranges = []; for (let a = from, k = 0; a <= target && k < PAR; a += BATCH, k++) ranges.push([a, Math.min(target, a + BATCH - 1)]);
+    const batches = await Promise.all(ranges.map(([a, b]) => getBlocks(a, b)));
+    for (const b of batches.flat()) {
       if (lastHash && b.parentHash !== lastHash) {           // reorg: rewind 64 blocks and retry
-        console.warn(`reorg at #${from}: rewinding`); truncate(Math.max(0, n - 64)); return;
+        console.warn(`reorg at #${GENESIS_BLOCK + n}: rewinding`); truncate(Math.max(0, n - 64)); return;
       }
-      const z = zFromHash(b.hash), r = SIGMA * z;
-      const prevS = n ? S[n - 1] : 0, prevA = n ? A[n - 1] : 0;
-      push(prevS + r, prevA + (Math.exp(r) - 1), parseInt(b.timestamp, 16));
+      push((n ? U[n - 1] : 0) + (byteSum(b.hash) - MEAN), parseInt(b.timestamp, 16));
       pending.push(n - 1); lastHash = b.hash;
     }
     persist();
-    if (blocks.length >= BATCH) console.log(`synced to #${GENESIS_BLOCK + n - 1}  (${target - (GENESIS_BLOCK + n - 1)} behind)`);
+    if (ranges.length > 1) console.log(`synced to #${GENESIS_BLOCK + n - 1}  (${target - (GENESIS_BLOCK + n - 1)} behind)`);
   }
   syncing = false;
 }
 async function loop() { for (;;) { try { await syncOnce(); lastErr = null; } catch (e) { lastErr = e.message; console.error('sync:', e.message); } await sleep(syncing ? 50 : 400); } }
 
 // ---------- queries ----------
-const priceAt = i => 100 * Math.exp(S[i]);
+const priceAt = i => 100 * Math.exp(S_of(U[i]));
+const yangAt = (i, i0) => Math.min(100, Math.max(0, 50 + 50 * S_of(U[i] - (i0 ? U[i0 - 1] : 0))));
 function idxAtTs(ts) { // last block index with TS <= ts, or -1
   let lo = 0, hi = n - 1, ans = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (TS[m] <= ts) { ans = m; lo = m + 1; } else hi = m - 1; } return ans;
 }
 function headInfo() {
   const i = n - 1; if (i < 0) return { synced: false, blocks: 0, genesisBlock: GENESIS_BLOCK };
-  return { block: GENESIS_BLOCK + i, ts: TS[i], S: S[i], A: A[i], price: priceAt(i), yang: Math.min(100, Math.max(0, 50 + 50 * A[i])), genesisBlock: GENESIS_BLOCK, genesisTs: TS[0], blocks: n, chainHead: head, behind: head - (GENESIS_BLOCK + i), synced: !syncing, sigma: SIGMA, err: lastErr };
+  return { block: GENESIS_BLOCK + i, ts: TS[i], U: U[i], S: S_of(U[i]), price: priceAt(i), yang: yangAt(i, 0), genesisBlock: GENESIS_BLOCK, genesisTs: TS[0], blocks: n, chainHead: head, behind: head - (GENESIS_BLOCK + i), synced: !syncing, unit: UNIT, sigma: SIGMA, err: lastErr };
 }
 // per-second closing prices, Float32 buffer, seconds [from, to]
 function seconds(from, to) {
@@ -128,8 +133,12 @@ function seconds(from, to) {
 }
 async function proof(b) {
   const i = b - GENESIS_BLOCK; if (i < 0 || i >= n) return { error: 'block not indexed' };
-  const blk = await getBlock(b); const z = zFromHash(blk.hash), r = SIGMA * z;
-  return { block: b, hash: blk.hash, parentHash: blk.parentHash, timestamp: parseInt(blk.timestamp, 16), sigma: SIGMA, z, r, S_prev: i ? S[i - 1] : 0, S: S[i], S_check: (i ? S[i - 1] : 0) + r, price: priceAt(i), A: A[i], yang: Math.min(100, Math.max(0, 50 + 50 * A[i])), bscscan: `https://bscscan.com/block/${b}`, method: 'u1=hash[0:8]/2^64, u2=hash[8:16]/2^64, Z=sqrt(-2 ln u1)cos(2π u2), r=σZ, S=ΣR, price=100·e^S' };
+  const blk = await getBlock(b); const bs = byteSum(blk.hash), d = bs - MEAN, uPrev = i ? U[i - 1] : 0;
+  return { block: b, hash: blk.hash, parentHash: blk.parentHash, timestamp: parseInt(blk.timestamp, 16),
+    byteSum: bs, delta: d, U_prev: uPrev, U: U[i], U_check: uPrev + d, consistent: uPrev + d === U[i],
+    unit: UNIT, r: d * UNIT, S: S_of(U[i]), S_wad: (BigInt(U[i]) * 330000000000n).toString(), price: priceAt(i), yang: yangAt(i, 0),
+    bscscan: `https://bscscan.com/block/${b}`, contract: 'WujiIndex.increment(hash) == (byteSum(hash) − 4080) · 3.3e11 wad; S = Σ increment',
+    method: 'byteSum = Σ of the 32 bytes of blockhash; U = Σ(byteSum − 4080); S = U · 3.3e-7; price = 100·e^S' };
 }
 
 // ---------- http ----------
@@ -150,11 +159,11 @@ const server = http.createServer(async (req, res) => {
     }
     if (u.pathname === '/blocks') {
       const from = Math.max(GENESIS_BLOCK, +q.get('from') || GENESIS_BLOCK), to = Math.min(GENESIS_BLOCK + n - 1, +q.get('to') || from + 999, from + 4999);
-      const out = []; for (let b = from; b <= to; b++) { const i = b - GENESIS_BLOCK; out.push([b, TS[i], S[i], A[i]]); }
-      return json({ columns: ['block', 'ts', 'S', 'A'], rows: out });
+      const out = []; for (let b = from; b <= to; b++) { const i = b - GENESIS_BLOCK; out.push([b, TS[i], U[i], S_of(U[i])]); }
+      return json({ columns: ['block', 'ts', 'U', 'S'], rows: out });
     }
     if (u.pathname === '/blockAt') { // which block is "current" at a given unix second
-      const i = idxAtTs(+q.get('ts')); return i < 0 ? json({ error: 'before genesis' }, 404) : json({ block: GENESIS_BLOCK + i, ts: TS[i], S: S[i], price: priceAt(i) });
+      const i = idxAtTs(+q.get('ts')); return i < 0 ? json({ error: 'before genesis' }, 404) : json({ block: GENESIS_BLOCK + i, ts: TS[i], U: U[i], S: S_of(U[i]), price: priceAt(i) });
     }
     const m = u.pathname.match(/^\/proof\/(\d+)$/); if (m) return json(await proof(+m[1]));
     // static terminal
@@ -166,6 +175,6 @@ const server = http.createServer(async (req, res) => {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   loadFile();
-  server.listen(PORT, () => console.log(`wuji indexer  http://localhost:${PORT}  genesis #${GENESIS_BLOCK}  σ=${SIGMA}`));
+  server.listen(PORT, () => console.log(`wuji indexer  http://localhost:${PORT}  genesis #${GENESIS_BLOCK}  unit=${UNIT} σ≈${SIGMA.toExponential(3)}`));
   loop();
 }
