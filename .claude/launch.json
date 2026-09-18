@@ -1,0 +1,1 @@
+{"version":"0.0.1","configurations":[{"name":"wuji","runtimeExecutable":"node","runtimeArgs":["indexer/index.mjs"],"port":8787}]}
