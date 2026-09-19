@@ -27,7 +27,7 @@ contract WujiIndexRealHashes is WujiTestBase {
             history.set(b, hashes[b - from]);
         }
         vm.roll(from);
-        WujiIndex idx = new WujiIndex(from);
+        WujiIndex idx = new WujiIndex(from, 100);
         vm.roll(to + 1);
         assertEq(idx.tick(), to - from + 1);
         emit log_named_int("contract S_wad", idx.S());

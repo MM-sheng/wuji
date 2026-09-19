@@ -43,8 +43,8 @@ contract Handler is Test {
 
     function mint(uint256 seed, uint256 pairs) external {
         pairs = bound(pairs, 1, 1_000e18);
-        (,,,, uint64 expiry,,) = vault.series(vault.currentId());
-        if (block.timestamp >= expiry) return; // handled by settle()
+        (,,,, uint64 settlementBlock,,) = vault.series(vault.currentId());
+        if (block.number >= settlementBlock) return; // handled by settle()
         uint256 t0 = usdt.balanceOf(vault.treasury());
         vm.prank(_actor(seed));
         vault.mint(pairs);
@@ -109,13 +109,19 @@ contract Handler is Test {
         ghostBlocksMoved += n;
     }
 
-    function passTime(uint256 secs) external {
-        vm.warp(block.timestamp + bound(secs, 1, 20 days));
-    }
-
     function settle() external {
-        (,,,, uint64 expiry,,) = vault.series(vault.currentId());
-        if (block.timestamp < expiry) vm.warp(expiry);
+        uint64 boundary = vault.currentSettlementBlock();
+        if (block.number <= boundary) {
+            uint64 from = uint64(block.number);
+            MockHistory h = MockHistory(payable(0x0000F90827F1C53a10cb7A02335B175320002935));
+            vm.roll(boundary + 1);
+            for (uint64 b = from; b <= boundary; b++) {
+                bytes32 x = keccak256(abi.encode(b, ghostSettles));
+                vm.setBlockhash(b, x);
+                h.set(b, x);
+            }
+        }
+        while (!index.checkpointed(boundary)) index.tick();
         vault.settle();
         ghostSettles++;
     }
@@ -135,7 +141,7 @@ contract WujiVaultInvariants is Test {
         vm.roll(1000);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
-        index = new WujiIndex(1000);
+        index = new WujiIndex(1000, 100);
         vault = new WujiVault(usdt, index, NOTIONAL, treasury);
         handler = new Handler(vault, index, usdt);
         targetContract(address(handler));

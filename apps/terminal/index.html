@@ -658,14 +658,15 @@
   function renderTaiji(){
     const c=HEAD.chain; const wrap=$('tYYwrap');
     if(!c||!c.vault){wrap.hidden=true;$('cChain').textContent='';return;}
-    const v=c.vault, ex=v.explorer, yang=100*v.yangShare, yin=100-yang, nowS=Date.now()/1000;
+    const v=c.vault, ex=v.explorer, yang=100*v.yangShare, yin=100-yang;
+    const blocksLeft=Math.max(0,v.settlementBlock-HEAD.block), eta=blocksLeft*.45;
     wrap.hidden=false;$('tYang').textContent=fmt(yang);$('tYin').textContent=fmt(yin);$('tSeries').textContent='#'+v.seriesId;
     $('cChain').textContent=c.frozenBlocks?'⚠':'✓';
     $('tjSeries').innerHTML=`
       <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}</div><div class="yin">${fmt(yin)} YIN</div></div>
       <div class="kv"><span>Series</span><b>#${v.seriesId} · ${v.settled?'SETTLED':'OPEN'}</b></div>
-      <div class="kv"><span>Opened</span><b>${new Date(v.start*1000).toISOString().slice(0,16).replace('T',' ')}Z</b></div>
-      <div class="kv"><span>Expiry</span><b>${new Date(v.expiry*1000).toISOString().slice(0,16).replace('T',' ')}Z · ${nowS<v.expiry?'in '+ago(v.expiry-nowS):'settle pending'}</b></div>
+      <div class="kv"><span>Start block</span><b>#${v.startBlock.toLocaleString()}</b></div>
+      <div class="kv"><span>Settlement block</span><b>#${v.settlementBlock.toLocaleString()} · ${HEAD.block<=v.settlementBlock?'≈ '+ago(eta):'checkpoint ready'}</b></div>
       <div class="kv"><span>S at open</span><b>${(Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
       <div class="kv"><span>ΔS since open</span><b class="${cls(c.S-Number(v.s0_wad)/1e18)}">${sgn(c.S-Number(v.s0_wad)/1e18)}${(c.S-Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
       <div class="kv"><span>YANG-${v.seriesId}</span><b><a href="${ex}/token/${v.yang}" target="_blank">${short(v.yang)}</a></b></div>

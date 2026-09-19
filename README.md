@@ -30,5 +30,5 @@ cross-checks, series solvency, wallet balances, paired minting, and paired redem
 
 ## Production status
 
-Testnet prototype only. Do not deploy the present vault to mainnet until the settlement-time
-optionality described in `docs/THREAT_MODEL.md` is removed and an independent contract review is complete.
+Testnet prototype only. Fixed-block checkpoint settlement removes the known caller timing option.
+Do not deploy to mainnet until an independent contract review and the remaining checklist are complete.

@@ -113,7 +113,7 @@ async function pollChain() {
       const id = Number(BigInt(cid)); const assetAddr = '0x' + asset.slice(26);
       const [sr, bal] = await Promise.all([call(VAULT, SEL.series + id.toString(16).padStart(64, '0')), call(assetAddr, SEL.balanceOf + VAULT.slice(2).toLowerCase().padStart(64, '0'))]);
       const w = k => '0x' + sr.slice(2 + 64 * k, 2 + 64 * (k + 1));
-      c.vault = { address: VAULT, asset: assetAddr, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), start: Number(BigInt(w(3))), expiry: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18,
+      c.vault = { address: VAULT, asset: assetAddr, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), startBlock: Number(BigInt(w(3))), settlementBlock: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18,
         balance: Number(BigInt(bal)) / 1e18, liabilities: Number(BigInt(liab)) / 1e18, chainId: CHAIN_ID, explorer: CHAIN_ID === 97 ? 'https://testnet.bscscan.com' : 'https://bscscan.com' };
     }
     chain = c;

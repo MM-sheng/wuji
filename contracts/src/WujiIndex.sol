@@ -27,21 +27,32 @@ contract WujiIndex {
     uint256 public constant DEFAULT_MAX = 1024;
 
     uint64 public immutable GENESIS_BLOCK;
+    /// @notice blocks per deterministic settlement period
+    uint64 public immutable CHECKPOINT_INTERVAL;
     /// @notice cumulative log-index in wad. price = 100 · exp(S / 1e18)
     int256 public S;
     /// @notice last block whose hash has been folded into S
     uint64 public lastBlock;
     /// @notice blocks whose hash aged out before anyone ticked; their increment is 0
     uint64 public frozenBlocks;
+    /// @notice first deterministic boundary not yet folded into the index
+    uint64 public nextCheckpointBlock;
+    mapping(uint64 => int256) public checkpointS;
+    mapping(uint64 => bool) public checkpointed;
 
     event Tick(uint64 indexed fromBlock, uint64 indexed toBlock, int256 S);
     event Gap(uint64 indexed fromBlock, uint64 indexed toBlock);
+    event Checkpoint(uint64 indexed blockNumber, int256 S);
 
     /// @param genesisBlock first block that contributes. Must not be in the past beyond hash reach.
-    constructor(uint64 genesisBlock) {
+    constructor(uint64 genesisBlock, uint64 checkpointInterval) {
         require(genesisBlock > 0 && genesisBlock + HISTORY_WINDOW - 1 >= block.number, "genesis out of reach");
+        require(checkpointInterval > 0, "checkpoint interval");
+        require(genesisBlock <= type(uint64).max - checkpointInterval, "checkpoint overflow");
         GENESIS_BLOCK = genesisBlock;
+        CHECKPOINT_INTERVAL = checkpointInterval;
         lastBlock = genesisBlock - 1;
+        nextCheckpointBlock = genesisBlock + checkpointInterval - 1;
     }
 
     /// @notice Fold up to DEFAULT_MAX not-yet-folded, still-reachable block hashes into S. Anyone may call.
@@ -61,6 +72,7 @@ contract WujiIndex {
         if (from < oldest) {
             emit Gap(from, oldest - 1);
             frozenBlocks += oldest - from;
+            _checkpointThrough(oldest - 1, S);
             from = oldest;
         }
         uint256 last = cur - 1;
@@ -71,6 +83,7 @@ contract WujiIndex {
             // |increment| ≤ 4080·UNIT ≈ 1.35e15 per block; overflow of int256 is impossible on any horizon
             for (uint256 b = from; b <= to; ++b) {
                 s += (int256(byteSum(_hash(b, cur))) - MEAN) * UNIT;
+                if (b == nextCheckpointBlock) _recordCheckpoint(uint64(b), s);
             }
         }
         S = s;
@@ -78,6 +91,20 @@ contract WujiIndex {
         emit Tick(from, to, s);
         return to - from + 1;
         // forge-lint: disable-end(unsafe-typecast)
+    }
+
+    function _checkpointThrough(uint64 through, int256 s) internal {
+        while (nextCheckpointBlock <= through) {
+            _recordCheckpoint(nextCheckpointBlock, s);
+        }
+    }
+
+    function _recordCheckpoint(uint64 at, int256 s) internal {
+        checkpointS[at] = s;
+        checkpointed[at] = true;
+        emit Checkpoint(at, s);
+        require(at <= type(uint64).max - CHECKPOINT_INTERVAL, "checkpoint overflow");
+        nextCheckpointBlock = at + CHECKPOINT_INTERVAL;
     }
 
     /// @dev blockhash() for the recent 256, EIP-2935 beyond. Reverts if the history contract cannot serve a

@@ -3,5 +3,5 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; source .env; set +a
-export ALLOW_MOCK_ASSET=true EXPECTED_CHAIN_ID=97
+export ALLOW_MOCK_ASSET=true EXPECTED_CHAIN_ID=97 SERIES_BLOCKS="${SERIES_BLOCKS:-8000}"
 "${FORGE:-$HOME/.foundry/bin/forge}" script script/Deploy.s.sol --rpc-url "$RPC" --broadcast --private-key "$PRIVATE_KEY" -vv

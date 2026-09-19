@@ -6,14 +6,17 @@ Status: internal review only; not a substitute for an independent audit
 
 ## Findings
 
-### WUJI-01 — High — Open — settlement-time optionality
+### WUJI-01 — High — Fixed, pending independent review — settlement-time optionality
 
 `settle()` uses the index value immediately before the caller's transaction rather than a point fixed
 before its hash is known. After expiry, a holder can wait for a favourable path before settling.
 A prompt keeper narrows the opportunity but cannot remove it.
 
-Required remediation: predetermine the settlement block and retain an on-chain checkpoint for that
-exact block. Do not deploy the current vault to mainnet before this protocol change is reviewed.
+Fix: every boundary is derived from immutable `GENESIS_BLOCK` and `CHECKPOINT_INTERVAL` before its
+hash exists. `WujiIndex` stores the exact S at each boundary, including deterministic zero-increment
+checkpoints inside frozen gaps. `WujiVault.settle()` reads only that checkpoint even when called late.
+Minting closes before the boundary block. Regression tests cover late settlement after a different
+post-boundary path and checkpoint creation in normal and frozen-gap paths.
 
 ### WUJI-02 — Medium — Fixed — stale backlog could spill across series
 
@@ -60,7 +63,7 @@ secondary-market execution price.
 
 ## Verification performed
 
-- 33 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.
+- 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.
 - Invariants cover solvency, matched open supply, whole-pair value, one open series, and fee destination.
 - `forge fmt --check` and `forge build --sizes` pass.
 - Runtime sizes remain below EVM limits; `WujiVault` is 17,326 bytes in the reviewed build.

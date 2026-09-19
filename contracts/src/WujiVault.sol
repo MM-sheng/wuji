@@ -16,8 +16,8 @@ import {SeriesToken} from "./SeriesToken.sol";
 ///         so each block moves ½·r_block of the notional from the losing side to the winning side —
 ///         a FIXED base, which is the only transfer rule that keeps the pair summing to NOTIONAL.
 ///
-///         A series lasts SERIES_LENGTH. After expiry anyone may settle(): the share is frozen from the
-///         index and the next series opens at ½/½ with S_start = the settlement S. Settled tokens redeem
+///         Every series ends at a block fixed before its hash exists. After that block anyone may settle():
+///         the share is frozen from its index checkpoint and the next series opens at ½/½. Settled tokens redeem
 ///         individually at their frozen value; pairs of the same series always redeem for NOTIONAL.
 ///
 ///         No owner. No pause. No upgrade. Fee and treasury are immutable.
@@ -26,7 +26,6 @@ contract WujiVault is ReentrancyGuard {
 
     uint256 public constant WAD = 1e18;
     uint256 public constant FEE_BPS = 5; // 0.05 % on mint and on redeem
-    uint256 public constant SERIES_LENGTH = 30 days;
 
     IERC20 public immutable asset; // collateral (e.g. USDT)
     WujiIndex public immutable index;
@@ -37,14 +36,14 @@ contract WujiVault is ReentrancyGuard {
         SeriesToken yang;
         SeriesToken yin;
         int256 s0; // index S (wad) at open
-        uint64 start;
-        uint64 expiry;
+        uint64 startBlock;
+        uint64 settlementBlock;
         bool settled;
         uint256 yangShare; // wad share of NOTIONAL owed per YANG after settlement; yin = WAD − yangShare
     }
     Series[] public series;
 
-    event SeriesOpened(uint256 indexed id, address yang, address yin, int256 s0, uint64 expiry);
+    event SeriesOpened(uint256 indexed id, address yang, address yin, int256 s0, uint64 settlementBlock);
     event SeriesSettled(uint256 indexed id, int256 s1, uint256 yangShare);
     event Minted(uint256 indexed id, address indexed to, uint256 pairs, uint256 collateral, uint256 fee);
     event RedeemedPair(uint256 indexed id, address indexed from, uint256 pairs, uint256 collateral, uint256 fee);
@@ -62,7 +61,9 @@ contract WujiVault is ReentrancyGuard {
         NOTIONAL = notional_;
         treasury = treasury_;
         index_.tick();
-        _open(index_.S());
+        uint64 boundary = index_.nextCheckpointBlock();
+        require(boundary >= block.number, "index stale: tick first");
+        _open(index_.S(), index_.GENESIS_BLOCK(), boundary);
     }
 
     // ---------------------------------------------------------------- views
@@ -71,11 +72,16 @@ contract WujiVault is ReentrancyGuard {
         return series.length - 1;
     }
 
+    function currentSettlementBlock() external view returns (uint64) {
+        return series[currentId()].settlementBlock;
+    }
+
     /// @notice Live YANG share (wad) of the current series, as of the index's last folded block.
     function yangShare() public view returns (uint256) {
         Series storage s = series[currentId()];
         if (s.settled) return s.yangShare;
-        return _share(s.s0, index.S());
+        int256 s1 = index.checkpointed(s.settlementBlock) ? index.checkpointS(s.settlementBlock) : index.S();
+        return _share(s.s0, s1);
     }
 
     /// @notice Live collateral value of one YANG and one YIN of the current series.
@@ -107,7 +113,7 @@ contract WujiVault is ReentrancyGuard {
         require(pairs > 0, "zero");
         id = currentId();
         Series storage s = series[id];
-        require(block.timestamp < s.expiry, "series expired: settle first");
+        require(block.number < s.settlementBlock, "series ended: settle first");
         // no index.tick() here: pairs are minted at par, so S is irrelevant, and folding an unbounded
         // number of blocks would make users' gas estimates stale by the time the tx mines.
         uint256 collateral = _ceilMul(pairs, NOTIONAL);
@@ -136,22 +142,24 @@ contract WujiVault is ReentrancyGuard {
 
     // ---------------------------------------------------------------- settlement
 
-    /// @notice Freeze the current series at the index's value and open the next one. Anyone, after expiry.
-    /// @dev Calls index.tick() first; send with a generous gas limit (≈400k + tick backlog), estimates go stale fast.
+    /// @notice Freeze the current series at its predetermined index checkpoint and open the next one.
+    /// @dev If the checkpoint is more than one default tick away, advance WujiIndex separately first.
     function settle() external nonReentrant returns (uint256 settledId, uint256 nextId) {
         settledId = currentId();
         Series storage s = series[settledId];
-        require(block.timestamp >= s.expiry, "not expired");
-        // Never let old blocks spill into the next series. If the backlog exceeds one bounded tick,
-        // callers must advance WujiIndex separately until this condition holds.
-        require(index.pending() <= index.DEFAULT_MAX(), "index backlog: tick first");
-        index.tick();
-        require(index.pending() == 0, "index stale");
-        int256 s1 = index.S();
+        uint64 boundary = s.settlementBlock;
+        require(block.number > boundary, "settlement block not mined");
+        if (!index.checkpointed(boundary)) {
+            uint64 last = index.lastBlock();
+            require(last < boundary && boundary - last <= index.DEFAULT_MAX(), "index backlog: tick first");
+            index.tick();
+            require(index.checkpointed(boundary), "checkpoint unavailable");
+        }
+        int256 s1 = index.checkpointS(boundary);
         s.settled = true;
         s.yangShare = _share(s.s0, s1);
         emit SeriesSettled(settledId, s1, s.yangShare);
-        nextId = _open(s1);
+        nextId = _open(s1, boundary + 1, boundary + index.CHECKPOINT_INTERVAL());
     }
 
     /// @notice Redeem settled tokens one-sided at their frozen values.
@@ -176,24 +184,23 @@ contract WujiVault is ReentrancyGuard {
 
     // ---------------------------------------------------------------- internals
 
-    function _open(int256 s0) internal returns (uint256 id) {
+    function _open(int256 s0, uint64 startBlock, uint64 settlementBlock) internal returns (uint256 id) {
         id = series.length;
         string memory n = _toString(id);
         SeriesToken yang = new SeriesToken(string.concat("WUJI Yang #", n), string.concat("YANG-", n));
         SeriesToken yin = new SeriesToken(string.concat("WUJI Yin #", n), string.concat("YIN-", n));
-        uint64 expiry = uint64(block.timestamp + SERIES_LENGTH);
         series.push(
             Series({
                 yang: yang,
                 yin: yin,
                 s0: s0,
-                start: uint64(block.timestamp),
-                expiry: expiry,
+                startBlock: startBlock,
+                settlementBlock: settlementBlock,
                 settled: false,
                 yangShare: 0
             })
         );
-        emit SeriesOpened(id, address(yang), address(yin), s0, expiry);
+        emit SeriesOpened(id, address(yang), address(yin), s0, settlementBlock);
     }
 
     /// @dev share = ½ + ½·ΔS, ΔS in wad, clamped to [0, WAD]. Both sides bounded; nothing created or destroyed.

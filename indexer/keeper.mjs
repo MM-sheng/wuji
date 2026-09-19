@@ -1,4 +1,4 @@
-// WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles the vault when a series expires.
+// WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles fixed-block series.
 // Signs with `cast` (Foundry) so this file has no dependencies and never touches the key itself.
 //
 //   RPC=... PRIVATE_KEY=... CONTRACT=<WujiIndex> [VAULT=<WujiVault>] [INTERVAL=45] node indexer/keeper.mjs
@@ -26,10 +26,11 @@ async function once() {
   }
   if (VAULT) {
     const id = num(cast('call', VAULT, 'currentId()(uint256)'));
-    const expiry = num(cast('call', VAULT, 'series(uint256)(address,address,int256,uint64,uint64,bool,uint256)', String(id)).split('\n')[4]);
-    if (Date.now() / 1000 >= expiry) {
+    const settlementBlock = num(cast('call', VAULT, 'currentSettlementBlock()(uint64)'));
+    const head = num(cast('block-number'));
+    if (head > settlementBlock) {
       const r = JSON.parse(send(VAULT, 'settle()', 3_500_000));
-      log(`settle series ${id} status=${r.status} ${r.transactionHash}`);
+      log(`settle series ${id} at checkpoint #${settlementBlock} status=${r.status} ${r.transactionHash}`);
     }
   }
 }

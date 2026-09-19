@@ -7,11 +7,12 @@ import {WujiTestBase} from "./Base.t.sol";
 contract WujiIndexTest is WujiTestBase {
     WujiIndex idx;
     uint64 constant GENESIS = 1000;
+    uint64 constant INTERVAL = 10_000;
 
     function setUp() public {
         installHistory();
         vm.roll(GENESIS);
-        idx = new WujiIndex(GENESIS);
+        idx = new WujiIndex(GENESIS, INTERVAL);
     }
 
     // ---------- byteSum / increment ----------
@@ -53,14 +54,14 @@ contract WujiIndexTest is WujiTestBase {
     }
 
     function test_futureGenesisReportsNoPendingBlocks() public {
-        WujiIndex future = new WujiIndex(GENESIS + 1000);
+        WujiIndex future = new WujiIndex(GENESIS + 1000, INTERVAL);
         assertEq(future.pending(), 0);
         assertEq(future.tick(), 0);
     }
 
     function test_futureGenesisAtBlockZeroReportsNoPendingBlocks() public {
         vm.roll(0);
-        WujiIndex future = new WujiIndex(1);
+        WujiIndex future = new WujiIndex(1, INTERVAL);
         assertEq(future.pending(), 0);
         assertEq(future.tick(), 0);
     }
@@ -82,6 +83,31 @@ contract WujiIndexTest is WujiTestBase {
         assertEq(idx.S(), exp1 + exp2);
     }
 
+    function test_recordsExactDeterministicCheckpoints() public {
+        WujiIndex checkpoints = new WujiIndex(GENESIS, 10);
+        int256 first = writeHashes(checkpoints, GENESIS, GENESIS + 9, 101);
+        int256 second = writeHashes(checkpoints, GENESIS + 10, GENESIS + 19, 102);
+        vm.roll(GENESIS + 25);
+        checkpoints.tick(25);
+        assertTrue(checkpoints.checkpointed(GENESIS + 9));
+        assertTrue(checkpoints.checkpointed(GENESIS + 19));
+        assertEq(checkpoints.checkpointS(GENESIS + 9), first);
+        assertEq(checkpoints.checkpointS(GENESIS + 19), first + second);
+        assertEq(checkpoints.nextCheckpointBlock(), GENESIS + 29);
+    }
+
+    function test_gapRecordsZeroIncrementCheckpoints() public {
+        WujiIndex checkpoints = new WujiIndex(GENESIS, 100);
+        vm.roll(GENESIS + 9000);
+        uint64 oldest = GENESIS + 9000 - uint64(checkpoints.HISTORY_WINDOW());
+        bytes32 h = hashFor(oldest, 103);
+        vm.setBlockhash(oldest, h);
+        history.set(oldest, h);
+        checkpoints.tick(1);
+        assertTrue(checkpoints.checkpointed(GENESIS + 799));
+        assertEq(checkpoints.checkpointS(GENESIS + 799), 0);
+    }
+
     function test_splittingTicksDoesNotChangeS() public {
         int256 expAll = setHashes(GENESIS, GENESIS + 99, 7);
         // path A: one tick
@@ -91,7 +117,7 @@ contract WujiIndexTest is WujiTestBase {
         assertEq(sA, expAll);
         // path B: fresh index, many small ticks over the same hashes
         vm.roll(GENESIS);
-        WujiIndex idx2 = new WujiIndex(GENESIS);
+        WujiIndex idx2 = new WujiIndex(GENESIS, INTERVAL);
         for (uint64 b = GENESIS + 1; b <= GENESIS + 100; b += 7) {
             vm.roll(b);
             idx2.tick();
@@ -160,7 +186,7 @@ contract WujiIndexTest is WujiTestBase {
         assertEq(idx.frozenBlocks(), 0);
         // one block later than that and the oldest one freezes
         vm.roll(GENESIS);
-        WujiIndex idx2 = new WujiIndex(GENESIS);
+        WujiIndex idx2 = new WujiIndex(GENESIS, INTERVAL);
         vm.roll(GENESIS + 8192);
         assertEq(idx2.tick(8192), 8191);
         assertEq(idx2.frozenBlocks(), 1);
@@ -169,11 +195,13 @@ contract WujiIndexTest is WujiTestBase {
     function test_constructorRejectsUnreachableGenesis() public {
         vm.roll(20000);
         vm.expectRevert("genesis out of reach");
-        new WujiIndex(20000 - 8191);
-        new WujiIndex(20000 - 8190); // boundary ok
-        new WujiIndex(30000); // future ok
+        new WujiIndex(20000 - 8191, INTERVAL);
+        new WujiIndex(20000 - 8190, INTERVAL); // boundary ok
+        new WujiIndex(30000, INTERVAL); // future ok
         vm.expectRevert("genesis out of reach");
-        new WujiIndex(0);
+        new WujiIndex(0, INTERVAL);
+        vm.expectRevert("checkpoint interval");
+        new WujiIndex(20000, 0);
     }
 
     function test_gasPerFullTick() public {
@@ -187,6 +215,6 @@ contract WujiIndexTest is WujiTestBase {
         idx.tick(2048);
         uint256 used2 = g - gasleft();
         emit log_named_uint("gas: remaining 1792 (1536 history + 256 blockhash)", used2);
-        assertLt(used + used2, 12_000_000);
+        assertLt(used + used2, 12_100_000);
     }
 }

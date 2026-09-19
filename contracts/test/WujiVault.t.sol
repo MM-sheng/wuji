@@ -27,6 +27,7 @@ contract WujiVaultTest is WujiTestBase {
     uint256 constant WAD = 1e18;
     uint256 constant NOTIONAL = 100e18;
     uint64 constant GENESIS = 1000;
+    uint64 constant INTERVAL = 2000;
 
     MockUSDT usdt;
     WujiIndex index;
@@ -40,7 +41,7 @@ contract WujiVaultTest is WujiTestBase {
         vm.roll(GENESIS);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
-        index = new WujiIndex(GENESIS);
+        index = new WujiIndex(GENESIS, INTERVAL);
         vault = new WujiVault(usdt, index, NOTIONAL, treasury);
         for (uint256 i = 0; i < 2; i++) {
             address a = i == 0 ? alice : bob;
@@ -58,21 +59,28 @@ contract WujiVaultTest is WujiTestBase {
         index.tick(n);
     }
 
+    function reachSettlement(uint256 salt) internal returns (int256 dS) {
+        uint64 boundary = vault.currentSettlementBlock();
+        uint64 from = uint64(block.number);
+        if (from <= boundary) dS = writeHashes(index, from, boundary, salt);
+        while (!index.checkpointed(boundary)) index.tick();
+    }
+
     function series(uint256 id)
         internal
         view
-        returns (SeriesToken yang, SeriesToken yin, int256 s0, uint64 expiry, bool settled, uint256 share)
+        returns (SeriesToken yang, SeriesToken yin, int256 s0, uint64 settlementBlock, bool settled, uint256 share)
     {
-        (yang, yin, s0,, expiry, settled, share) = vault.series(id);
+        (yang, yin, s0,, settlementBlock, settled, share) = vault.series(id);
     }
 
     // ---------------------------------------------------------------- basics
 
     function test_opensSeriesZeroAtDeploy() public view {
         assertEq(vault.currentId(), 0);
-        (,, int256 s0, uint64 expiry, bool settled,) = series(0);
+        (,, int256 s0, uint64 settlementBlock, bool settled,) = series(0);
         assertEq(s0, index.S());
-        assertEq(expiry, block.timestamp + 30 days);
+        assertEq(settlementBlock, GENESIS + INTERVAL - 1);
         assertFalse(settled);
         assertEq(vault.yangShare(), WAD / 2);
     }
@@ -172,15 +180,15 @@ contract WujiVaultTest is WujiTestBase {
 
     // ---------------------------------------------------------------- settlement
 
-    function test_settleRevertsBeforeExpiry() public {
-        vm.expectRevert("not expired");
+    function test_settleRevertsBeforeSettlementBlock() public {
+        vm.expectRevert("settlement block not mined");
         vault.settle();
     }
 
-    function test_mintRevertsAfterExpiryUntilSettled() public {
-        vm.warp(block.timestamp + 30 days);
+    function test_mintRevertsAtSettlementBlockUntilSettled() public {
+        reachSettlement(20);
         vm.prank(alice);
-        vm.expectRevert("series expired: settle first");
+        vm.expectRevert("series ended: settle first");
         vault.mint(1e18);
         vault.settle();
         vm.prank(alice);
@@ -192,7 +200,7 @@ contract WujiVaultTest is WujiTestBase {
         vm.prank(alice);
         vault.mint(10e18);
         int256 dS = advance(120, 3);
-        vm.warp(block.timestamp + 30 days);
+        dS += reachSettlement(31);
         (uint256 settledId, uint256 nextId) = vault.settle();
         assertEq(settledId, 0);
         assertEq(nextId, 1);
@@ -209,10 +217,22 @@ contract WujiVaultTest is WujiTestBase {
         assertEq(shareAfter, share);
     }
 
-    function test_settleRequiresIndexCatchupBeyondDefaultTick() public {
-        int256 expected = writeHashes(index, uint64(block.number), uint64(block.number + 1099), 77);
-        assertEq(index.pending(), 1100);
-        vm.warp(block.timestamp + 30 days);
+    function test_lateSettlementCannotChooseLaterIndexValue() public {
+        int256 boundaryS = reachSettlement(32);
+        int256 later = advance(200, 33);
+        assertTrue(later != 0);
+        vault.settle();
+        (,,,,, uint256 share) = series(0);
+        assertEq(int256(share), int256(WAD / 2) + boundaryS / 2);
+        assertEq(index.S(), boundaryS + later);
+        (,, int256 nextS0,,,) = series(1);
+        assertEq(nextS0, boundaryS);
+    }
+
+    function test_settleRequiresIndexCatchupToCheckpoint() public {
+        uint64 boundary = vault.currentSettlementBlock();
+        int256 expected = writeHashes(index, uint64(block.number), boundary, 77);
+        assertEq(index.pending(), INTERVAL);
 
         vm.expectRevert("index backlog: tick first");
         vault.settle();
@@ -220,9 +240,8 @@ contract WujiVaultTest is WujiTestBase {
         assertEq(index.lastBlock(), GENESIS - 1);
 
         assertEq(index.tick(), 1024);
-        assertEq(index.pending(), 76);
+        assertEq(boundary - index.lastBlock(), INTERVAL - 1024);
         vault.settle();
-        assertEq(index.pending(), 0);
         assertEq(index.S(), expected);
         (,, int256 nextS0,,,) = series(1);
         assertEq(nextS0, expected);
@@ -235,7 +254,7 @@ contract WujiVaultTest is WujiTestBase {
         vm.prank(alice);
         yin.transfer(bob, 10e18); // alice keeps YANG, bob holds YIN
         advance(200, 5);
-        vm.warp(block.timestamp + 30 days);
+        reachSettlement(51);
         vault.settle();
         (,,,,, uint256 share) = series(0);
 
@@ -277,7 +296,7 @@ contract WujiVaultTest is WujiTestBase {
         vault.mint(3e18);
         advance(90, 6);
         assertLe(vault.liabilities(), usdt.balanceOf(address(vault)));
-        vm.warp(block.timestamp + 30 days);
+        reachSettlement(61);
         vault.settle();
         vm.prank(alice);
         vault.mint(2e18);

@@ -39,7 +39,7 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
   - 用对数增量而不是算术涨跌幅：这样金库只需读 `WujiIndex.S`，不需要第二个累加器，也不需要链上 exp。
 - 边界：`yangShare = clamp(½ + ½·ΔS, 0, 1)`，YIN = 1 − yangShare。两边都是有界的 claim，像期权一样：到边界后赢方不再多拿。没有钱被创造或销毁，只是停止转移。
 - **不做每日封顶顺延**（2026-09-18 改）：封顶需要链上每日检查点，增加复杂度和 gas，却不能消除边界——它只是让触碰边界慢一点。有界 claim + 期次已经足够诚实。
-- **期次（Series）**：每期 30 天，从 50/50 起步，期末 `settle()` 按最终值兑现，下一期自动开。代币按期命名 `YANG-2610` / `YIN-2610`。
+- **期次（Series）**：主网每期固定 5,760,000 个区块（按当前约 0.45 秒/块约为 30 天），从 50/50 起步。结算区块在开期时已经确定；`WujiIndex` 折叠该块时把 S 固化为链上 checkpoint。任何人以后调用 `settle()` 都只能读取这个 checkpoint，不能选择更晚、更有利的路径点。下一期边界按相同区块间隔递增。代币按期命名 `YANG-k` / `YIN-k`。
   - 为什么要期次：余额是转移额的累加，波动按 √T 增长（每日 σ≈3 块）。永远滚下去一年内触底概率约四成；30 天内约 0.5%。
 
 ## 3. 永续现货（滚动金库）
@@ -54,17 +54,17 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
 - **价格合约** `contracts/src/WujiIndex.sol`：`tick(max)` 任何人可调，把上次记录以来最多 `max` 个块哈希（最旧优先）折进 `S`；`tick()` 默认 1024。
   - 哈希来源：最近 256 块用 `blockhash`（≈1.4k gas/块）；256～8191 块用 **EIP-2935 历史合约** `0x0000F90827F1C53a10cb7A02335B175320002935`（BSC 主网和测试网都已上线，实测可读 8000 块前的哈希；≈6k gas/块）。窗口约 **1 小时**，keeper 只要一小时内调一次就不会断档。
   - 断档（>8191 块无人 tick）：断档增量**定义为 0**，`frozenBlocks` 计数，`Gap` 事件留记录。丑但确定。历史合约对窗口内的块拿不到哈希时**回滚**而不是记 0——宁可不记，不记错。
-  - keeper `indexer/keeper.mjs`：有积压 ≥40 块就 tick，gas 按积压量预算（gas 估算会过期：估算时的块数 < 上链时的块数，第一次部署就因此 OOG 过一次）；到期自动 `settle()`。
+  - 固定 checkpoint：从创世块开始每隔 `CHECKPOINT_INTERVAL` 块记录一次精确 S。checkpoint 对应的区块号在其哈希产生前已经确定；若边界落在断档内，则按断档零增量规则记录断档前的 S。
+  - keeper `indexer/keeper.mjs`：有积压 ≥40 块就 tick，gas 按积压量预算（gas 估算会过期：估算时的块数 < 上链时的块数，第一次部署就因此 OOG 过一次）；链高越过结算块后自动 `settle()`。
   - 用户操作（mint/redeem）**不** tick：配对按面值铸赎与 S 无关，而且无界的折叠会让钱包 gas 估算失效。只有 `settle()` 需要新鲜的 S。
-  - `settle()` 只接受不超过一个默认 tick（1024 块）的积压，并在结算前验证 `pending()==0`；积压更大时必须先独立调用 `WujiIndex.tick()`。因此旧块不会被错误计入下一期。
+  - `settle()` 只要求距离当期 checkpoint 不超过一个默认 tick（1024 块）；更远时必须先独立调用 `WujiIndex.tick()`。当前链头即使已经远远越过边界，结算值仍是固定 checkpoint，边界后的块不会计入上一期。
   - 无 owner、无升级、无参数可调。
 - **金库合约** `contracts/src/WujiVault.sol`：
-  - `mint(pairs)` 拉 `pairs × NOTIONAL` 抵押 + 0.05% 费；`redeemPair(id, pairs)` 任何时候按面值赎（开期或已结算都行）；`settle()` 到期后任何人可调，冻结 share、开下一期；`redeemSettled(id, yang, yin)` 单边按冻结值赎。
+  - `mint(pairs)` 在结算块之前拉 `pairs × NOTIONAL` 抵押 + 0.05% 费；`redeemPair(id, pairs)` 任何时候按面值赎（开期或已结算都行）；`settle()` 在边界块被挖出后任何人可调，读取固定 checkpoint、冻结 share、开下一期；`redeemSettled(id, yang, yin)` 单边按冻结值赎。
   - 每期两个独立 ERC-20（`SeriesToken`，只有金库能铸销）：`YANG-k` / `YIN-k`。
   - 费率 0.05% 写死，`treasury` 地址 immutable。去向仍待定，但机制已定：不可改。
   - 不变量（Foundry invariant 测试，45,000 次随机调用序列含断档、结算、单边持有）：金库余额 ≥ 全部负债；开期内 YANG 供应 == YIN 供应；YANG+YIN 值恒等于 NOTIONAL；任何时刻只有最后一期未结算；手续费只流向 treasury。
-  - **已知弱点：结算时点**。`settle()` 用调用那一刻的 S。到期后第一个调用者决定用哪个块结算，理论上可以等一个对自己有利的块。缓解：keeper 在到期那一秒调用；双方都能抢先调用。v2 可考虑金库在到期块附近强制记录 S。
-  - **主网阻断项**：keeper 只能缩短上述窗口，不能消除调用者的择时权。主网上线前必须改为“哈希产生前已确定、且链上可恢复”的结算点；详见 `docs/THREAT_MODEL.md`。
+  - 结算时点不能由调用者选择：每期的 `settlementBlock` 预先确定，结算读取 `checkpointS[settlementBlock]`。keeper 只负责推进和及时开户，不影响赔付结果。
   - 抵押品必须是普通、非 rebasing、非 fee-on-transfer ERC-20；mint 会核对金库余额增量，不足则整笔回滚。
 - 二级市场直接用 PancakeSwap：YANG/USDT、YIN/USDT，铸赎套利把两池价格之和钉在 100。`enterYANG(50 USDT)` 路由一笔交易铸对+卖 YIN。
 
@@ -90,7 +90,7 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
 2c. ✅ 金库合约 `WujiVault` + 单元/模糊/不变量测试
 3. ✅ BSC testnet 部署（`contracts/deployments/bsc-testnet.json`），keeper 在跑，链上 S 与索引器逐位一致
 3b. ✅ 终端「两仪 · On-chain」标签：YANG/YIN 实时值、期次倒计时、合约 S vs 索引 S 对照、金库偿付、钱包 mint/redeem（原生 EIP-1193，无库；MetaMask 实机待验）
-4. 审计、主网、上池子
+4. 🔄 固定区块结算已实现；待独立审计、完整测试网结算、主网、上池子
 5. 滚动金库（WUJI / YIN 永续）
 
 ## 待定

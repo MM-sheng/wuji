@@ -28,16 +28,13 @@ may change the index, mint claims, withdraw collateral, pause users, or upgrade 
 
 ## Mainnet blockers
 
-### Settlement-time optionality — unresolved
+### Settlement checkpoint — implemented, pending independent review
 
-The current series expires by timestamp, while `settle()` freezes the index at the block immediately
-before the settlement transaction. A caller may wait after expiry and choose a later path point that
-favours the side they hold. A fast keeper reduces the window but does not remove the option, and is
-therefore not a security proof.
-
-Mainnet requires a rule that fixes the settlement block before its hash is known and makes the exact
-index value at that block recoverable on chain. Candidate design: block-number series plus index
-checkpoints at deterministic boundaries. This changes the protocol and needs its own tests and review.
+Series use deterministic block-number boundaries derived from immutable deployment parameters.
+`WujiIndex` stores S when each boundary is folded, and `WujiVault` reads only that value. Calling
+`settle()` later cannot change the payoff. Missing boundary hashes follow the existing frozen-gap rule,
+so the checkpoint remains recoverable. This remediation has unit and invariant coverage but still
+requires an independent review against the release commit.
 
 ### Independent review — unresolved
 
@@ -50,8 +47,8 @@ parameters, compiler settings, and the final deployed bytecode.
 - No owner, proxy, pause, governance, or arbitrary withdrawal path.
 - `ReentrancyGuard` and `SafeERC20` protect vault entry points and token calls.
 - Minting measures the vault balance delta and rejects fee-on-transfer collateral.
-- Settlement refuses to proceed when the index backlog exceeds one bounded tick, then verifies the
-  index is fully caught up. Old blocks cannot silently spill into the next series.
+- Settlement reads a predetermined checkpoint. If that boundary is more than one bounded tick away,
+  callers advance the index separately; the index need not catch up to a later chain head.
 - Missing hashes outside the 8191-block history window contribute exactly zero and emit `Gap`.
 - Mint fees round up; payouts and redemption fees round down in the vault's favour.
 - Deployment requires an explicit chain id, treasury, and production collateral. Mock collateral is
@@ -70,6 +67,6 @@ parameters, compiler settings, and the final deployed bytecode.
 
 ## Monitoring signals
 
-Alert on `Gap`, keeper transaction failures, `pending() > 256`, expiry without settlement, vault
+Alert on `Gap`, keeper transaction failures, `pending() > 256`, a mined settlement block without settlement, vault
 balance below `liabilities()`, unexpected collateral implementation changes, and any mismatch between
 the indexer's `S_wad` and `WujiIndex.S()`.

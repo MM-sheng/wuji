@@ -5,8 +5,8 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 
 ## Protocol decision
 
-- [ ] Replace timestamp/call-time settlement with a predetermined, recoverable settlement point.
-- [ ] Update `ARCHITECTURE.md` to match the final settlement rule.
+- [x] Replace timestamp/call-time settlement with a predetermined, recoverable settlement point.
+- [x] Update `ARCHITECTURE.md` to match the final settlement rule.
 - [ ] Decide and publicly disclose the immutable treasury recipient and its control policy.
 - [ ] Freeze the collateral address, decimals, `NOTIONAL`, fee, series length, and genesis rule.
 - [ ] Document BNB validator influence and the deterministic frozen-gap rule for users.
