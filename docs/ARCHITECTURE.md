@@ -56,6 +56,7 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
   - 断档（>8191 块无人 tick）：断档增量**定义为 0**，`frozenBlocks` 计数，`Gap` 事件留记录。丑但确定。历史合约对窗口内的块拿不到哈希时**回滚**而不是记 0——宁可不记，不记错。
   - keeper `indexer/keeper.mjs`：有积压 ≥40 块就 tick，gas 按积压量预算（gas 估算会过期：估算时的块数 < 上链时的块数，第一次部署就因此 OOG 过一次）；到期自动 `settle()`。
   - 用户操作（mint/redeem）**不** tick：配对按面值铸赎与 S 无关，而且无界的折叠会让钱包 gas 估算失效。只有 `settle()` 需要新鲜的 S。
+  - `settle()` 只接受不超过一个默认 tick（1024 块）的积压，并在结算前验证 `pending()==0`；积压更大时必须先独立调用 `WujiIndex.tick()`。因此旧块不会被错误计入下一期。
   - 无 owner、无升级、无参数可调。
 - **金库合约** `contracts/src/WujiVault.sol`：
   - `mint(pairs)` 拉 `pairs × NOTIONAL` 抵押 + 0.05% 费；`redeemPair(id, pairs)` 任何时候按面值赎（开期或已结算都行）；`settle()` 到期后任何人可调，冻结 share、开下一期；`redeemSettled(id, yang, yin)` 单边按冻结值赎。
@@ -63,6 +64,8 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
   - 费率 0.05% 写死，`treasury` 地址 immutable。去向仍待定，但机制已定：不可改。
   - 不变量（Foundry invariant 测试，45,000 次随机调用序列含断档、结算、单边持有）：金库余额 ≥ 全部负债；开期内 YANG 供应 == YIN 供应；YANG+YIN 值恒等于 NOTIONAL；任何时刻只有最后一期未结算；手续费只流向 treasury。
   - **已知弱点：结算时点**。`settle()` 用调用那一刻的 S。到期后第一个调用者决定用哪个块结算，理论上可以等一个对自己有利的块。缓解：keeper 在到期那一秒调用；双方都能抢先调用。v2 可考虑金库在到期块附近强制记录 S。
+  - **主网阻断项**：keeper 只能缩短上述窗口，不能消除调用者的择时权。主网上线前必须改为“哈希产生前已确定、且链上可恢复”的结算点；详见 `docs/THREAT_MODEL.md`。
+  - 抵押品必须是普通、非 rebasing、非 fee-on-transfer ERC-20；mint 会核对金库余额增量，不足则整笔回滚。
 - 二级市场直接用 PancakeSwap：YANG/USDT、YIN/USDT，铸赎套利把两池价格之和钉在 100。`enterYANG(50 USDT)` 路由一笔交易铸对+卖 YIN。
 
 ## 5. 索引 / API（无权威缓存）

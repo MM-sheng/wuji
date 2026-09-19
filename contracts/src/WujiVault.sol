@@ -25,22 +25,22 @@ contract WujiVault is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 public constant WAD = 1e18;
-    uint256 public constant FEE_BPS = 5;              // 0.05 % on mint and on redeem
+    uint256 public constant FEE_BPS = 5; // 0.05 % on mint and on redeem
     uint256 public constant SERIES_LENGTH = 30 days;
 
-    IERC20 public immutable asset;                    // collateral (e.g. USDT)
+    IERC20 public immutable asset; // collateral (e.g. USDT)
     WujiIndex public immutable index;
-    uint256 public immutable NOTIONAL;                // collateral per pair (e.g. 100e18)
-    address public immutable treasury;                // where fees go; set once, forever
+    uint256 public immutable NOTIONAL; // collateral per pair (e.g. 100e18)
+    address public immutable treasury; // where fees go; set once, forever
 
     struct Series {
         SeriesToken yang;
         SeriesToken yin;
-        int256 s0;              // index S (wad) at open
+        int256 s0; // index S (wad) at open
         uint64 start;
         uint64 expiry;
         bool settled;
-        uint256 yangShare;      // wad share of NOTIONAL owed per YANG after settlement; yin = WAD − yangShare
+        uint256 yangShare; // wad share of NOTIONAL owed per YANG after settlement; yin = WAD − yangShare
     }
     Series[] public series;
 
@@ -48,9 +48,13 @@ contract WujiVault is ReentrancyGuard {
     event SeriesSettled(uint256 indexed id, int256 s1, uint256 yangShare);
     event Minted(uint256 indexed id, address indexed to, uint256 pairs, uint256 collateral, uint256 fee);
     event RedeemedPair(uint256 indexed id, address indexed from, uint256 pairs, uint256 collateral, uint256 fee);
-    event RedeemedSettled(uint256 indexed id, address indexed from, uint256 yang, uint256 yin, uint256 collateral, uint256 fee);
+    event RedeemedSettled(
+        uint256 indexed id, address indexed from, uint256 yang, uint256 yin, uint256 collateral, uint256 fee
+    );
 
     constructor(IERC20 asset_, WujiIndex index_, uint256 notional_, address treasury_) {
+        require(address(asset_).code.length > 0, "asset not contract");
+        require(address(index_).code.length > 0, "index not contract");
         require(notional_ >= 1e6, "notional too small");
         require(treasury_ != address(0), "treasury");
         asset = asset_;
@@ -108,7 +112,9 @@ contract WujiVault is ReentrancyGuard {
         // number of blocks would make users' gas estimates stale by the time the tx mines.
         uint256 collateral = _ceilMul(pairs, NOTIONAL);
         uint256 fee = _ceilBps(collateral);
+        uint256 beforeBalance = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), collateral);
+        require(asset.balanceOf(address(this)) - beforeBalance == collateral, "unsupported collateral");
         if (fee > 0) asset.safeTransferFrom(msg.sender, treasury, fee);
         s.yang.mint(msg.sender, pairs);
         s.yin.mint(msg.sender, pairs);
@@ -136,7 +142,11 @@ contract WujiVault is ReentrancyGuard {
         settledId = currentId();
         Series storage s = series[settledId];
         require(block.timestamp >= s.expiry, "not expired");
+        // Never let old blocks spill into the next series. If the backlog exceeds one bounded tick,
+        // callers must advance WujiIndex separately until this condition holds.
+        require(index.pending() <= index.DEFAULT_MAX(), "index backlog: tick first");
         index.tick();
+        require(index.pending() == 0, "index stale");
         int256 s1 = index.S();
         s.settled = true;
         s.yangShare = _share(s.s0, s1);
@@ -149,7 +159,7 @@ contract WujiVault is ReentrancyGuard {
         Series storage s = series[id];
         require(s.settled, "not settled");
         require(yangAmt > 0 || yinAmt > 0, "zero");
-        uint256 collateral;
+        uint256 collateral = 0;
         if (yangAmt > 0) {
             s.yang.burn(msg.sender, yangAmt);
             collateral += _value(yangAmt, s.yangShare);
@@ -172,7 +182,17 @@ contract WujiVault is ReentrancyGuard {
         SeriesToken yang = new SeriesToken(string.concat("WUJI Yang #", n), string.concat("YANG-", n));
         SeriesToken yin = new SeriesToken(string.concat("WUJI Yin #", n), string.concat("YIN-", n));
         uint64 expiry = uint64(block.timestamp + SERIES_LENGTH);
-        series.push(Series({yang: yang, yin: yin, s0: s0, start: uint64(block.timestamp), expiry: expiry, settled: false, yangShare: 0}));
+        series.push(
+            Series({
+                yang: yang,
+                yin: yin,
+                s0: s0,
+                start: uint64(block.timestamp),
+                expiry: expiry,
+                settled: false,
+                yangShare: 0
+            })
+        );
         emit SeriesOpened(id, address(yang), address(yin), s0, expiry);
     }
 
@@ -199,10 +219,17 @@ contract WujiVault is ReentrancyGuard {
 
     function _toString(uint256 v) internal pure returns (string memory) {
         if (v == 0) return "0";
-        uint256 t = v; uint256 d;
-        while (t != 0) { d++; t /= 10; }
+        uint256 t = v;
+        uint256 d = 0;
+        while (t != 0) {
+            d++;
+            t /= 10;
+        }
         bytes memory b = new bytes(d);
-        while (v != 0) { b[--d] = bytes1(uint8(48 + v % 10)); v /= 10; }
+        while (v != 0) {
+            b[--d] = bytes1(uint8(48 + v % 10));
+            v /= 10;
+        }
         return string(b);
     }
 }

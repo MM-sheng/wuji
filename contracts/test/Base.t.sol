@@ -33,7 +33,10 @@ abstract contract WujiTestBase is Test {
 
     function writeConstant(WujiIndex idx, uint64 from, uint64 to, bytes32 h) internal returns (int256 expected) {
         if (block.number <= to) vm.roll(to + 1);
-        for (uint64 b = from; b <= to; b++) { vm.setBlockhash(b, h); history.set(b, h); }
+        for (uint64 b = from; b <= to; b++) {
+            vm.setBlockhash(b, h);
+            history.set(b, h);
+        }
         expected = int256(uint256(to - from + 1)) * idx.increment(h);
     }
 }

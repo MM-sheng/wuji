@@ -14,10 +14,18 @@ import {MockUSDT} from "../test/mocks/MockUSDT.sol";
 contract Deploy is Script {
     function run() external {
         address asset = vm.envOr("ASSET", address(0));
-        address treasury = vm.envOr("TREASURY", msg.sender);
+        address treasury = vm.envOr("TREASURY", address(0));
         uint256 notional = vm.envOr("NOTIONAL", uint256(100e18));
+        uint256 expectedChainId = vm.envOr("EXPECTED_CHAIN_ID", uint256(0));
+        bool allowMockAsset = vm.envOr("ALLOW_MOCK_ASSET", false);
+        require(expectedChainId != 0 && block.chainid == expectedChainId, "wrong or missing EXPECTED_CHAIN_ID");
+        require(!allowMockAsset || block.chainid != 56, "mock disabled on BSC mainnet");
+        if (allowMockAsset && treasury == address(0)) treasury = msg.sender;
+        require(treasury != address(0), "TREASURY required");
+        if (asset != address(0)) require(asset.code.length > 0, "ASSET not contract");
         vm.startBroadcast();
         if (asset == address(0)) {
+            require(allowMockAsset, "ASSET required; mock disabled");
             MockUSDT m = new MockUSDT();
             m.mint(msg.sender, 1_000_000e18);
             asset = address(m);
@@ -29,5 +37,7 @@ contract Deploy is Script {
         console.log("WujiIndex:", address(idx));
         console.log("WujiVault:", address(vault));
         console.log("genesis block:", idx.GENESIS_BLOCK());
+        console.log("chain id:", block.chainid);
+        console.log("treasury:", treasury);
     }
 }

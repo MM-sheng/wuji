@@ -6,7 +6,9 @@ contract MockHistory {
     uint256 constant WINDOW = 8191;
     mapping(uint256 => bytes32) public hashes;
 
-    function set(uint256 b, bytes32 h) external { hashes[b] = h; }
+    function set(uint256 b, bytes32 h) external {
+        hashes[b] = h;
+    }
 
     fallback(bytes calldata data) external returns (bytes memory) {
         require(data.length == 32, "bad input");

@@ -15,13 +15,15 @@ contract Handler is Test {
     WujiIndex public index;
     MockUSDT public usdt;
     address[] public actors;
-    uint256 public ghostFees;           // collateral sent to treasury
+    uint256 public ghostFees; // collateral sent to treasury
     uint256 public ghostCalls;
     uint256 public ghostSettles;
     uint256 public ghostBlocksMoved;
 
     constructor(WujiVault v, WujiIndex i, MockUSDT u) {
-        vault = v; index = i; usdt = u;
+        vault = v;
+        index = i;
+        usdt = u;
         for (uint256 k = 0; k < 4; k++) {
             address a = address(uint160(0xA11CE + k));
             actors.push(a);
@@ -31,8 +33,13 @@ contract Handler is Test {
         }
     }
 
-    function _actor(uint256 seed) internal view returns (address) { return actors[seed % actors.length]; }
-    function _open(uint256 id) internal view returns (bool settled) { (,,,,, settled,) = vault.series(id); }
+    function _actor(uint256 seed) internal view returns (address) {
+        return actors[seed % actors.length];
+    }
+
+    function _open(uint256 id) internal view returns (bool settled) {
+        (,,,,, settled,) = vault.series(id);
+    }
 
     function mint(uint256 seed, uint256 pairs) external {
         pairs = bound(pairs, 1, 1_000e18);
@@ -79,7 +86,8 @@ contract Handler is Test {
         uint256 id = idSeed % (vault.currentId() + 1);
         (SeriesToken yang, SeriesToken yin,,,,,) = vault.series(id);
         SeriesToken t = yangSide ? yang : yin;
-        address from = _actor(seed); address to = _actor(seed / 7 + 1);
+        address from = _actor(seed);
+        address to = _actor(seed / 7 + 1);
         if (t.balanceOf(from) == 0 || from == to) return;
         amt = bound(amt, 1, t.balanceOf(from));
         vm.prank(from);
@@ -92,7 +100,11 @@ contract Handler is Test {
         uint64 from = uint64(block.number);
         vm.roll(from + n);
         MockHistory h = MockHistory(payable(0x0000F90827F1C53a10cb7A02335B175320002935));
-        for (uint64 b = from; b < from + n; b++) { bytes32 x = keccak256(abi.encode(b, salt)); vm.setBlockhash(b, x); h.set(b, x); }
+        for (uint64 b = from; b < from + n; b++) {
+            bytes32 x = keccak256(abi.encode(b, salt));
+            vm.setBlockhash(b, x);
+            h.set(b, x);
+        }
         index.tick(n);
         ghostBlocksMoved += n;
     }
@@ -111,7 +123,10 @@ contract Handler is Test {
 
 contract WujiVaultInvariants is Test {
     uint256 constant NOTIONAL = 100e18;
-    MockUSDT usdt; WujiIndex index; WujiVault vault; Handler handler;
+    MockUSDT usdt;
+    WujiIndex index;
+    WujiVault vault;
+    Handler handler;
     address treasury = makeAddr("treasury");
 
     function setUp() public {

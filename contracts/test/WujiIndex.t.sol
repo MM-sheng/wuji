@@ -17,7 +17,9 @@ contract WujiIndexTest is WujiTestBase {
     // ---------- byteSum / increment ----------
 
     function naiveByteSum(bytes32 h) internal pure returns (uint256 s) {
-        for (uint256 i = 0; i < 32; i++) s += uint8(h[i]);
+        for (uint256 i = 0; i < 32; i++) {
+            s += uint8(h[i]);
+        }
     }
 
     function testFuzz_byteSumMatchesNaive(bytes32 h) public view {
@@ -48,6 +50,19 @@ contract WujiIndexTest is WujiTestBase {
         assertEq(idx.tick(), 0);
         assertEq(idx.S(), 0);
         assertEq(idx.lastBlock(), GENESIS - 1);
+    }
+
+    function test_futureGenesisReportsNoPendingBlocks() public {
+        WujiIndex future = new WujiIndex(GENESIS + 1000);
+        assertEq(future.pending(), 0);
+        assertEq(future.tick(), 0);
+    }
+
+    function test_futureGenesisAtBlockZeroReportsNoPendingBlocks() public {
+        vm.roll(0);
+        WujiIndex future = new WujiIndex(1);
+        assertEq(future.pending(), 0);
+        assertEq(future.tick(), 0);
     }
 
     function test_tickFoldsEveryBlockOnce() public {
@@ -93,7 +108,9 @@ contract WujiIndexTest is WujiTestBase {
         vm.roll(GENESIS + 10000);
         uint64 oldest = GENESIS + 10000 - 8191;
         int256 expected;
-        for (uint64 b = oldest; b <= GENESIS + 9999; b++) expected += idx.increment(hashFor(b, 3));
+        for (uint64 b = oldest; b <= GENESIS + 9999; b++) {
+            expected += idx.increment(hashFor(b, 3));
+        }
 
         vm.expectEmit(true, true, false, false);
         emit WujiIndex.Gap(GENESIS, oldest - 1);
@@ -107,7 +124,7 @@ contract WujiIndexTest is WujiTestBase {
     function test_defaultTickIsCappedAndResumable() public {
         int256 expected = setHashes(GENESIS, GENESIS + 2999, 8);
         vm.roll(GENESIS + 3000);
-        assertEq(idx.tick(), 1024);            // DEFAULT_MAX
+        assertEq(idx.tick(), 1024); // DEFAULT_MAX
         assertEq(idx.lastBlock(), GENESIS + 1023);
         assertEq(idx.pending(), 3000 - 1024);
         assertEq(idx.tick(), 1024);
@@ -128,7 +145,9 @@ contract WujiIndexTest is WujiTestBase {
     function test_revertsIfHistoryCannotServeInWindowBlock() public {
         // hashes set only in the EVM, not in the history mock → beyond 256 the fold must revert, not fabricate
         vm.roll(GENESIS + 600);
-        for (uint64 b = GENESIS; b < GENESIS + 600; b++) vm.setBlockhash(b, hashFor(b, 5));
+        for (uint64 b = GENESIS; b < GENESIS + 600; b++) {
+            vm.setBlockhash(b, hashFor(b, 5));
+        }
         vm.expectRevert("history unavailable");
         idx.tick(600);
         assertEq(idx.lastBlock(), GENESIS - 1); // nothing recorded
@@ -152,7 +171,7 @@ contract WujiIndexTest is WujiTestBase {
         vm.expectRevert("genesis out of reach");
         new WujiIndex(20000 - 8191);
         new WujiIndex(20000 - 8190); // boundary ok
-        new WujiIndex(30000);        // future ok
+        new WujiIndex(30000); // future ok
         vm.expectRevert("genesis out of reach");
         new WujiIndex(0);
     }

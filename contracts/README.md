@@ -1,66 +1,46 @@
-## Foundry
+# WUJI contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Three immutable contracts implement the testnet protocol:
 
-Foundry consists of:
+- `WujiIndex` folds BSC block hashes into the integer log index `S`.
+- `WujiVault` holds collateral and mints one matched YANG/YIN pair per notional.
+- `SeriesToken` is the ERC-20 claim for one side of one 30-day series.
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+There is no owner, pause, upgrade path, or mutable fee. The treasury, collateral, index,
+notional, and 5 bps mint/redemption fee are fixed at deployment.
 
-## Documentation
+## Verify
 
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```sh
+~/.foundry/bin/forge fmt --check
+~/.foundry/bin/forge build --sizes
+~/.foundry/bin/forge lint
+~/.foundry/bin/forge test -vvv
 ```
 
-### Test
+The suite includes unit, fuzz, invariant, gap/freeze, real BSC hash, rounding, non-standard
+collateral, and settlement-backlog coverage.
 
-```shell
-$ forge test
+## Testnet deployment
+
+Copy `.env.example` to `.env`, use a throwaway funded testnet key, then run:
+
+```sh
+./scripts/deploy-testnet.sh
 ```
 
-### Format
+The testnet script sets `EXPECTED_CHAIN_ID=97` and explicitly enables deployment of `MockUSDT`.
 
-```shell
-$ forge fmt
+## Production deployment
+
+Production intentionally has no permissive defaults. Set all of the following:
+
+```sh
+ASSET=<canonical collateral address>
+TREASURY=<reviewed immutable recipient>
+NOTIONAL=<amount in collateral base units>
+EXPECTED_CHAIN_ID=56
 ```
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+Leave `ALLOW_MOCK_ASSET` unset. `Deploy.s.sol` aborts if the chain id, collateral, or treasury
+is missing. Complete [`../docs/MAINNET_CHECKLIST.md`](../docs/MAINNET_CHECKLIST.md) before broadcasting.

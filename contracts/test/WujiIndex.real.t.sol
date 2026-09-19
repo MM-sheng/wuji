@@ -9,7 +9,10 @@ import {WujiTestBase} from "./Base.t.sol";
 contract WujiIndexRealHashes is WujiTestBase {
     function test_realHashesMatchIndexer() public {
         string memory path = "test/fixtures/real-hashes.json";
-        if (!vm.exists(path)) { emit log("no fixture; run scripts/check-real-hashes.sh"); return; }
+        if (!vm.exists(path)) {
+            emit log("no fixture; run scripts/check-real-hashes.sh");
+            return;
+        }
         string memory j = vm.readFile(path);
         uint64 from = uint64(vm.parseJsonUint(j, ".from"));
         uint64 to = uint64(vm.parseJsonUint(j, ".to"));
@@ -19,7 +22,10 @@ contract WujiIndexRealHashes is WujiTestBase {
 
         installHistory();
         vm.roll(to + 1);
-        for (uint64 b = from; b <= to; b++) { vm.setBlockhash(b, hashes[b - from]); history.set(b, hashes[b - from]); }
+        for (uint64 b = from; b <= to; b++) {
+            vm.setBlockhash(b, hashes[b - from]);
+            history.set(b, hashes[b - from]);
+        }
         vm.roll(from);
         WujiIndex idx = new WujiIndex(from);
         vm.roll(to + 1);

@@ -6,6 +6,22 @@ import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
 import {SeriesToken} from "../src/SeriesToken.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract FeeOnTransferToken is ERC20("Fee token", "FEE") {
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0)) {
+            uint256 fee = value / 100;
+            super._update(from, address(0), fee);
+            value -= fee;
+        }
+        super._update(from, to, value);
+    }
+}
 
 contract WujiVaultTest is WujiTestBase {
     uint256 constant WAD = 1e18;
@@ -42,7 +58,11 @@ contract WujiVaultTest is WujiTestBase {
         index.tick(n);
     }
 
-    function series(uint256 id) internal view returns (SeriesToken yang, SeriesToken yin, int256 s0, uint64 expiry, bool settled, uint256 share) {
+    function series(uint256 id)
+        internal
+        view
+        returns (SeriesToken yang, SeriesToken yin, int256 s0, uint64 expiry, bool settled, uint256 share)
+    {
         (yang, yin, s0,, expiry, settled, share) = vault.series(id);
     }
 
@@ -68,6 +88,18 @@ contract WujiVaultTest is WujiTestBase {
         assertEq(usdt.balanceOf(alice), 1_000_000e18 - 300e18 - 0.15e18);
     }
 
+    function test_mintRejectsFeeOnTransferCollateral() public {
+        FeeOnTransferToken feeToken = new FeeOnTransferToken();
+        WujiVault feeVault = new WujiVault(feeToken, index, NOTIONAL, treasury);
+        feeToken.mint(alice, 1_000e18);
+        vm.startPrank(alice);
+        feeToken.approve(address(feeVault), type(uint256).max);
+        vm.expectRevert("unsupported collateral");
+        feeVault.mint(1e18);
+        vm.stopPrank();
+        assertEq(feeToken.balanceOf(address(feeVault)), 0);
+    }
+
     function test_redeemPairReturnsNotionalMinusFee() public {
         vm.startPrank(alice);
         vault.mint(2e18);
@@ -83,14 +115,14 @@ contract WujiVaultTest is WujiTestBase {
         vm.prank(alice);
         vault.mint(1); // 1e-18 of a pair = 100 wei of collateral
         assertEq(usdt.balanceOf(address(vault)), 100);
-        assertEq(usdt.balanceOf(treasury), 1);             // fee ceil(100 · 5 / 10000) = 1 wei
+        assertEq(usdt.balanceOf(treasury), 1); // fee ceil(100 · 5 / 10000) = 1 wei
         vm.prank(alice);
         vault.redeemPair(0, 1);
         assertEq(usdt.balanceOf(address(vault)), 0);
-        assertEq(usdt.balanceOf(treasury), 1);             // redeem fee floors to 0
+        assertEq(usdt.balanceOf(treasury), 1); // redeem fee floors to 0
         // sub-wei collateral: 3 · 100e18 / 1e18 wouldn't divide evenly only below 1e16 pairs; check ceil
         vm.prank(alice);
-        vault.mint(1e16 + 1);                              // 1.00…01 collateral → ceil to 1e18/100 + 1 wei... i.e. 1e18 + 100 wei
+        vault.mint(1e16 + 1); // 1.00…01 collateral → ceil to 1e18/100 + 1 wei... i.e. 1e18 + 100 wei
         assertEq(usdt.balanceOf(address(vault)), 1e18 + 100);
     }
 
@@ -118,7 +150,9 @@ contract WujiVaultTest is WujiTestBase {
         // that is not enough to clamp (needs ΔS ≥ 1e18), so use a series whose s0 is far away instead:
         // deploy a vault on an index whose S we then push through several ticks.
         int256 total;
-        for (uint256 k = 0; k < 6; k++) total += advanceAll(255, true); // ≈ +2.06e18 → clamp high
+        for (uint256 k = 0; k < 6; k++) {
+            total += advanceAll(255, true); // ≈ +2.06e18 → clamp high
+        }
         assertGt(total, int256(WAD));
         assertEq(vault.yangShare(), WAD);
         (uint256 y, uint256 n) = vault.values();
@@ -129,7 +163,9 @@ contract WujiVaultTest is WujiTestBase {
     function advanceAll(uint64 n, bool up) internal returns (int256 dS) {
         uint64 from = uint64(block.number);
         // bytes32(0) would read as "unset" in the mock history, so the down case uses 0x01..01 (byteSum 32)
-        bytes32 h = up ? bytes32(type(uint256).max) : bytes32(uint256(0x0101010101010101010101010101010101010101010101010101010101010101));
+        bytes32 h = up
+            ? bytes32(type(uint256).max)
+            : bytes32(uint256(0x0101010101010101010101010101010101010101010101010101010101010101));
         dS = writeConstant(index, from, from + n - 1, h);
         index.tick(n);
     }
@@ -160,7 +196,7 @@ contract WujiVaultTest is WujiTestBase {
         (uint256 settledId, uint256 nextId) = vault.settle();
         assertEq(settledId, 0);
         assertEq(nextId, 1);
-        (,, , , bool settled, uint256 share) = series(0);
+        (,,,, bool settled, uint256 share) = series(0);
         assertTrue(settled);
         assertEq(int256(share), int256(WAD / 2) + dS / 2);
         (,, int256 s0Next,, bool settledNext,) = series(1);
@@ -171,6 +207,25 @@ contract WujiVaultTest is WujiTestBase {
         advance(100, 4);
         (,,,,, uint256 shareAfter) = series(0);
         assertEq(shareAfter, share);
+    }
+
+    function test_settleRequiresIndexCatchupBeyondDefaultTick() public {
+        int256 expected = writeHashes(index, uint64(block.number), uint64(block.number + 1099), 77);
+        assertEq(index.pending(), 1100);
+        vm.warp(block.timestamp + 30 days);
+
+        vm.expectRevert("index backlog: tick first");
+        vault.settle();
+        assertEq(vault.currentId(), 0);
+        assertEq(index.lastBlock(), GENESIS - 1);
+
+        assertEq(index.tick(), 1024);
+        assertEq(index.pending(), 76);
+        vault.settle();
+        assertEq(index.pending(), 0);
+        assertEq(index.S(), expected);
+        (,, int256 nextS0,,,) = series(1);
+        assertEq(nextS0, expected);
     }
 
     function test_redeemSettledPaysFrozenValues() public {
@@ -216,15 +271,19 @@ contract WujiVaultTest is WujiTestBase {
     }
 
     function test_liabilitiesNeverExceedBalance() public {
-        vm.prank(alice); vault.mint(7e18);
-        vm.prank(bob); vault.mint(3e18);
+        vm.prank(alice);
+        vault.mint(7e18);
+        vm.prank(bob);
+        vault.mint(3e18);
         advance(90, 6);
         assertLe(vault.liabilities(), usdt.balanceOf(address(vault)));
         vm.warp(block.timestamp + 30 days);
         vault.settle();
-        vm.prank(alice); vault.mint(2e18);
+        vm.prank(alice);
+        vault.mint(2e18);
         assertLe(vault.liabilities(), usdt.balanceOf(address(vault)));
-        vm.prank(bob); vault.redeemSettled(0, 3e18, 3e18);
+        vm.prank(bob);
+        vault.redeemSettled(0, 3e18, 3e18);
         assertLe(vault.liabilities(), usdt.balanceOf(address(vault)));
     }
 }
