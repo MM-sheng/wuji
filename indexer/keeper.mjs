@@ -47,4 +47,4 @@ function listVaults() {                                    // re-read the factor
   vaultCache = { at: Date.now(), list }; log(`factory has ${n} vault(s)`); return list;
 }
 log(`keeper on ${CONTRACT}${FACTORY ? ' + factory ' + FACTORY : VAULT ? ' + vault ' + VAULT : ''} every ${INTERVAL}s`);
-for (;;) { try { await once(); } catch (e) { log('error:', redact(e.stderr || e.message || '')); } await new Promise(r => setTimeout(r, INTERVAL * 1000)); }
+for (;;) { try { await once(); } catch (e) { log('error:', redact([e.stderr, e.stdout, e.message].filter(Boolean).join('\n'))); } await new Promise(r => setTimeout(r, INTERVAL * 1000)); }
