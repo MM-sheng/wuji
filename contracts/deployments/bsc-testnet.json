@@ -3,10 +3,14 @@
   "rpc": "https://bsc-testnet-rpc.publicnode.com",
   "explorer": "https://testnet.bscscan.com",
   "deployedAt": "2026-09-19",
-  "genesisBlock": 131844469,
-  "MockUSDT": "0xeb3B09Eb5d19fbc7576082Fb75c5708013c40aFf",
-  "WujiIndex": "0x9461B69F39E3Dd0b56941E8825274027f48776a0",
-  "WujiVault": "0xE3eAFFB720DF12d807948A0b54c7d28088060Fd8",
+  "genesisBlock": 131854143,
+  "seriesBlocks": 8000,
+  "settlementBlock": 131862142,
+  "MockUSDT": "0x4F38c0bE2BffC031B8273F2239Ee2bD34155Ea5E",
+  "WujiIndex": "0xf1a83Cd8E9cC77480c641BF3Bb04f288011aA21b",
+  "WujiVault": "0xd7Ca80028aE0935E3149d9b4400074605876341b",
+  "YANG-0": "0x453f37cCDa0Ccede02E1EaB2772A06c86686f0FD",
+  "YIN-0": "0xcE3F24e6A29ebF755dC515A33fF6Dd2Eb2544acd",
   "treasury": "0x6657289562f870677325124f3ACbdebB0ea80B95",
-  "note": "third deployment: EIP-2935 reach + bounded tick(max); mint no longer ticks"
+  "note": "fixed-block settlement: immutable 8000-block series with on-chain index checkpoints"
 }
