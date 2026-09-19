@@ -164,6 +164,24 @@
   .about{padding:12px 14px;font-size:12px;line-height:1.75;color:var(--muted);max-width:820px}
   .about b{color:var(--ink);font-weight:600} .about code{font-family:var(--mono);font-size:11px;color:var(--acc)}
 
+  /* 两仪 · on-chain */
+  .taiji{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:1px;background:var(--line);height:100%}
+  .taiji>div{background:var(--panel);padding:10px 14px;font-family:var(--mono);font-size:11px;overflow:auto}
+  .taiji h4{font-family:var(--sans);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:8px;font-weight:600}
+  .taiji .kv{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--line)}
+  .taiji .kv span:first-child{color:var(--muted)} .taiji .kv b{font-weight:500;color:var(--ink)}
+  .taiji a{color:var(--acc);text-decoration:none} .taiji a:hover{text-decoration:underline}
+  .yy{display:flex;align-items:center;gap:0;height:26px;border:1px solid var(--line2);border-radius:3px;overflow:hidden;margin:6px 0 10px;font-weight:600}
+  .yy .yang{background:rgba(245,179,66,.25);color:var(--warn);display:flex;align-items:center;padding:0 8px;height:100%;transition:width .4s}
+  .yy .yin{background:rgba(76,141,255,.22);color:var(--acc);display:flex;align-items:center;justify-content:flex-end;padding:0 8px;height:100%;flex:1}
+  .ok{color:var(--up)} .bad{color:var(--dn)}
+  .wal button{font-family:var(--mono);font-size:10.5px;padding:5px 10px;border:1px solid var(--line2);border-radius:2px;color:var(--ink);background:var(--panel2);letter-spacing:.04em}
+  .wal button:hover{border-color:var(--muted)} .wal button:disabled{opacity:.4;cursor:default}
+  .wal button.pri{border-color:var(--warn);color:var(--warn)} .wal button.pri:hover{background:var(--warn);color:#2b1d00}
+  .wal .row2{display:flex;gap:6px;align-items:center;margin:8px 0}
+  .wal input{width:70px;background:var(--panel);border:1px solid var(--line2);border-radius:2px;padding:4px 6px;font-family:var(--mono);font-size:11px;text-align:right;outline:none}
+  .wal .msg2{color:var(--muted);font-size:10.5px;min-height:14px;margin-top:6px;word-break:break-all}
+  .stat.yy2 .v{font-size:11.5px}
   @media (max-width:900px){
     .term{grid-template-columns:1fr;grid-template-rows:36px 1fr auto 220px}
     .rail{grid-row:3;grid-column:1} .bottom{grid-row:4;grid-column:1} .chartwrap{grid-column:1}
@@ -182,6 +200,7 @@
     <div class="stat"><span class="k">24h Low</span><span class="v" id="tLow">—</span></div>
     <div class="stat"><span class="k">Drift since genesis</span><span class="v" id="tDrift">—</span></div>
     <div class="stat"><span class="k">Rlz Vol 24h</span><span class="v" id="tVol">—</span></div>
+    <div class="stat yy2" id="tYYwrap" hidden><span class="k">阳 · 阴 <span id="tSeries"></span></span><span class="v"><span class="warnv" id="tYang">—</span> <span style="color:var(--dim)">/</span> <span style="color:var(--acc)" id="tYin">—</span></span></div>
     <div class="clock"><span class="k">UTC · TICK</span><span class="v" id="tClock">—</span></div>
     <div class="status" id="statusBox"><i></i><span id="statusTxt">LIVE</span></div>
   </div>
@@ -248,6 +267,7 @@
       <button data-p="news">News<em id="cNews">0</em></button>
       <button data-p="liqs">Liquidations<em id="cLiqs">0</em></button>
       <button data-p="verdict">Verdict</button>
+      <button data-p="taiji">两仪 · On-chain<em id="cChain"></em></button>
       <button data-p="about">About</button>
       <span class="sp"></span>
       <button class="link" id="bReset">reset my account</button>
@@ -273,6 +293,22 @@
       </div>
       <div class="ruling" id="vRuling"></div>
     </div>
+    <div class="pane" id="p-taiji">
+      <div class="taiji">
+        <div>
+          <h4>Series · 两仪</h4>
+          <div id="tjSeries"><div class="empty">这条链上还没有部署合约——这里只有指数。测试网版本在 :8788。</div></div>
+        </div>
+        <div>
+          <h4>Contract vs index · 可验证</h4>
+          <div id="tjChain"></div>
+        </div>
+        <div class="wal">
+          <h4>Wallet</h4>
+          <div id="tjWallet"><button id="wConnect">CONNECT WALLET</button><div class="msg2">MetaMask / any EIP-1193 wallet · BSC testnet</div></div>
+        </div>
+      </div>
+    </div>
     <div class="pane" id="p-about">
       <div class="about">
         <b>无极生太极，太极生两仪。</b> A market before reason.<br>
@@ -296,7 +332,7 @@
   // ================= CHAIN-FED INDEX =================
   // Price is 100·exp(S), S = unit·Σ(byteSum(blockhash) − 4080) over every BSC block since genesis (docs/ARCHITECTURE.md §1).
   // The indexer is a cache, not an authority: /proof/:block lets anyone recompute a step from a public RPC.
-  const API=location.port==='8787'||location.hostname!=='localhost'?'':'http://localhost:8787';
+  const API=location.protocol==='file:'?'http://localhost:8787':'';   // same origin as the indexer that serves this page
   const SIG=0.000138*Math.sqrt(192000/86400);  // ≈ per-second log vol equivalent, used only for volume scaling
   const PX0=100, FEE_BPS=2, MONKEY_SZ=5, MONKEY_BLK=60;
   const SEED='wuji:v1';                          // seeds the monkey / synthetic book / newsroom — NOT the price
@@ -615,6 +651,81 @@
     $('newsBody').innerHTML=items.length?items.map(it=>`<div class="it"><span class="t">${new Date((GENESIS+it.t)*1000).toISOString().slice(5,16).replace('T',' ')}Z</span><span class="s">${it.src}</span><span class="h">${esc(it.text)}</span><span class="m ${it.ret>0?'up':'dn'}">${sgn(it.ret*100)}${fmt(it.ret*100)}%</span></div>`).join('')
       :'<div class="empty">Nothing moved more than 0.4% in a minute over the last 3 days. The newsroom is idle.</div>';
   }
+  // ================= 两仪 · ON-CHAIN =================
+  const fmt4=n=>n.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+  const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'—';
+  const ago=s=>{s=Math.max(0,s|0);if(s<60)return s+'s';if(s<3600)return (s/60|0)+'m '+(s%60)+'s';const d=s/86400|0,h=(s%86400)/3600|0,m=(s%3600)/60|0;return (d?d+'d ':'')+h+'h '+m+'m';};
+  function renderTaiji(){
+    const c=HEAD.chain; const wrap=$('tYYwrap');
+    if(!c||!c.vault){wrap.hidden=true;$('cChain').textContent='';return;}
+    const v=c.vault, ex=v.explorer, yang=100*v.yangShare, yin=100-yang, nowS=Date.now()/1000;
+    wrap.hidden=false;$('tYang').textContent=fmt(yang);$('tYin').textContent=fmt(yin);$('tSeries').textContent='#'+v.seriesId;
+    $('cChain').textContent=c.frozenBlocks?'⚠':'✓';
+    $('tjSeries').innerHTML=`
+      <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}</div><div class="yin">${fmt(yin)} YIN</div></div>
+      <div class="kv"><span>Series</span><b>#${v.seriesId} · ${v.settled?'SETTLED':'OPEN'}</b></div>
+      <div class="kv"><span>Opened</span><b>${new Date(v.start*1000).toISOString().slice(0,16).replace('T',' ')}Z</b></div>
+      <div class="kv"><span>Expiry</span><b>${new Date(v.expiry*1000).toISOString().slice(0,16).replace('T',' ')}Z · ${nowS<v.expiry?'in '+ago(v.expiry-nowS):'settle pending'}</b></div>
+      <div class="kv"><span>S at open</span><b>${(Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
+      <div class="kv"><span>ΔS since open</span><b class="${cls(c.S-Number(v.s0_wad)/1e18)}">${sgn(c.S-Number(v.s0_wad)/1e18)}${(c.S-Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
+      <div class="kv"><span>YANG-${v.seriesId}</span><b><a href="${ex}/token/${v.yang}" target="_blank">${short(v.yang)}</a></b></div>
+      <div class="kv"><span>YIN-${v.seriesId}</span><b><a href="${ex}/token/${v.yin}" target="_blank">${short(v.yin)}</a></b></div>
+      <div class="kv"><span>Vault balance / liabilities</span><b class="${v.balance+1e-9>=v.liabilities?'ok':'bad'}">${fmt(v.balance)} / ${fmt(v.liabilities)} ${v.balance+1e-9>=v.liabilities?'✓ solvent':'✗'}</b></div>
+      <div class="kv"><span>Vault</span><b><a href="${ex}/address/${v.address}" target="_blank">${short(v.address)}</a></b></div>`;
+    const agree=c.indexer_S_wad!==undefined&&c.indexer_S_wad===c.S_wad;
+    $('tjChain').innerHTML=`
+      <div class="kv"><span>WujiIndex</span><b><a href="${ex}/address/${c.contract}" target="_blank">${short(c.contract)}</a></b></div>
+      <div class="kv"><span>Contract S (wad)</span><b>${c.S_wad}</b></div>
+      <div class="kv"><span>Indexer S @ same block</span><b>${c.indexer_S_wad??'—'}</b></div>
+      <div class="kv"><span>Agreement</span><b class="${agree?'ok':'bad'}">${agree?'✓ bit-for-bit identical':c.frozenBlocks?'differs: frozen blocks':'✗ MISMATCH'}</b></div>
+      <div class="kv"><span>Contract last block</span><b>#${c.lastBlock.toLocaleString()}</b></div>
+      <div class="kv"><span>Index head block</span><b>#${HEAD.block.toLocaleString()} · contract ${(HEAD.block-c.lastBlock).toLocaleString()} behind</b></div>
+      <div class="kv"><span>Frozen blocks</span><b class="${c.frozenBlocks?'bad':'ok'}">${c.frozenBlocks}</b></div>
+      <div class="kv"><span>Contract price</span><b>${fmt4(c.price)}</b></div>
+      <div style="margin-top:10px;color:var(--dim);font-size:10px;line-height:1.6">S = 3.3e-7 · Σ(byteSum(blockhash) − 4080). 合约在链上折叠，索引器在链下重算，两边在同一区块必须得到同一个整数。点任意 K 线 → BscScan 自己验。</div>`;
+    renderWallet();
+  }
+
+  // ---- wallet: raw EIP-1193, hand-rolled ABI for four calls. No library, nothing to trust.
+  const W={acct:null,chainId:null,bal:{},busy:false,msg:''};
+  const pad=(h)=>h.replace(/^0x/,'').padStart(64,'0');
+  const toWad=n=>BigInt(Math.round(n*1e6))*10n**12n;
+  const hex=(b)=>'0x'+b.toString(16);
+  const eth=()=>window.ethereum;
+  async function ethCall(to,data){return eth().request({method:'eth_call',params:[{to,data},'latest']});}
+  async function refreshWallet(){ const c=HEAD.chain; if(!W.acct||!c||!c.vault)return; const v=c.vault; const me=pad(W.acct);
+    const [u,y,n,al]=await Promise.all([ethCall(v.asset,'0x70a08231'+me),ethCall(v.yang,'0x70a08231'+me),ethCall(v.yin,'0x70a08231'+me),ethCall(v.asset,'0xdd62ed3e'+me+pad(v.address))]);
+    W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; W.chainId=parseInt(await eth().request({method:'eth_chainId'}),16); renderWallet(); }
+  async function connect(){ if(!eth()){W.msg='No wallet found. Install MetaMask.';renderWallet();return;}
+    try{ const a=await eth().request({method:'eth_requestAccounts'}); W.acct=a[0]; W.msg='';
+      const want=HEAD.chain?.vault?.chainId||97; const cur=parseInt(await eth().request({method:'eth_chainId'}),16);
+      if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&want===97) await eth().request({method:'wallet_addEthereumChain',params:[{chainId:'0x61',chainName:'BNB Smart Chain Testnet',nativeCurrency:{name:'tBNB',symbol:'tBNB',decimals:18},rpcUrls:['https://bsc-testnet-rpc.publicnode.com'],blockExplorerUrls:['https://testnet.bscscan.com']}]}); else throw e; } }
+      eth().on&&eth().on('accountsChanged',a=>{W.acct=a[0]||null;refreshWallet();renderWallet();});
+      await refreshWallet(); }catch(e){ W.msg=e.message||String(e); renderWallet(); } }
+  async function send(to,data,label){ W.busy=true;W.msg=label+' · confirm in wallet…';renderWallet();
+    try{ const h=await eth().request({method:'eth_sendTransaction',params:[{from:W.acct,to,data}]}); W.msg=label+' · sent '+short(h)+' · waiting…';renderWallet();
+      for(let i=0;i<120;i++){ const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]}); if(r){ W.msg=(r.status==='0x1'?'✓ ':'✗ ')+label+' · '+short(h); break;} await new Promise(r=>setTimeout(r,1500)); }
+    }catch(e){ W.msg='✗ '+(e.shortMessage||e.message||String(e)).slice(0,120); }
+    W.busy=false; await refreshWallet(); renderWallet(); }
+  async function doMint(){ const v=HEAD.chain.vault, pairs=Math.max(0.01,+$('wPairs').value||1), need=pairs*100*1.0005;
+    if(W.bal.allow<need) await send(v.asset,'0x095ea7b3'+pad(v.address)+pad((2n**256n-1n).toString(16)),'approve USDT');
+    await send(v.address,'0xa0712d68'+pad(toWad(pairs).toString(16)),`mint ${pairs} pair`); }
+  async function doRedeem(){ const v=HEAD.chain.vault, pairs=Math.max(0.01,+$('wPairs').value||1);
+    await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`); }
+  function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; if(!c||!c.vault){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
+    if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${W.msg||'MetaMask / any EIP-1193 wallet · BSC testnet'}</div>`; $('wConnect').onclick=connect; return; }
+    const v=c.vault, b=W.bal, wrong=W.chainId&&W.chainId!==v.chainId;
+    el.innerHTML=`
+      <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
+      <div class="kv"><span>USDT</span><b>${b.usdt===undefined?'…':fmt(b.usdt)}</b></div>
+      <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmt(b.yang*100*v.yangShare)}</span></div>
+      <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmt(b.yin*100*(1-v.yangShare))}</span></div>
+      <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · 100/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
+      <div class="msg2">${W.msg||'mint: 1 pair = 1 YANG + 1 YIN for 100 USDT (+0.05%). redeem: a pair → 100 USDT any time.'}</div>`;
+    $('wMint').onclick=doMint; $('wRedeem').onclick=doRedeem; }
+  $('wConnect').onclick=connect;
+  setInterval(()=>{ if(W.acct&&!W.busy)refreshWallet().catch(()=>{}); },15000);
+
   function renderMode(now){
     const real=nowTick(), sc=$('scrub'); sc.max=real; if(document.activeElement!==sc) sc.value=now;
     const b=$('modeBtn'); const rp=replayT!==null;
@@ -627,7 +738,7 @@
   function renderAll(force){
     const now=viewTick(); if(!force&&now===lastTick)return; lastTick=now; const price=priceAt(now);
     if(replayT===null)checkLiq(now);
-    draw();renderTop(now,price);renderAcct(price);renderBook(now,price);renderLead(now,price);renderVerdict(now,price);renderNews(now);renderMode(now);renderLiqs();
+    draw();renderTop(now,price);renderAcct(price);renderBook(now,price);renderLead(now,price);renderVerdict(now,price);renderNews(now);renderMode(now);renderLiqs();renderTaiji();
   }
   function setReplay(t){ const real=nowTick(); replayT=(t===null||t>=real)?null:Math.max(0,t|0);
     const hash=replayT===null?'':'#t='+new Date((GENESIS+replayT)*1000).toISOString().slice(0,19)+'Z';

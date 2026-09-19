@@ -15,6 +15,7 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const GENESIS_BLOCK = +(process.env.GENESIS_BLOCK || 122616000);
 const CONTRACT = process.env.CONTRACT || '';   // WujiIndex address on the chain RPC points at; enables the on-chain cross-check
 const VAULT = process.env.VAULT || '';
+const CHAIN_ID = +(process.env.CHAIN_ID || (RPCS[0].includes('testnet') || RPCS[0].includes('prebsc') ? 97 : 56));
 const UNIT = 3.3e-7;           // log-increment per unit of (byteSum − 4080); contract: UNIT = 3.3e11 wad
 const MEAN = 4080;             // 32 · 127.5
 const SIGMA = UNIT * Math.sqrt(32 * 65535 / 12);  // ≈1.38e-4 per block (≈6%/day at ~192k blocks/day)
@@ -94,7 +95,7 @@ async function getBlocks(from, to) {
 async function getBlock(b) { return (await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_getBlockByNumber', params: [hex(b), false] })).result; }
 
 // ---------- on-chain cross-check (raw eth_call, no ABI library) ----------
-const SEL = { S: '0x4be1c796', lastBlock: '0x806b984f', frozenBlocks: '0x6998a0d0', yangShare: '0xdbc1faef', currentId: '0xe00dd161', series: '0xdc22cb6a' };
+const SEL = { S: '0x4be1c796', lastBlock: '0x806b984f', frozenBlocks: '0x6998a0d0', yangShare: '0xdbc1faef', currentId: '0xe00dd161', series: '0xdc22cb6a', asset: '0x38d52e0f', liabilities: '0xb4add307', balanceOf: '0x70a08231' };
 const call = async (to, data) => (await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] })).result;
 const toInt = h => { const v = BigInt(h); return v >= (1n << 255n) ? v - (1n << 256n) : v; };
 let chain = null;
@@ -108,11 +109,12 @@ async function pollChain() {
     if (i >= 0 && i < n) { c.indexer_S_wad = (BigInt(U[i]) * 330000000000n).toString(); c.agree = c.indexer_S_wad === c.S_wad || c.frozenBlocks > 0; }
     c.S = Number(toInt(sW)) / 1e18; c.price = 100 * Math.exp(c.S);
     if (VAULT) {
-      const [ys, cid] = await Promise.all([call(VAULT, SEL.yangShare), call(VAULT, SEL.currentId)]);
-      const id = Number(BigInt(cid));
-      const sr = await call(VAULT, SEL.series + id.toString(16).padStart(64, '0'));
+      const [ys, cid, asset, liab] = await Promise.all([call(VAULT, SEL.yangShare), call(VAULT, SEL.currentId), call(VAULT, SEL.asset), call(VAULT, SEL.liabilities)]);
+      const id = Number(BigInt(cid)); const assetAddr = '0x' + asset.slice(26);
+      const [sr, bal] = await Promise.all([call(VAULT, SEL.series + id.toString(16).padStart(64, '0')), call(assetAddr, SEL.balanceOf + VAULT.slice(2).toLowerCase().padStart(64, '0'))]);
       const w = k => '0x' + sr.slice(2 + 64 * k, 2 + 64 * (k + 1));
-      c.vault = { address: VAULT, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), start: Number(BigInt(w(3))), expiry: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18 };
+      c.vault = { address: VAULT, asset: assetAddr, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), start: Number(BigInt(w(3))), expiry: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18,
+        balance: Number(BigInt(bal)) / 1e18, liabilities: Number(BigInt(liab)) / 1e18, chainId: CHAIN_ID, explorer: CHAIN_ID === 97 ? 'https://testnet.bscscan.com' : 'https://bscscan.com' };
     }
     chain = c;
   } catch (e) { chain = { contract: CONTRACT, err: e.message }; }

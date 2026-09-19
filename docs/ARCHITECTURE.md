@@ -86,7 +86,7 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
 2b. ✅ 价格合约 `WujiIndex` + 单元/模糊/真实哈希对账测试
 2c. ✅ 金库合约 `WujiVault` + 单元/模糊/不变量测试
 3. ✅ BSC testnet 部署（`contracts/deployments/bsc-testnet.json`），keeper 在跑，链上 S 与索引器逐位一致
-3b. 终端接合约（两仪视图、钱包）
+3b. ✅ 终端「两仪 · On-chain」标签：YANG/YIN 实时值、期次倒计时、合约 S vs 索引 S 对照、金库偿付、钱包 mint/redeem（原生 EIP-1193，无库；MetaMask 实机待验）
 4. 审计、主网、上池子
 5. 滚动金库（WUJI / YIN 永续）
 
