@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
-import {SeriesToken} from "../src/SeriesToken.sol";
+import {SeriesToken, SeriesTokenDeployer} from "../src/SeriesToken.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 import {MockHistory} from "./mocks/MockHistory.sol";
 
@@ -142,7 +142,7 @@ contract WujiVaultInvariants is Test {
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
         index = new WujiIndex(1000, 100);
-        vault = new WujiVault(usdt, index, NOTIONAL, treasury);
+        vault = new WujiVault(usdt, index, NOTIONAL, treasury, new SeriesTokenDeployer());
         handler = new Handler(vault, index, usdt);
         targetContract(address(handler));
     }

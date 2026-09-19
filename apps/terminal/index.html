@@ -442,7 +442,7 @@
   // ================= CHART =================
   const PKEY='noise-perp:prefs';
   let prefs={}; try{prefs=JSON.parse(localStorage.getItem(PKEY))||{};}catch(e){}
-  const savePrefs=()=>{try{localStorage.setItem(PKEY,JSON.stringify({tf,chartType,ta:taOn,tab:curTab}));}catch(e){}};
+  const savePrefs=()=>{try{localStorage.setItem(PKEY,JSON.stringify({tf,chartType,ta:taOn,tab:curTab,vault:typeof vaultIdx==='number'?vaultIdx:0}));}catch(e){}};
   let tf=+prefs.tf||15, chartType=prefs.chartType==='line'?'line':'candle', size=5, curTab=prefs.tab||'lead';
   let mouse=null, chartMap=null, hoverT=null, hoverBlock=null;   // crosshair state + last draw's coordinate map
   const cv=$('chart'), ctx=cv.getContext('2d');
@@ -655,15 +655,19 @@
   const fmt4=n=>n.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
   const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'—';
   const ago=s=>{s=Math.max(0,s|0);if(s<60)return s+'s';if(s<3600)return (s/60|0)+'m '+(s%60)+'s';const d=s/86400|0,h=(s%86400)/3600|0,m=(s%3600)/60|0;return (d?d+'d ':'')+h+'h '+m+'m';};
+  let vaultIdx=+(prefs.vault||0);
+  const curVault=()=>{const c=HEAD.chain; if(!c)return null; const list=c.vaults||(c.vault?[c.vault]:[]); if(!list.length)return null; if(vaultIdx>=list.length)vaultIdx=0; return list[vaultIdx];};
   function renderTaiji(){
-    const c=HEAD.chain; const wrap=$('tYYwrap');
-    if(!c||!c.vault){wrap.hidden=true;$('cChain').textContent='';return;}
-    const v=c.vault, ex=v.explorer, yang=100*v.yangShare, yin=100-yang;
+    const c=HEAD.chain; const wrap=$('tYYwrap'); const v0=curVault();
+    if(!c||!v0){wrap.hidden=true;$('cChain').textContent='';return;}
+    const v=v0, ex=v.explorer, yang=100*v.yangShare, yin=100-yang;
     const blocksLeft=Math.max(0,v.settlementBlock-HEAD.block), eta=blocksLeft*.45;
-    wrap.hidden=false;$('tYang').textContent=fmt(yang);$('tYin').textContent=fmt(yin);$('tSeries').textContent='#'+v.seriesId;
+    wrap.hidden=false;$('tYang').textContent=fmt(yang);$('tYin').textContent=fmt(yin);$('tSeries').textContent=(v.symbol||'')+' #'+v.seriesId;
     $('cChain').textContent=c.frozenBlocks?'⚠':'✓';
-    $('tjSeries').innerHTML=`
+    const list=c.vaults||[v]; const sel=list.length>1?`<div class="tb" style="display:flex;gap:2px;margin-bottom:8px">${list.map((x,i)=>`<button data-v="${i}" class="${i===vaultIdx?'on':''}" style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;color:${i===vaultIdx?'var(--ink)':'var(--dim)'};background:${i===vaultIdx?'var(--panel2)':'none'};border:1px solid ${i===vaultIdx?'var(--line2)':'transparent'}">${x.symbol||'?'} · ${x.notional}/pair</button>`).join('')}</div>`:'';
+    $('tjSeries').innerHTML=sel+`
       <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}</div><div class="yin">${fmt(yin)} YIN</div></div>
+      <div class="kv"><span>Collateral</span><b>${v.symbol||'—'} · ${v.notional} per pair · <a href="${ex}/token/${v.asset}" target="_blank">${short(v.asset)}</a></b></div>
       <div class="kv"><span>Series</span><b>#${v.seriesId} · ${v.settled?'SETTLED':'OPEN'}</b></div>
       <div class="kv"><span>Start block</span><b>#${v.startBlock.toLocaleString()}</b></div>
       <div class="kv"><span>Settlement block</span><b>#${v.settlementBlock.toLocaleString()} · ${HEAD.block<=v.settlementBlock?'≈ '+ago(eta):'checkpoint ready'}</b></div>
@@ -684,6 +688,7 @@
       <div class="kv"><span>Frozen blocks</span><b class="${c.frozenBlocks?'bad':'ok'}">${c.frozenBlocks}</b></div>
       <div class="kv"><span>Contract price</span><b>${fmt4(c.price)}</b></div>
       <div style="margin-top:10px;color:var(--dim);font-size:10px;line-height:1.6">S = 3.3e-7 · Σ(byteSum(blockhash) − 4080). 合约在链上折叠，索引器在链下重算，两边在同一区块必须得到同一个整数。点任意 K 线 → BscScan 自己验。</div>`;
+    [...$('tjSeries').querySelectorAll('button[data-v]')].forEach(b=>b.onclick=()=>{vaultIdx=+b.dataset.v;savePrefs();W.bal={};renderTaiji();refreshWallet().catch(()=>{});});
     renderWallet();
   }
 
@@ -694,12 +699,12 @@
   const hex=(b)=>'0x'+b.toString(16);
   const eth=()=>window.ethereum;
   async function ethCall(to,data){return eth().request({method:'eth_call',params:[{to,data},'latest']});}
-  async function refreshWallet(){ const c=HEAD.chain; if(!W.acct||!c||!c.vault)return; const v=c.vault; const me=pad(W.acct);
+  async function refreshWallet(){ const c=HEAD.chain; const v=curVault(); if(!W.acct||!c||!v)return; const me=pad(W.acct);
     const [u,y,n,al]=await Promise.all([ethCall(v.asset,'0x70a08231'+me),ethCall(v.yang,'0x70a08231'+me),ethCall(v.yin,'0x70a08231'+me),ethCall(v.asset,'0xdd62ed3e'+me+pad(v.address))]);
     W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; W.chainId=parseInt(await eth().request({method:'eth_chainId'}),16); renderWallet(); }
   async function connect(){ if(!eth()){W.msg='No wallet found. Install MetaMask.';renderWallet();return;}
     try{ const a=await eth().request({method:'eth_requestAccounts'}); W.acct=a[0]; W.msg='';
-      const want=HEAD.chain?.vault?.chainId||97; const cur=parseInt(await eth().request({method:'eth_chainId'}),16);
+      const want=curVault()?.chainId||97; const cur=parseInt(await eth().request({method:'eth_chainId'}),16);
       if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&want===97) await eth().request({method:'wallet_addEthereumChain',params:[{chainId:'0x61',chainName:'BNB Smart Chain Testnet',nativeCurrency:{name:'tBNB',symbol:'tBNB',decimals:18},rpcUrls:['https://bsc-testnet-rpc.publicnode.com'],blockExplorerUrls:['https://testnet.bscscan.com']}]}); else throw e; } }
       eth().on&&eth().on('accountsChanged',a=>{W.acct=a[0]||null;refreshWallet();renderWallet();});
       await refreshWallet(); }catch(e){ W.msg=e.message||String(e); renderWallet(); } }
@@ -708,21 +713,21 @@
       for(let i=0;i<120;i++){ const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]}); if(r){ W.msg=(r.status==='0x1'?'✓ ':'✗ ')+label+' · '+short(h); break;} await new Promise(r=>setTimeout(r,1500)); }
     }catch(e){ W.msg='✗ '+(e.shortMessage||e.message||String(e)).slice(0,120); }
     W.busy=false; await refreshWallet(); renderWallet(); }
-  async function doMint(){ const v=HEAD.chain.vault, pairs=Math.max(0.01,+$('wPairs').value||1), need=pairs*100*1.0005;
+  async function doMint(){ const v=curVault(), pairs=Math.max(0.01,+$('wPairs').value||1), need=pairs*v.notional*1.0005;
     if(W.bal.allow<need) await send(v.asset,'0x095ea7b3'+pad(v.address)+pad((2n**256n-1n).toString(16)),'approve USDT');
     await send(v.address,'0xa0712d68'+pad(toWad(pairs).toString(16)),`mint ${pairs} pair`); }
-  async function doRedeem(){ const v=HEAD.chain.vault, pairs=Math.max(0.01,+$('wPairs').value||1);
+  async function doRedeem(){ const v=curVault(), pairs=Math.max(0.01,+$('wPairs').value||1);
     await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`); }
-  function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; if(!c||!c.vault){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
+  function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; const vv=curVault(); if(!c||!vv){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
     if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${W.msg||'MetaMask / any EIP-1193 wallet · BSC testnet'}</div>`; $('wConnect').onclick=connect; return; }
-    const v=c.vault, b=W.bal, wrong=W.chainId&&W.chainId!==v.chainId;
+    const v=vv, b=W.bal, wrong=W.chainId&&W.chainId!==v.chainId;
     el.innerHTML=`
       <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
-      <div class="kv"><span>USDT</span><b>${b.usdt===undefined?'…':fmt(b.usdt)}</b></div>
-      <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmt(b.yang*100*v.yangShare)}</span></div>
-      <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmt(b.yin*100*(1-v.yangShare))}</span></div>
-      <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · 100/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
-      <div class="msg2">${W.msg||'mint: 1 pair = 1 YANG + 1 YIN for 100 USDT (+0.05%). redeem: a pair → 100 USDT any time.'}</div>`;
+      <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmt(b.usdt)}</b></div>
+      <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmt(b.yang*v.notional*v.yangShare)} ${v.symbol||''}</span></div>
+      <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmt(b.yin*v.notional*(1-v.yangShare))} ${v.symbol||''}</span></div>
+      <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · ${v.notional} ${v.symbol||''}/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
+      <div class="msg2">${W.msg||`mint: 1 pair = 1 YANG + 1 YIN for ${v.notional} ${v.symbol||''} (+0.05%). redeem: a pair → ${v.notional} ${v.symbol||''} any time.`}</div>`;
     $('wMint').onclick=doMint; $('wRedeem').onclick=doRedeem; }
   $('wConnect').onclick=connect;
   setInterval(()=>{ if(W.acct&&!W.busy)refreshWallet().catch(()=>{}); },15000);

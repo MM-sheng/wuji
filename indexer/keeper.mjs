@@ -1,18 +1,21 @@
 // WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles fixed-block series.
 // Signs with `cast` (Foundry) so this file has no dependencies and never touches the key itself.
 //
-//   RPC=... PRIVATE_KEY=... CONTRACT=<WujiIndex> [VAULT=<WujiVault>] [INTERVAL=45] node indexer/keeper.mjs
+//   RPC=... KEYSTORE_ACCOUNT=... PASSWORD_FILE=... CONTRACT=<WujiIndex> [FACTORY=<WujiVaultFactory>] [VAULT=<WujiVault>] [INTERVAL=45] node indexer/keeper.mjs
+//   With FACTORY set, every vault the factory knows is settled; VAULT alone settles just that one.
 //
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 
-const { RPC, PRIVATE_KEY, CONTRACT, VAULT } = process.env;
+const { RPC, KEYSTORE_ACCOUNT, PASSWORD_FILE, CONTRACT, VAULT, FACTORY } = process.env;
 const INTERVAL = +(process.env.INTERVAL || 45);
-if (!RPC || !PRIVATE_KEY || !CONTRACT) { console.error('need RPC, PRIVATE_KEY, CONTRACT'); process.exit(1); }
+if (!RPC || !KEYSTORE_ACCOUNT || !PASSWORD_FILE || !CONTRACT) { console.error('need RPC, KEYSTORE_ACCOUNT, PASSWORD_FILE, CONTRACT (run contracts/scripts/set-key.sh)'); process.exit(1); }
 const CAST = process.env.CAST || path.join(os.homedir(), '.foundry', 'bin', 'cast');
 const cast = (...a) => execFileSync(CAST, [...a, '--rpc-url', RPC], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-const send = (to, sig, gas, ...args) => cast('send', to, sig, ...args, '--private-key', PRIVATE_KEY, '--gas-limit', String(gas), '--json');
+const PWFILE = path.isAbsolute(PASSWORD_FILE) ? PASSWORD_FILE : path.join(process.cwd(), 'contracts', PASSWORD_FILE);
+const send = (to, sig, gas, ...args) => cast('send', to, sig, ...args, '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), '--json');
+const redact = s => { const lines = String(s).replace(/0x[0-9a-fA-F]{64}/g, '0x…').split('\n').map(l => l.trim()).filter(Boolean); return lines.find(l => /^Error|insufficient|revert|nonce|underpriced|timeout/i.test(l)) || lines.find(l => !/^Command failed/.test(l)) || 'cast send failed'; };
 const num = s => Number(BigInt(s.split(' ')[0]));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
@@ -24,15 +27,24 @@ async function once() {
     const r = JSON.parse(send(CONTRACT, 'tick(uint256)', 150_000 + n * 6_500, String(n)));
     log(`tick  pending=${pending} folded≤${n} status=${r.status} gas=${parseInt(r.gasUsed, 16)} ${r.transactionHash}`);
   }
-  if (VAULT) {
-    const id = num(cast('call', VAULT, 'currentId()(uint256)'));
-    const settlementBlock = num(cast('call', VAULT, 'currentSettlementBlock()(uint64)'));
-    const head = num(cast('block-number'));
+  const vaults = FACTORY ? listVaults() : VAULT ? [VAULT] : [];
+  if (!vaults.length) return;
+  const head = num(cast('block-number'));
+  for (const v of vaults) {
+    const id = num(cast('call', v, 'currentId()(uint256)'));
+    const settlementBlock = num(cast('call', v, 'currentSettlementBlock()(uint64)'));
     if (head > settlementBlock) {
-      const r = JSON.parse(send(VAULT, 'settle()', 3_500_000));
-      log(`settle series ${id} at checkpoint #${settlementBlock} status=${r.status} ${r.transactionHash}`);
+      const r = JSON.parse(send(v, 'settle()', 3_500_000));
+      log(`settle ${v.slice(0, 10)} series ${id} at checkpoint #${settlementBlock} status=${r.status} ${r.transactionHash}`);
     }
   }
 }
-log(`keeper on ${CONTRACT}${VAULT ? ' + vault ' + VAULT : ''} every ${INTERVAL}s`);
-for (;;) { try { await once(); } catch (e) { log('error:', (e.stderr || e.message || '').toString().split('\n')[0]); } await new Promise(r => setTimeout(r, INTERVAL * 1000)); }
+let vaultCache = { at: 0, list: [] };
+function listVaults() {                                    // re-read the factory every ~10 min: anyone can add a vault
+  if (Date.now() - vaultCache.at < 600_000) return vaultCache.list;
+  const n = num(cast('call', FACTORY, 'count()(uint256)'));
+  const list = []; for (let i = 0; i < n; i++) list.push(cast('call', FACTORY, 'vaults(uint256)(address)', String(i)));
+  vaultCache = { at: Date.now(), list }; log(`factory has ${n} vault(s)`); return list;
+}
+log(`keeper on ${CONTRACT}${FACTORY ? ' + factory ' + FACTORY : VAULT ? ' + vault ' + VAULT : ''} every ${INTERVAL}s`);
+for (;;) { try { await once(); } catch (e) { log('error:', redact(e.stderr || e.message || '')); } await new Promise(r => setTimeout(r, INTERVAL * 1000)); }

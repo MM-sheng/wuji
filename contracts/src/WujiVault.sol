@@ -2,10 +2,11 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {WujiIndex} from "./WujiIndex.sol";
-import {SeriesToken} from "./SeriesToken.sol";
+import {SeriesToken, SeriesTokenDeployer} from "./SeriesToken.sol";
 
 /// @title WujiVault — 无极生太极，太极生两仪
 /// @notice Deposit NOTIONAL of collateral, receive one YANG and one YIN of the current series.
@@ -31,6 +32,8 @@ contract WujiVault is ReentrancyGuard {
     WujiIndex public immutable index;
     uint256 public immutable NOTIONAL; // collateral per pair (e.g. 100e18)
     address public immutable treasury; // where fees go; set once, forever
+    SeriesTokenDeployer public immutable tokens; // stateless helper that deploys YANG/YIN tokens bound to this vault
+    string public collateralSymbol; // e.g. "USDT"; baked into series token names
 
     struct Series {
         SeriesToken yang;
@@ -51,7 +54,9 @@ contract WujiVault is ReentrancyGuard {
         uint256 indexed id, address indexed from, uint256 yang, uint256 yin, uint256 collateral, uint256 fee
     );
 
-    constructor(IERC20 asset_, WujiIndex index_, uint256 notional_, address treasury_) {
+    constructor(IERC20 asset_, WujiIndex index_, uint256 notional_, address treasury_, SeriesTokenDeployer tokens_) {
+        require(address(tokens_).code.length > 0, "deployer not contract");
+        tokens = tokens_;
         require(address(asset_).code.length > 0, "asset not contract");
         require(address(index_).code.length > 0, "index not contract");
         require(notional_ >= 1e6, "notional too small");
@@ -60,6 +65,7 @@ contract WujiVault is ReentrancyGuard {
         index = index_;
         NOTIONAL = notional_;
         treasury = treasury_;
+        collateralSymbol = _symbolOf(address(asset_));
         index_.tick();
         uint64 boundary = index_.nextCheckpointBlock();
         require(boundary >= block.number, "index stale: tick first");
@@ -187,8 +193,9 @@ contract WujiVault is ReentrancyGuard {
     function _open(int256 s0, uint64 startBlock, uint64 settlementBlock) internal returns (uint256 id) {
         id = series.length;
         string memory n = _toString(id);
-        SeriesToken yang = new SeriesToken(string.concat("WUJI Yang #", n), string.concat("YANG-", n));
-        SeriesToken yin = new SeriesToken(string.concat("WUJI Yin #", n), string.concat("YIN-", n));
+        string memory c = collateralSymbol;
+        SeriesToken yang = tokens.deploy(string.concat("WUJI Yang ", c, " #", n), string.concat("YANG-", c, "-", n), address(this));
+        SeriesToken yin = tokens.deploy(string.concat("WUJI Yin ", c, " #", n), string.concat("YIN-", c, "-", n), address(this));
         series.push(
             Series({
                 yang: yang,
@@ -222,6 +229,16 @@ contract WujiVault is ReentrancyGuard {
 
     function _ceilBps(uint256 x) internal pure returns (uint256) {
         return (x * FEE_BPS + 9_999) / 10_000;
+    }
+
+    /// @dev symbol() is optional in ERC-20; fall back to a generic tag so names never revert
+    function _symbolOf(address a) internal view returns (string memory) {
+        (bool ok, bytes memory r) = a.staticcall(abi.encodeWithSelector(IERC20Metadata.symbol.selector));
+        if (ok && r.length >= 64) {
+            string memory sym = abi.decode(r, (string));
+            if (bytes(sym).length > 0 && bytes(sym).length <= 11) return sym;
+        }
+        return "TOKEN";
     }
 
     function _toString(uint256 v) internal pure returns (string memory) {

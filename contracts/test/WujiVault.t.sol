@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {WujiTestBase} from "./Base.t.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
-import {SeriesToken} from "../src/SeriesToken.sol";
+import {SeriesToken, SeriesTokenDeployer} from "../src/SeriesToken.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -42,7 +42,7 @@ contract WujiVaultTest is WujiTestBase {
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
         index = new WujiIndex(GENESIS, INTERVAL);
-        vault = new WujiVault(usdt, index, NOTIONAL, treasury);
+        vault = new WujiVault(usdt, index, NOTIONAL, treasury, new SeriesTokenDeployer());
         for (uint256 i = 0; i < 2; i++) {
             address a = i == 0 ? alice : bob;
             usdt.mint(a, 1_000_000e18);
@@ -98,7 +98,7 @@ contract WujiVaultTest is WujiTestBase {
 
     function test_mintRejectsFeeOnTransferCollateral() public {
         FeeOnTransferToken feeToken = new FeeOnTransferToken();
-        WujiVault feeVault = new WujiVault(feeToken, index, NOTIONAL, treasury);
+        WujiVault feeVault = new WujiVault(feeToken, index, NOTIONAL, treasury, new SeriesTokenDeployer());
         feeToken.mint(alice, 1_000e18);
         vm.startPrank(alice);
         feeToken.approve(address(feeVault), type(uint256).max);
