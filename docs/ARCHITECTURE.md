@@ -51,11 +51,11 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
 
 ## 4. 合约层
 
-- **价格合约** `contracts/src/WujiIndex.sol`：`tick()` 任何人可调，把上次记录以来的块哈希折进 `S`。Solidity 只能读最近 256 块（≈2 分钟），保障：
-  1. 所有用户交易顺手 tick
-  2. keeper 每分钟 tick，gas 由手续费池报销
-  3. 断档（>256 块无人 tick）：断档增量**定义为 0**，`frozenBlocks` 计数，`Gap` 事件留记录。丑但确定。
-  - 实测：折满 256 块一次 `tick` ≈ 366k gas；每天约 750 次 ≈ 275M gas，按 BSC 0.05 gwei ≈ 0.014 BNB/天。
+- **价格合约** `contracts/src/WujiIndex.sol`：`tick(max)` 任何人可调，把上次记录以来最多 `max` 个块哈希（最旧优先）折进 `S`；`tick()` 默认 1024。
+  - 哈希来源：最近 256 块用 `blockhash`（≈1.4k gas/块）；256～8191 块用 **EIP-2935 历史合约** `0x0000F90827F1C53a10cb7A02335B175320002935`（BSC 主网和测试网都已上线，实测可读 8000 块前的哈希；≈6k gas/块）。窗口约 **1 小时**，keeper 只要一小时内调一次就不会断档。
+  - 断档（>8191 块无人 tick）：断档增量**定义为 0**，`frozenBlocks` 计数，`Gap` 事件留记录。丑但确定。历史合约对窗口内的块拿不到哈希时**回滚**而不是记 0——宁可不记，不记错。
+  - keeper `indexer/keeper.mjs`：有积压 ≥40 块就 tick，gas 按积压量预算（gas 估算会过期：估算时的块数 < 上链时的块数，第一次部署就因此 OOG 过一次）；到期自动 `settle()`。
+  - 用户操作（mint/redeem）**不** tick：配对按面值铸赎与 S 无关，而且无界的折叠会让钱包 gas 估算失效。只有 `settle()` 需要新鲜的 S。
   - 无 owner、无升级、无参数可调。
 - **金库合约** `contracts/src/WujiVault.sol`：
   - `mint(pairs)` 拉 `pairs × NOTIONAL` 抵押 + 0.05% 费；`redeemPair(id, pairs)` 任何时候按面值赎（开期或已结算都行）；`settle()` 到期后任何人可调，冻结 share、开下一期；`redeemSettled(id, yang, yin)` 单边按冻结值赎。
@@ -85,7 +85,8 @@ WUJI 是一个**和世界无关的资产**：价格由 BNB 链的出块哈希决
 2. ✅ 索引器 + 终端接链：本地跑通"块 → 价格"（创世 #122616000，2026-09-18）
 2b. ✅ 价格合约 `WujiIndex` + 单元/模糊/真实哈希对账测试
 2c. ✅ 金库合约 `WujiVault` + 单元/模糊/不变量测试
-3. 部署 BSC testnet，终端接合约
+3. ✅ BSC testnet 部署（`contracts/deployments/bsc-testnet.json`），keeper 在跑，链上 S 与索引器逐位一致
+3b. 终端接合约（两仪视图、钱包）
 4. 审计、主网、上池子
 5. 滚动金库（WUJI / YIN 永续）
 

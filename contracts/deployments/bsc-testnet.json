@@ -1,0 +1,12 @@
+{
+  "chainId": 97,
+  "rpc": "https://bsc-testnet-rpc.publicnode.com",
+  "explorer": "https://testnet.bscscan.com",
+  "deployedAt": "2026-09-19",
+  "genesisBlock": 131844469,
+  "MockUSDT": "0xeb3B09Eb5d19fbc7576082Fb75c5708013c40aFf",
+  "WujiIndex": "0x9461B69F39E3Dd0b56941E8825274027f48776a0",
+  "WujiVault": "0xE3eAFFB720DF12d807948A0b54c7d28088060Fd8",
+  "treasury": "0x6657289562f870677325124f3ACbdebB0ea80B95",
+  "note": "third deployment: EIP-2935 reach + bounded tick(max); mint no longer ticks"
+}

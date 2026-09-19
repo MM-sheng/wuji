@@ -6,6 +6,7 @@ import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
 import {SeriesToken} from "../src/SeriesToken.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
+import {MockHistory} from "./mocks/MockHistory.sol";
 
 /// Random sequences of mint / redeemPair / redeemSettled / settle / index moves / time, by several actors.
 /// The vault must stay solvent and the pair must stay whole no matter the order.
@@ -87,11 +88,12 @@ contract Handler is Test {
 
     // move the chain: n fake blocks with random hashes, then tick
     function moveIndex(uint64 n, uint256 salt) external {
-        n = uint64(bound(n, 1, 300)); // > 256 sometimes, to exercise frozen gaps
+        n = uint64(salt % 25 == 0 ? bound(n, 8000, 9000) : bound(n, 1, 600)); // mostly small; sometimes past the 8191 window to exercise frozen gaps
         uint64 from = uint64(block.number);
         vm.roll(from + n);
-        for (uint64 b = from; b < from + n; b++) vm.setBlockhash(b, keccak256(abi.encode(b, salt)));
-        index.tick();
+        MockHistory h = MockHistory(payable(0x0000F90827F1C53a10cb7A02335B175320002935));
+        for (uint64 b = from; b < from + n; b++) { bytes32 x = keccak256(abi.encode(b, salt)); vm.setBlockhash(b, x); h.set(b, x); }
+        index.tick(n);
         ghostBlocksMoved += n;
     }
 
@@ -113,6 +115,8 @@ contract WujiVaultInvariants is Test {
     address treasury = makeAddr("treasury");
 
     function setUp() public {
+        MockHistory hist = new MockHistory();
+        vm.etch(0x0000F90827F1C53a10cb7A02335B175320002935, address(hist).code);
         vm.roll(1000);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();

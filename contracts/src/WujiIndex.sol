@@ -10,14 +10,21 @@ pragma solidity ^0.8.24;
 ///
 ///         No owner, no oracle, no upgrade path. The only input is the chain.
 ///
-/// @dev    blockhash() only reaches back 256 blocks. tick() must therefore be called at least every
-///         256 blocks; blocks that fall out of reach before being folded are FROZEN (increment 0)
-///         and counted in `frozenBlocks`. Ugly, deterministic, and verifiable — by design.
+/// @dev    Hashes come from blockhash() for the last 256 blocks and from the EIP-2935 history contract
+///         (live on BSC) for the last 8191 (≈1 h). tick() must be called at least that often; blocks
+///         that fall out of reach before being folded are FROZEN (increment 0) and counted in
+///         `frozenBlocks`. Ugly, deterministic, and verifiable — by design.
 contract WujiIndex {
     /// @notice wad (1e18) log-increment per unit of (byteSum − 4080)
     int256 public constant UNIT = 3.3e11;
     /// @notice expected byteSum of 32 uniform bytes: 32 · 127.5
     int256 public constant MEAN = 4080;
+
+    /// @notice EIP-2935 history storage: staticcall(abi.encode(blockNumber)) → hash, reverts outside the window
+    address public constant HISTORY = 0x0000F90827F1C53a10cb7A02335B175320002935;
+    uint256 public constant HISTORY_WINDOW = 8191;
+    /// @notice default cap on blocks folded per tick() call (≈ 1.6k gas each via blockhash, ≈ 4k via history)
+    uint256 public constant DEFAULT_MAX = 1024;
 
     uint64 public immutable GENESIS_BLOCK;
     /// @notice cumulative log-index in wad. price = 100 · exp(S / 1e18)
@@ -32,31 +39,38 @@ contract WujiIndex {
 
     /// @param genesisBlock first block that contributes. Must not be in the past beyond hash reach.
     constructor(uint64 genesisBlock) {
-        require(genesisBlock + 255 >= block.number, "genesis out of reach");
+        require(genesisBlock > 0 && genesisBlock + HISTORY_WINDOW - 1 >= block.number, "genesis out of reach");
         GENESIS_BLOCK = genesisBlock;
         lastBlock = genesisBlock - 1;
     }
 
-    /// @notice Fold every not-yet-folded, still-reachable block hash into S. Anyone may call.
+    /// @notice Fold up to DEFAULT_MAX not-yet-folded, still-reachable block hashes into S. Anyone may call.
+    function tick() external returns (uint64 folded) {
+        return tick(DEFAULT_MAX);
+    }
+
+    /// @notice Fold up to `maxBlocks` pending block hashes into S (oldest first). Anyone may call.
     /// @return folded number of blocks folded this call
-    function tick() public returns (uint64 folded) {
+    function tick(uint256 maxBlocks) public returns (uint64 folded) {
         // block numbers fit in uint64 for the next ~10^11 years; byteSum ≤ 8160 fits any int
         // forge-lint: disable-start(unsafe-typecast)
         uint256 cur = block.number;
         uint64 from = lastBlock + 1;
-        if (from >= cur) return 0; // current block's hash is not known yet
-        uint64 to = uint64(cur - 1);
-        uint64 oldest = cur > 256 ? uint64(cur - 256) : 0;
+        if (from >= cur || maxBlocks == 0) return 0; // current block's hash is not known yet
+        uint64 oldest = cur > HISTORY_WINDOW ? uint64(cur - HISTORY_WINDOW) : 0;
         if (from < oldest) {
             emit Gap(from, oldest - 1);
             frozenBlocks += oldest - from;
             from = oldest;
         }
+        uint256 last = cur - 1;
+        if (last - from + 1 > maxBlocks) last = from + maxBlocks - 1;
+        uint64 to = uint64(last);
         int256 s = S;
         unchecked {
             // |increment| ≤ 4080·UNIT ≈ 1.35e15 per block; overflow of int256 is impossible on any horizon
             for (uint256 b = from; b <= to; ++b) {
-                s += (int256(byteSum(blockhash(b))) - MEAN) * UNIT;
+                s += (int256(byteSum(_hash(b, cur))) - MEAN) * UNIT;
             }
         }
         S = s;
@@ -64,6 +78,15 @@ contract WujiIndex {
         emit Tick(from, to, s);
         return to - from + 1;
         // forge-lint: disable-end(unsafe-typecast)
+    }
+
+    /// @dev blockhash() for the recent 256, EIP-2935 beyond. Reverts if the history contract cannot serve a
+    ///      block we consider in-window: better to fold nothing than to fold a wrong hash.
+    function _hash(uint256 b, uint256 cur) internal view returns (bytes32 h) {
+        if (cur - b <= 256) return blockhash(b);
+        (bool ok, bytes memory r) = HISTORY.staticcall(abi.encode(b));
+        require(ok && r.length == 32, "history unavailable");
+        h = abi.decode(r, (bytes32));
     }
 
     /// @notice Sum of the 32 bytes of h, in [0, 8160]. SWAR: 5 fold steps instead of a 32-iteration loop.

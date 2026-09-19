@@ -104,7 +104,8 @@ contract WujiVault is ReentrancyGuard {
         id = currentId();
         Series storage s = series[id];
         require(block.timestamp < s.expiry, "series expired: settle first");
-        index.tick();
+        // no index.tick() here: pairs are minted at par, so S is irrelevant, and folding an unbounded
+        // number of blocks would make users' gas estimates stale by the time the tx mines.
         uint256 collateral = _ceilMul(pairs, NOTIONAL);
         uint256 fee = _ceilBps(collateral);
         asset.safeTransferFrom(msg.sender, address(this), collateral);
@@ -130,6 +131,7 @@ contract WujiVault is ReentrancyGuard {
     // ---------------------------------------------------------------- settlement
 
     /// @notice Freeze the current series at the index's value and open the next one. Anyone, after expiry.
+    /// @dev Calls index.tick() first; send with a generous gas limit (≈400k + tick backlog), estimates go stale fast.
     function settle() external nonReentrant returns (uint256 settledId, uint256 nextId) {
         settledId = currentId();
         Series storage s = series[settledId];

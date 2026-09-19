@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test} from "forge-std/Test.sol";
+import {WujiTestBase} from "./Base.t.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
 import {SeriesToken} from "../src/SeriesToken.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 
-contract WujiVaultTest is Test {
+contract WujiVaultTest is WujiTestBase {
     uint256 constant WAD = 1e18;
     uint256 constant NOTIONAL = 100e18;
     uint64 constant GENESIS = 1000;
@@ -20,6 +20,7 @@ contract WujiVaultTest is Test {
     address bob = makeAddr("bob");
 
     function setUp() public {
+        installHistory();
         vm.roll(GENESIS);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
@@ -36,13 +37,9 @@ contract WujiVaultTest is Test {
     // move the index: write `n` fake block hashes and tick. Returns the ΔS (wad) they produced.
     function advance(uint64 n, uint256 salt) internal returns (int256 dS) {
         uint64 from = uint64(block.number);
-        vm.roll(from + n);
-        for (uint64 b = from; b < from + n; b++) {
-            bytes32 h = keccak256(abi.encode(b, salt));
-            vm.setBlockhash(b, h);
-            dS += index.increment(h);
-        }
-        index.tick();
+        if (n == 0) return 0;
+        dS = writeHashes(index, from, from + n - 1, salt);
+        index.tick(n);
     }
 
     function series(uint256 id) internal view returns (SeriesToken yang, SeriesToken yin, int256 s0, uint64 expiry, bool settled, uint256 share) {
@@ -131,10 +128,10 @@ contract WujiVaultTest is Test {
 
     function advanceAll(uint64 n, bool up) internal returns (int256 dS) {
         uint64 from = uint64(block.number);
-        vm.roll(from + n);
-        bytes32 h = up ? bytes32(type(uint256).max) : bytes32(0);
-        for (uint64 b = from; b < from + n; b++) { vm.setBlockhash(b, h); dS += index.increment(h); }
-        index.tick();
+        // bytes32(0) would read as "unset" in the mock history, so the down case uses 0x01..01 (byteSum 32)
+        bytes32 h = up ? bytes32(type(uint256).max) : bytes32(uint256(0x0101010101010101010101010101010101010101010101010101010101010101));
+        dS = writeConstant(index, from, from + n - 1, h);
+        index.tick(n);
     }
 
     // ---------------------------------------------------------------- settlement

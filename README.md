@@ -13,7 +13,11 @@ WUJI is an asset correlated with nothing. Its price is written by BNB Chain bloc
 ## Run
 
 ```bash
-node indexer/index.mjs        # http://localhost:8787  (terminal + API)
+node indexer/index.mjs        # mainnet index → http://localhost:8787  (terminal + API)
+./scripts/testnet.sh          # testnet index (:8788) + keeper for the deployed contracts (needs contracts/.env)
+cd contracts && forge test    # unit / fuzz / invariant suites
 ```
+
+Testnet deployment: `contracts/deployments/bsc-testnet.json`.
 
 API: `/head` · `/seconds?from&to` · `/blocks?from&to` · `/blockAt?ts` · `/proof/:block`
