@@ -12,5 +12,11 @@
   "YANG-0": "0x453f37cCDa0Ccede02E1EaB2772A06c86686f0FD",
   "YIN-0": "0xcE3F24e6A29ebF755dC515A33fF6Dd2Eb2544acd",
   "treasury": "0x6657289562f870677325124f3ACbdebB0ea80B95",
+  "transactions": {
+    "deployMockUSDT": "0x4efa44656415a214fdaa84518c75d05f70e545473f208045511e5ce559f87cee",
+    "deployWujiIndex": "0x52f2903d1d552bda58e899f9e70c6d66d9f64c00d5f682a3007d5556323b1077",
+    "deployWujiVault": "0xaaf6e59c2aff19d377603c25caab599ba55df6d2b3752ddb44ef7cab2e23f946",
+    "smokeMint": "0x638d2efbfa6029d7d720d6acc7661ffb638c00c6eab0db80b43c7ab54f446621"
+  },
   "note": "fixed-block settlement: immutable 8000-block series with on-chain index checkpoints"
 }
