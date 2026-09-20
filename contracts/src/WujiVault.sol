@@ -39,14 +39,14 @@ contract WujiVault is ReentrancyGuard {
         SeriesToken yang;
         SeriesToken yin;
         int256 s0; // index S (wad) at open
-        uint64 startBlock;
-        uint64 settlementBlock;
+        uint64 startHeight;
+        uint64 settlementHeight;
         bool settled;
         uint256 yangShare; // wad share of NOTIONAL owed per YANG after settlement; yin = WAD − yangShare
     }
     Series[] public series;
 
-    event SeriesOpened(uint256 indexed id, address yang, address yin, int256 s0, uint64 settlementBlock);
+    event SeriesOpened(uint256 indexed id, address yang, address yin, int256 s0, uint64 settlementHeight);
     event SeriesSettled(uint256 indexed id, int256 s1, uint256 yangShare);
     event Minted(uint256 indexed id, address indexed to, uint256 pairs, uint256 collateral, uint256 fee);
     event RedeemedPair(uint256 indexed id, address indexed from, uint256 pairs, uint256 collateral, uint256 fee);
@@ -66,13 +66,13 @@ contract WujiVault is ReentrancyGuard {
         NOTIONAL = notional_;
         treasury = treasury_;
         collateralSymbol = _symbolOf(address(asset_));
-        // Fold at most a small backlog here: an unbounded tick would make vault creation cost arbitrary gas
+        // Fold at most a small backlog here: an unbounded fold would make vault creation cost arbitrary gas
         // (a 1024-block history fold is ~6M). With a larger backlog, advance the index first, then create.
-        require(index_.pending() <= 256, "index backlog: tick first");
-        index_.tick(256);
-        uint64 boundary = index_.nextCheckpointBlock();
-        require(boundary >= block.number, "index stale: tick first");
-        _open(index_.S(), index_.GENESIS_BLOCK(), boundary);
+        require(index_.pending() <= 256, "index backlog: fold first");
+        index_.fold(256);
+        uint64 boundary = index_.nextCheckpointHeight();
+        require(boundary > index_.lastHeight(), "index stale: fold first");
+        _open(index_.S(), index_.GENESIS_HEIGHT(), boundary);
     }
 
     // ---------------------------------------------------------------- views
@@ -81,15 +81,15 @@ contract WujiVault is ReentrancyGuard {
         return series.length - 1;
     }
 
-    function currentSettlementBlock() external view returns (uint64) {
-        return series[currentId()].settlementBlock;
+    function currentSettlementHeight() external view returns (uint64) {
+        return series[currentId()].settlementHeight;
     }
 
     /// @notice Live YANG share (wad) of the current series, as of the index's last folded block.
     function yangShare() public view returns (uint256) {
         Series storage s = series[currentId()];
         if (s.settled) return s.yangShare;
-        int256 s1 = index.checkpointed(s.settlementBlock) ? index.checkpointS(s.settlementBlock) : index.S();
+        int256 s1 = index.checkpointed(s.settlementHeight) ? index.checkpointS(s.settlementHeight) : index.S();
         return _share(s.s0, s1);
     }
 
@@ -122,8 +122,8 @@ contract WujiVault is ReentrancyGuard {
         require(pairs > 0, "zero");
         id = currentId();
         Series storage s = series[id];
-        require(block.number < s.settlementBlock, "series ended: settle first");
-        // no index.tick() here: pairs are minted at par, so S is irrelevant, and folding an unbounded
+        require(index.lastHeight() < s.settlementHeight, "series ended: settle first");
+        // no index.fold() here: pairs are minted at par, so S is irrelevant, and folding an unbounded
         // number of blocks would make users' gas estimates stale by the time the tx mines.
         uint256 collateral = _ceilMul(pairs, NOTIONAL);
         uint256 fee = _ceilBps(collateral);
@@ -152,16 +152,16 @@ contract WujiVault is ReentrancyGuard {
     // ---------------------------------------------------------------- settlement
 
     /// @notice Freeze the current series at its predetermined index checkpoint and open the next one.
-    /// @dev If the checkpoint is more than one default tick away, advance WujiIndex separately first.
+    /// @dev If the checkpoint is more than one default fold away, advance WujiIndex separately first.
     function settle() external nonReentrant returns (uint256 settledId, uint256 nextId) {
         settledId = currentId();
         Series storage s = series[settledId];
-        uint64 boundary = s.settlementBlock;
-        require(block.number > boundary, "settlement block not mined");
+        uint64 boundary = s.settlementHeight;
+        require(index.finalizedHeight() >= boundary, "settlement height not final");
         if (!index.checkpointed(boundary)) {
-            uint64 last = index.lastBlock();
-            require(last < boundary && boundary - last <= index.DEFAULT_MAX(), "index backlog: tick first");
-            index.tick();
+            uint64 last = index.lastHeight();
+            require(last < boundary && boundary - last <= index.DEFAULT_MAX(), "index backlog: fold first");
+            index.fold();
             require(index.checkpointed(boundary), "checkpoint unavailable");
         }
         int256 s1 = index.checkpointS(boundary);
@@ -193,7 +193,7 @@ contract WujiVault is ReentrancyGuard {
 
     // ---------------------------------------------------------------- internals
 
-    function _open(int256 s0, uint64 startBlock, uint64 settlementBlock) internal returns (uint256 id) {
+    function _open(int256 s0, uint64 startHeight, uint64 settlementHeight) internal returns (uint256 id) {
         id = series.length;
         string memory n = _toString(id);
         string memory c = collateralSymbol;
@@ -204,13 +204,13 @@ contract WujiVault is ReentrancyGuard {
                 yang: yang,
                 yin: yin,
                 s0: s0,
-                startBlock: startBlock,
-                settlementBlock: settlementBlock,
+                startHeight: startHeight,
+                settlementHeight: settlementHeight,
                 settled: false,
                 yangShare: 0
             })
         );
-        emit SeriesOpened(id, address(yang), address(yin), s0, settlementBlock);
+        emit SeriesOpened(id, address(yang), address(yin), s0, settlementHeight);
     }
 
     /// @dev share = ½ + ½·ΔS, ΔS in wad, clamped to [0, WAD]. Both sides bounded; nothing created or destroyed.

@@ -32,3 +32,26 @@ cross-checks, series solvency, wallet balances, paired minting, and paired redem
 
 Testnet prototype only. Fixed-block checkpoint settlement removes the known caller timing option.
 Do not deploy to mainnet until an independent contract review and the remaining checklist are complete.
+
+## Bitcoin source (2026-09-20)
+
+The Bitcoin implementation is isolated from the legacy BSC comparison stack. Read
+[the architecture](docs/ARCHITECTURE.md) and [acceptance report](docs/BTC_SOURCE_REPORT.md).
+
+```
+node --test indexer/bitcoin.test.mjs indexer/bitcoin-index.test.mjs
+cd contracts && forge test
+```
+
+Prepare a fresh independently compared checkpoint with `node scripts/prepare-bitcoin-checkpoint.mjs`.
+Deploy with `ENV_FILE=/absolute/path/to/contracts/.env bash contracts/scripts/deploy-testnet.sh` after tests.
+Start the new stack with the same ENV_FILE and `bash scripts/bitcoin-testnet.sh` (port 8789).
+The env contains only the Foundry account name, password-file path, deployer and RPC; never add a private key.
+
+For a local Bitcoin source: set `BITCOIN_API=http://127.0.0.1:8332` and
+`BITCOIN_API_KIND=bitcoind-rest` (Core REST enabled), or point BITCOIN_API at a local Esplora API.
+`SOURCE=bitcoin GENESIS_HEIGHT=... PORT=8789 node indexer/index.mjs` also runs standalone without contracts.
+It stays at 100 until the genesis height has six descendants. Averages are not block countdown guarantees.
+
+The old BSC deployments are archived in `contracts/deployments/bsc-testnet-legacy.json`.
+On the Bitcoin branch, use `scripts/bitcoin-testnet.sh`; do not run the old BSC startup script against the new manifest.

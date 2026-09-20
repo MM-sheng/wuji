@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 set -a; source contracts/.env; set +a
 [ -n "${KEYSTORE_ACCOUNT:-}" ] || { echo 'run contracts/scripts/set-key.sh first'; exit 1; }
-D=contracts/deployments/bsc-testnet.json
+D=contracts/deployments/bsc-testnet-legacy.json
 j() { python3 -c "import json;print(json.load(open('$D'))['$1'])"; }
 export CONTRACT=$(j WujiIndex) FACTORY=$(j WujiVaultFactory) GENESIS_BLOCK=$(j genesisBlock)
 export RPC="$RPC,https://data-seed-prebsc-1-s1.bnbchain.org:8545,https://data-seed-prebsc-2-s1.bnbchain.org:8545"   # indexer rotates on failure; keeper uses the first

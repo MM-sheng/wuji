@@ -21,7 +21,7 @@ contract WujiVaultFactoryTest is WujiTestBase {
     function setUp() public {
         installHistory();
         vm.roll(1000); vm.warp(1_800_000_000);
-        index = new WujiIndex(1000, 8000);
+        index = new WujiIndex(relay(), 1000, 8000);
         factory = new WujiVaultFactory(index, treasury, new SeriesTokenDeployer());
         usdt = new MockUSDT(); wbnb = new MockWBNB();
         usdt.mint(alice, 1e24); wbnb.mint(alice, 1e24);
@@ -50,7 +50,7 @@ contract WujiVaultFactoryTest is WujiTestBase {
         WujiVault vu = factory.create(usdt, 100e18);
         WujiVault vb = factory.create(wbnb, 1e18);
         writeHashes(index, 1000, 1299, 42);
-        index.tick(300);
+        index.fold(300);
         assertEq(vu.yangShare(), vb.yangShare());              // identical share...
         (uint256 yu,) = vu.values(); (uint256 yb,) = vb.values();
         assertEq(yu, 100e18 * vu.yangShare() / 1e18);         // ...different money
@@ -79,9 +79,9 @@ contract WujiVaultFactoryTest is WujiTestBase {
 
     function test_createRefusesLargeIndexBacklog() public {
         writeHashes(index, 1000, 1999, 77);          // 1000 unfolded blocks
-        vm.expectRevert("index backlog: tick first");
+        vm.expectRevert("index backlog: fold first");
         factory.create(usdt, 100e18);
-        index.tick(1024);                             // anyone advances the index...
+        index.fold(1024);                             // anyone advances the index...
         factory.create(usdt, 100e18);                 // ...then creation is cheap and exact
         assertEq(factory.count(), 1);
     }

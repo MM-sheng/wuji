@@ -1,0 +1,16 @@
+{
+  "genesisHeight": 967826,
+  "checkpointHeight": 967825,
+  "checkpointHeader": "00e002209464fca963f09ddc196e6eb6844cfa2fed64a4dd14b101000000000000000000fdd9cf69e83eb416d967e49f154e615184e4bb96cdd1fa3780e2eedd2e85e6a14ecfaf6ac51e02175137652d",
+  "checkpointHash": "00000000000000000000d67cbca716ef045392720cefb43e8287994ae216c06b",
+  "epochStartHeight": 967680,
+  "epochStartTime": 1789801745,
+  "checkpointChainWork": "570195989278543477056646",
+  "workConvention": "normalized to the checkpoint own work; common pre-checkpoint work is omitted for every branch",
+  "confirmations": 6,
+  "checkpointInterval": 4320,
+  "verifiedSources": [
+    "https://mempool.space/api",
+    "https://blockstream.info/api"
+  ]
+}

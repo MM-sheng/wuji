@@ -6,7 +6,8 @@ import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
 import {SeriesToken, SeriesTokenDeployer} from "../src/SeriesToken.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
-import {MockHistory} from "./mocks/MockHistory.sol";
+import {MockBitcoinRelay} from "./mocks/MockBitcoinRelay.sol";
+import {BitcoinRelay} from "../src/BitcoinRelay.sol";
 
 /// Random sequences of mint / redeemPair / redeemSettled / settle / index moves / time, by several actors.
 /// The vault must stay solvent and the pair must stay whole no matter the order.
@@ -44,7 +45,7 @@ contract Handler is Test {
     function mint(uint256 seed, uint256 pairs) external {
         pairs = bound(pairs, 1, 1_000e18);
         (,,,, uint64 settlementBlock,,) = vault.series(vault.currentId());
-        if (block.number >= settlementBlock) return; // handled by settle()
+        if (index.lastHeight() >= settlementBlock) return; // handled by settle()
         uint256 t0 = usdt.balanceOf(vault.treasury());
         vm.prank(_actor(seed));
         vault.mint(pairs);
@@ -94,37 +95,24 @@ contract Handler is Test {
         t.transfer(to, amt);
     }
 
-    // move the chain: n fake blocks with random hashes, then tick
+    // Submit synthetic 80-byte headers to the test feeder, then exercise the real index/vault.
     function moveIndex(uint64 n, uint256 salt) external {
-        n = uint64(salt % 25 == 0 ? bound(n, 8000, 9000) : bound(n, 1, 600)); // mostly small; sometimes past the 8191 window to exercise frozen gaps
-        uint64 from = uint64(block.number);
-        vm.roll(from + n);
-        MockHistory h = MockHistory(payable(0x0000F90827F1C53a10cb7A02335B175320002935));
-        for (uint64 b = from; b < from + n; b++) {
-            bytes32 x = keccak256(abi.encode(b, salt));
-            vm.setBlockhash(b, x);
-            h.set(b, x);
-        }
-        index.tick(n);
+        n = uint64(salt % 25 == 0 ? bound(n, 8000, 9000) : bound(n, 1, 600));
+        _advance(n,salt);
         ghostBlocksMoved += n;
     }
-
-    function settle() external {
-        uint64 boundary = vault.currentSettlementBlock();
-        if (block.number <= boundary) {
-            uint64 from = uint64(block.number);
-            MockHistory h = MockHistory(payable(0x0000F90827F1C53a10cb7A02335B175320002935));
-            vm.roll(boundary + 1);
-            for (uint64 b = from; b <= boundary; b++) {
-                bytes32 x = keccak256(abi.encode(b, ghostSettles));
-                vm.setBlockhash(b, x);
-                h.set(b, x);
-            }
-        }
-        while (!index.checkpointed(boundary)) index.tick();
-        vault.settle();
-        ghostSettles++;
+    function _advance(uint64 count,uint256 salt) internal {
+        MockBitcoinRelay r=MockBitcoinRelay(address(index.relay()));
+        uint64 from=index.lastHeight()+1;
+        for(uint64 h=from;h<from+count;h++) r.submit(h,abi.encodePacked(bytes32(uint256(h)),bytes32(salt),bytes16(0)));
+        index.fold(count);
     }
+    function settle() external {
+        uint64 boundary=vault.currentSettlementHeight();
+        if(index.lastHeight()<boundary) _advance(boundary-index.lastHeight(),ghostSettles);
+        vault.settle(); ghostSettles++;
+    }
+
 }
 
 contract WujiVaultInvariants is Test {
@@ -136,12 +124,11 @@ contract WujiVaultInvariants is Test {
     address treasury = makeAddr("treasury");
 
     function setUp() public {
-        MockHistory hist = new MockHistory();
-        vm.etch(0x0000F90827F1C53a10cb7A02335B175320002935, address(hist).code);
+        MockBitcoinRelay hist = new MockBitcoinRelay();
         vm.roll(1000);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
-        index = new WujiIndex(1000, 100);
+        index = new WujiIndex(BitcoinRelay(address(hist)),1000,100);
         vault = new WujiVault(usdt, index, NOTIONAL, treasury, new SeriesTokenDeployer());
         handler = new Handler(vault, index, usdt);
         targetContract(address(handler));
@@ -191,6 +178,6 @@ contract WujiVaultInvariants is Test {
         emit log_named_uint("calls", handler.ghostCalls());
         emit log_named_uint("settles", handler.ghostSettles());
         emit log_named_uint("blocks moved", handler.ghostBlocksMoved());
-        emit log_named_uint("frozen blocks", index.frozenBlocks());
+        emit log_named_uint("last Bitcoin height", index.lastHeight());
     }
 }

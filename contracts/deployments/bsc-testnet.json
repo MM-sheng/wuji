@@ -1,27 +1,106 @@
 {
   "chainId": 97,
+  "source": "bitcoin",
   "rpc": "https://bsc-testnet-rpc.publicnode.com",
   "explorer": "https://testnet.bscscan.com",
-  "deployedAt": "2026-09-19",
-  "genesisBlock": 131863490,
-  "seriesBlocks": 8000,
-  "MockUSDT": "0xbeE172F0fB092f94051E116e8ADBD0e66597b295",
-  "WujiIndex": "0x94c23631aCCfDCFa4D4fF4E964F87C750a6a0D88",
+  "deployedAt": "2026-09-20T12:29:55.128684+00:00",
+  "genesisHeight": 967826,
+  "checkpointInterval": 4320,
+  "confirmations": 6,
+  "unitWad": "12000000000000",
+  "checkpoint": {
+    "genesisHeight": 967826,
+    "checkpointHeight": 967825,
+    "checkpointHeader": "00e002209464fca963f09ddc196e6eb6844cfa2fed64a4dd14b101000000000000000000fdd9cf69e83eb416d967e49f154e615184e4bb96cdd1fa3780e2eedd2e85e6a14ecfaf6ac51e02175137652d",
+    "checkpointHash": "00000000000000000000d67cbca716ef045392720cefb43e8287994ae216c06b",
+    "epochStartHeight": 967680,
+    "epochStartTime": 1789801745,
+    "checkpointChainWork": "570195989278543477056646",
+    "workConvention": "normalized to the checkpoint own work; common pre-checkpoint work is omitted for every branch",
+    "confirmations": 6,
+    "checkpointInterval": 4320,
+    "verifiedSources": [
+      "https://mempool.space/api",
+      "https://blockstream.info/api"
+    ]
+  },
   "treasury": "0x6657289562f870677325124f3ACbdebB0ea80B95",
-  "note": "factory deployment: one index, many collaterals; 8000-block series with deterministic checkpoints. Vault bytecode embedded in this factory predates the bounded-constructor-tick change (commit after 2c27d0c).",
-  "SeriesTokenDeployer": "0x4Ad80A411c22346b1367e9c9db1d717a0d82Af71",
-  "WujiVaultFactory": "0xF7bE2203e35343c3e64391DF29DF6f05e9f4Ab75",
-  "MockWBNB": "0xd3E00DCaEf286B9fD339BA58baefA02CB5738128",
+  "BitcoinRelay": "0xdeb96757708da1491b7e3b32f48feb9948e11f88",
+  "WujiIndex": "0xea6e13c6bda56dd38d442dc7a4c598977c04fa93",
+  "SeriesTokenDeployer": "0xc6cdce6fd709c63b18113cc657ecf658b507a69e",
+  "WujiVaultFactory": "0x5a78fd29f7aa297d2dfe967994c8783cb0aac34f",
+  "MockUSDT": "0x39ad4fa6f30eb1581bf7992151f7df1b0dcd3ae6",
+  "MockWBNB": "0xaa4ab66f350fccb6e85b582e32deeeff40d78844",
   "vaults": {
     "USDT": {
-      "address": "0x3F34d7751c8dF2ca01739A1C744A68884eF40357",
-      "notional": "100e18",
-      "note": "series 0 settled at checkpoint #131871489 by the keeper; series roll every 8000 blocks"
+      "address": "0x890b7dAbb92c063C77b13B6bD3f0fdAD7a1B23D1",
+      "notional": "100e18"
     },
     "WBNB": {
-      "address": "0x717e12e564AcaC8ad3Fa9c4dd86AA9daf1ccDEB1",
-      "notional": "1e18",
-      "YANG-0": "0xA5d0550cD5Ec9683D09884efeAeE7F719f36A702"
+      "address": "0x12547F3591726FAB2886E69a7Dc18B1722cDAf03",
+      "notional": "1e18"
     }
-  }
+  },
+  "transactions": [
+    {
+      "hash": "0xa803cb9392258303c2a084551f96b99c0674cff049e44e9997843e9c971f1a4b",
+      "block": 132134222,
+      "status": "0x1",
+      "gasUsed": 1086958
+    },
+    {
+      "hash": "0x1eb27efe015ceef4552342de0cda3c41d437963588d01c38ebabf686e0b6c6f5",
+      "block": 132134222,
+      "status": "0x1",
+      "gasUsed": 709241
+    },
+    {
+      "hash": "0xc685175ea19174db0adf8b690dba60a24b8dfcee7e2fb0086a6805b3a0dfa3b6",
+      "block": 132134222,
+      "status": "0x1",
+      "gasUsed": 811758
+    },
+    {
+      "hash": "0xc92bcea21c0b44a49c70ddca3a929a8b06594842e30b517ceeb06a95dfbf4722",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 3355233
+    },
+    {
+      "hash": "0xa3db7e915779b06fd017db3d1883429e9792b98f882ac38be56a9aff4f167201",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 507924
+    },
+    {
+      "hash": "0xb348e24568ab07d52ddba767b7cc925b9e8dc515863ade680c75ad71dd319715",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 68427
+    },
+    {
+      "hash": "0x5cde00f0a9f4c2f1b00218a5e15ebef24ee3c10e2d43f9b73c08ae315e2ef35c",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 507956
+    },
+    {
+      "hash": "0xaa8bd7fe62be0b253a4f6ae86d168a9dd3528b4fcffd099e763de487613d5c9d",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 68439
+    },
+    {
+      "hash": "0xe16d0adb0c8505d30c50aedcfb6d2bd86417625f34e9034f33112abca132b662",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 3264449
+    },
+    {
+      "hash": "0x209b205b7c54306aff4a1370ed7e7fb4f40e946a618428b9094fba0e5b4fc088",
+      "block": 132134224,
+      "status": "0x1",
+      "gasUsed": 3247337
+    }
+  ]
 }
