@@ -15,7 +15,7 @@ cast_bin="${CAST:-$HOME/.foundry/bin/cast}"
 if [[ -f /tmp/wuji-sepolia-keeper.pid ]] && kill -0 "$(cat /tmp/wuji-sepolia-keeper.pid)" 2>/dev/null; then
   echo 'Stop the Sepolia keeper before using its nonce to deploy' >&2; exit 1
 fi
-args=(script script/Deploy.s.sol --rpc-url "$RPC" --rpc-timeout 15 --fork-retries 2)
+args=(script script/Deploy.s.sol --rpc-url "$RPC" --rpc-timeout 45 --fork-retries 2)
 if [[ "${1:-}" == --broadcast && $# == 1 ]]; then args+=(--broadcast);
 elif [[ $# != 0 ]]; then echo 'Usage: deploy-sepolia.sh [--broadcast]' >&2; exit 1; fi
 "${FORGE:-$HOME/.foundry/bin/forge}" "${args[@]}" \

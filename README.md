@@ -160,7 +160,7 @@ Use a separate encrypted Foundry account. `contracts/.env.sepolia` contains only
 into a command or a log. The deployment wrapper simulates by default; `--broadcast` submits to Sepolia only.
 
 ```bash
-node --test indexer/bitcoin*.test.mjs scripts/compare-chains.test.mjs apps/terminal/wallet.test.mjs
+node --test indexer/bitcoin*.test.mjs indexer/networks.test.mjs scripts/compare-chains.test.mjs apps/terminal/wallet.test.mjs
 bash contracts/scripts/deploy-sepolia.sh
 bash contracts/scripts/deploy-sepolia.sh --broadcast
 # After successful broadcast, set DEPLOYMENT_COMMIT to the full reviewed source commit:
