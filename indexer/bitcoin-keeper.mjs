@@ -1,0 +1,71 @@
+import { BitcoinAPI, step } from './bitcoin.mjs';
+// WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles fixed-block series.
+// Signs with `cast` (Foundry) so this file has no dependencies and never touches the key itself.
+//
+//   RPC=... KEYSTORE_ACCOUNT=... PASSWORD_FILE=... CONTRACT=<WujiIndex> [FACTORY=<WujiVaultFactory>] [VAULT=<WujiVault>] [INTERVAL=45] node indexer/keeper.mjs
+//   With FACTORY set, every vault the factory knows is settled; VAULT alone settles just that one.
+//
+import { execFileSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
+
+const { RPC, KEYSTORE_ACCOUNT, PASSWORD_FILE, CONTRACT, VAULT, FACTORY } = process.env;
+const INTERVAL = +(process.env.INTERVAL || 45);
+if (!RPC || !KEYSTORE_ACCOUNT || !PASSWORD_FILE || !CONTRACT) { console.error('need RPC, KEYSTORE_ACCOUNT, PASSWORD_FILE, CONTRACT (run contracts/scripts/set-key.sh)'); process.exit(1); }
+const CAST = process.env.CAST || path.join(os.homedir(), '.foundry', 'bin', 'cast');
+const RPC0 = RPC.split(',')[0];
+const cast = (...a) => execFileSync(CAST, [...a, '--rpc-url', RPC0], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+const PWFILE = path.isAbsolute(PASSWORD_FILE) ? PASSWORD_FILE : path.join(process.cwd(), 'contracts', PASSWORD_FILE);
+const send = (to, sig, gas, ...args) => cast('send', to, sig, ...args, '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), '--json');
+const redact = s => { const lines = String(s).replace(/0x[0-9a-fA-F]{64}/g, '0x…').split('\n').map(l => l.trim()).filter(Boolean); return lines.find(l => /^Error|insufficient|revert|nonce|underpriced|timeout/i.test(l)) || lines.find(l => !/^Command failed/.test(l)) || 'cast send failed'; };
+const num = s => Number(BigInt(s.split(' ')[0]));
+const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+
+const api=new BitcoinAPI();
+const RELAY=process.env.RELAY;
+if(!RELAY)throw Error('RELAY required');
+async function once(){
+ const tip=await api.tip();
+ const best=num(cast('call',RELAY,'bestHeight()(uint64)'));
+ const checkpoint=num(cast('call',RELAY,'checkpointHeight()(uint64)'));
+ const checkpointHash=cast('call',RELAY,'checkpointHash()(bytes32)').toLowerCase();
+ if('0x'+step((await api.at(checkpoint)).header).internalHash!==checkpointHash)throw Error('source disagrees with trusted relay checkpoint');
+ let common=Math.min(best,tip);
+ const source=await api.at(common);
+ if('0x'+step(source.header).internalHash!==cast('call',RELAY,'headerAt(uint64)(bytes32)',String(common)).toLowerCase()){
+  // A competing branch may need several batches before it outweighs the incumbent.
+  // Search ALL known headers, not only headerAt(), or every retry would resend the first batch.
+  let lo=checkpoint,hi=tip;
+  while(lo<hi){const mid=Math.ceil((lo+hi)/2),candidate=await api.at(mid);
+   try{cast('call',RELAY,'heightOf(bytes32)(uint64)','0x'+step(candidate.header).internalHash);lo=mid;}
+   catch(e){if(String(e.stderr||e.message).includes('unknown header'))hi=mid-1;else throw e;}
+  }
+  common=lo;
+ }
+ const end=Math.min(tip,common+24);
+ if(end>common){
+  const headers=[];
+  for(let h=common+1;h<=end;h++){const b=await api.at(h);if(step(b.header).hash!==b.hash)throw Error('Bitcoin source hash mismatch');headers.push(b.header);}
+  const r=JSON.parse(send(RELAY,'submit(bytes)',5_000_000,'0x'+headers.join('')));
+  if(r.status!=='0x1'&&r.status!==1)throw Error('relay transaction reverted');
+  log(`submit Bitcoin ${common+1}..${end} ${r.transactionHash}`);
+ }
+ // Detect deep reorgs even if pending() is zero, before any settlement transactions.
+ cast('call',CONTRACT,'fold(uint256)(uint64)','0');
+ const pending=num(cast('call',CONTRACT,'pending()(uint256)'));
+ if(pending){const count=Math.min(pending,256);const r=JSON.parse(send(CONTRACT,'fold(uint256)',6_000_000,String(count)));if(r.status!=='0x1'&&r.status!==1)throw Error('fold reverted');log('fold',count,r.transactionHash);}
+ const last=num(cast('call',CONTRACT,'lastHeight()(uint64)'));
+ for(const v of FACTORY?listVaults():VAULT?[VAULT]:[]){
+  const boundary=num(cast('call',v,'currentSettlementHeight()(uint64)'));
+  if(last>=boundary){const r=JSON.parse(send(v,'settle()',3_500_000));if(r.status!=='0x1'&&r.status!==1)throw Error('settle reverted');log('settle',v,boundary,r.transactionHash);}
+ }
+}
+let vaultCache = { at: 0, list: [] };
+function listVaults() {                                    // re-read the factory every ~10 min: anyone can add a vault
+  if (Date.now() - vaultCache.at < 600_000) return vaultCache.list;
+  const n = num(cast('call', FACTORY, 'count()(uint256)'));
+  const list = []; for (let i = 0; i < n; i++) list.push(cast('call', FACTORY, 'vaults(uint256)(address)', String(i)));
+  vaultCache = { at: Date.now(), list }; log(`factory has ${n} vault(s)`); return list;
+}
+log(`keeper on ${CONTRACT}${FACTORY ? ' + factory ' + FACTORY : VAULT ? ' + vault ' + VAULT : ''} every ${INTERVAL}s`);
+for (;;) { try { await once(); } catch (e) { log('error:', redact([e.stderr, e.stdout, e.message].filter(Boolean).join('\n'))); } await new Promise(r => setTimeout(r, INTERVAL * 1000)); }
