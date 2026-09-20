@@ -56,4 +56,36 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
         router.route(address(token));
         assertEq(token.balanceOf(address(rewards)),fee/2); assertEq(token.balanceOf(router.DEAD()),fee/2);
     }
+    function test_rewardBatchGasBudget() public {
+        uint64 nonce = vm.getNonce(address(this));
+        RelayerRewards rewards = new RelayerRewards(vm.computeCreateAddress(address(this),nonce+1),vm.computeCreateAddress(address(this),nonce+2));
+        BitcoinRelay r = new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,rewards);
+        new WujiIndex(r,798336,4320,rewards);
+        vm.prank(ALICE); r.submit(slice(headers,0,80)); // Includes first worker/epoch setup.
+        bytes memory batch = slice(headers,80,24*80);
+        uint256 g = gasleft(); vm.prank(ALICE); r.submit(batch);
+        uint256 perHeader = (g-gasleft())/24;
+        emit log_named_uint("steady reward gas/header",perHeader); assertLe(perHeader,70_000);
+        batch = slice(headers,25*80,24*80);
+        g = gasleft(); vm.prank(BOB); r.submit(batch);
+        perHeader = (g-gasleft())/24;
+        emit log_named_uint("new worker reward gas/header",perHeader); assertLe(perHeader,70_000);
+        assertEq(r.submitter(r.headerAt(798336)),ALICE);
+        assertEq(r.submitter(r.headerAt(798361)),BOB);
+    }
+    function test_alternatingWorkersKeepAttributionAndDuplicatesDoNotSteal() public {
+        (RelayerRewards rewards, EasyRelay r, WujiIndex idx) = wired();
+        bytes memory first;
+        for(uint256 i;i<20;++i) {
+            bytes memory h = next(r,r.bestHash(),10000+i);
+            if(i==0)first=h;
+            vm.prank(i%2==0?ALICE:BOB);r.submit(h);
+        }
+        vm.prank(BOB);r.submit(first);
+        for(uint64 h=1001;h<=1020;++h)assertEq(r.submitter(r.headerAt(h)),h%2==1?ALICE:BOB);
+        assertEq(r.submitter(bytes32(uint256(123))),address(0));
+        assertEq(r.submitter(r.checkpointHash()),address(0));
+        vm.prank(FOLDER);idx.fold();
+        assertEq(rewards.points(ALICE),7);assertEq(rewards.points(BOB),7);assertEq(rewards.points(FOLDER),14);
+    }
 }

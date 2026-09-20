@@ -8,10 +8,39 @@ Today the contracts pass it; the keeper, fees, indexer and front-end do not.
 
 ---
 
+## T0 · Claims correction (docs + terminal wording) — do this first, one PR, no contract changes
+
+Source: `docs/reviews/2026-09-20-adversarial.md` (read it in full). Apply every "动作" marked as documentation:
+- Positioning: WUJI is **a verifiable pure-randomness settlement market and public benchmark**, not a zero-beta hedge,
+  not crisis collateral, not "an asset like Bitcoin". Remove those claims from ARCHITECTURE §0, README, NAMING subtitle
+  (new subtitle: *A market about nothing. Verifiable. Heartbeat: Bitcoin.*).
+- Four concepts, never conflated: **index S** / **instantaneous settlement share** `clamp(½+½ΔS)` / **payoff at
+  expiry** / **market price**. The share is absolute-position, path-independent; drop the word "唯一" and the "每块转移"
+  wording. State explicitly: the share is not a price and must never be used as a lending-collateral price feed.
+- Delete every σ²/8 / "再平衡收割" / "没有知情者" / "无毒流" / "一个 WUJI 多个场所" statement. Replace the last with
+  "shared settlement index, a family of separate claims".
+- Solvency invariant stated as a theorem under standard ERC-20 behaviour assumptions; arbitrary-token vaults carry no
+  equal-safety promise.
+- Terminal: label `values()` output as "settlement share (not price)"; never draw series resets as one continuous
+  history; add the 4-concept note to the About tab.
+
 ## T1 · Protocol pays its own keepers — `RelayerRewards` + `FeeRouter` (highest priority, changes contracts, must land before audit)
 
 Implementation and testnet verification: [T1_REPORT.md](T1_REPORT.md), branch `codex/relayer-rewards`.
 Header rewards are intentionally credited at six-deep folding, rather than immediately at submission, to exclude transient orphan branches. Review/merge and independent audit remain pending.
+
+**Rework required after the 2026-09-20 review (items #12, #13, #21) before merge:**
+- **No burn.** 100 % of fees go to an immutable **operations reserve** that can only be paid out as keeper bounties.
+  Burning collateral pays nobody and ERC-20 has no uniform burn.
+- **Per-task bounties instead of perpetual points.** Each *finalised* height (its header accepted and later folded)
+  pays a one-off bounty to the account that folded it (folding is the act that proves the header stayed on the main
+  chain). Bounty = a fixed fraction of the reserve balance per height (e.g. 1/10 000 of the balance in that token), so
+  it self-scales with what the protocol earns and never runs dry. No historical points sharing future income; no
+  claim() of old work against new fees.
+- Per-asset accounting; anyone may `fund(token, amount)` the reserve (the deployer will pre-fund at launch — that is
+  a donation, not a privilege).
+- Add the economic model to ARCHITECTURE §4: gas per finalised height (measure), bounty per height at a given reserve
+  balance, and the primary-market volume needed to sustain it on BSC and on Ethereum at stated gas prices.
 
 Problem: relaying headers and folding costs gas; today one machine does it for free. Nobody else has a reason to.
 
@@ -43,12 +72,20 @@ Bitcoin's total work fits comfortably — height `uint32`, time `uint32`, bits `
 `bool`). Keep `main[height]`. Do not remove any validation. Report a before/after gas table; fixtures must still pass
 byte-for-byte.
 
-## T3 · Prove "one WUJI": deploy to Ethereum Sepolia and show identical S
+## T2b · Relay: complete header validation and a catch-up gate (review item #4)
+
+- Implement median-time-past (11-block median; store or walk ancestors — measure gas) and the 2-hour future-time
+  limit exactly as Bitcoin Core. Document any remaining omission and why it cannot create work.
+- `WujiIndex.fold` must refuse while the relay is still catching up: e.g. require the relay's best-header timestamp
+  to be within a bounded distance of `block.timestamp`, so six-deep folding cannot happen on a stale local view.
+- Differential tests against more real epochs (at least 3 retargets) and a Core-derived vector set for MTP.
+
+## T3 · Deploy to Ethereum Sepolia and show identical S (review item #17 wording)
 
 Same contracts, same `GENESIS_HEIGHT`, same relay checkpoint, deployed on Sepolia (chain 11155111). Run a second
 keeper against it. Add `scripts/compare-chains.mjs` that reads `S`, `lastHeight`, `lastHash` from both the BSC-testnet
-and Sepolia indexes and prints whether they agree at the same height (they must). Document in ARCHITECTURE §1
-("the path is Bitcoin's; chains are settlement venues") and add the Sepolia addresses to `contracts/deployments/`.
+and Sepolia indexes and prints whether they agree at the same height (they must while neither has frozen). Document
+in ARCHITECTURE §1 as "a shared settlement index; each deployment is a separate claim" — not "one asset". and add the Sepolia addresses to `contracts/deployments/`.
 Sepolia ETH comes from a faucet; do not ask for keys — the keystore flow already exists (`set-key.sh`, use a second
 account name).
 
@@ -84,17 +121,31 @@ liveness, collateral risk (USDT freeze vs WBNB); (7) the "never" list: no token,
 no pause, no foundation; (8) how to verify (T4). Numbers must come from the code and tests, not prose. Bilingual is
 welcome: Chinese primary, English full translation.
 
-## T7 · Rolling perpetual vault — `WUJI` / `YIN` tokens (after T1)
+## T7 · Rolling vault — REDESIGN before building (review item #9)
 
-An ERC-4626-style vault per collateral that holds the current series' YANG and, at settlement, redeems and re-enters
-the next series (mirror vault for YIN; the two roll jointly by minting pairs against each other, only the imbalance
-touches the market). Its share token is the thing exchanges list. Same rules: no owner, no upgrade. Spell out the NAV
-path in docs (it is not `100·e^S`; see ARCHITECTURE §3). Invariant: vault shares are always fully backed by YANG (or
-YIN) + collateral dust.
+The naive roll (settle, re-enter 1:1) has a negative log drift: per-series wealth factor `2·g(X)` has E[log] < 0 and
+a nonzero probability of total loss. Any rolling product must (a) re-enter by **value** (0.8·N of old YANG buys 1.6
+new YANG at ½), (b) be documented as a rolled-derivative strategy with its NAV process stated, and (c) never be drawn
+as one continuous price history. Write the design note first (`docs/tasks/T7_DESIGN.md`) with the NAV math and a
+simulation over the real header fixtures; build only after review. It may turn out that no rolling token should exist.
+
+## T9 · Frozen-state exit (review item #7) — required before mainnet
+
+A >6-block Bitcoin reorg halts `fold` forever; pairs still redeem at par but a one-sided holder has no exit.
+Design and implement a rule with no admin: if `fold` has been halted for more than X Bitcoin blocks (measured by the
+relay's own best height, not wall clock), the current series settles at the **last recorded checkpoint** (or, if none
+in this series, at ½/½) and no further series opens for that vault. Analyse and test the incentive to trigger the halt
+deliberately (who gains at which state) and choose X accordingly. Write-up in THREAT_MODEL.
 
 ## T8 · Operations before mainnet (not code-heavy, but required)
 
 - Second keeper on a different machine and RPC provider (T4's Docker makes this trivial).
+- **Disappearance drill** (review item #14): switch off every author-run node, RPC, keeper and front-end for 48 h on
+  testnet; record whether independent participants take over profitably and whether a one-sided holder can exit.
+- THREAT_MODEL rewritten around **attacker private cost** (pool cost-shifting, brief withholding, existing forks) and
+  a stated **value-at-risk cap**: with s = 0.5 %/block, a feasible withholding strategy profits once net one-sided
+  exposure A > ≈ 501 · c_b (c_b = attacker's private cost per discarded block). Publish the cap; keep early exposure
+  far below it (review items #5, #6, #16).
 - Alerts: relay lag > 3 Bitcoin blocks, index backlog, keeper errors, `liabilities > balance` (should be impossible —
   alert anyway), settlement overdue.
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.

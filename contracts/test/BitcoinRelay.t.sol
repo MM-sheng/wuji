@@ -10,6 +10,11 @@ import {MockUSDT} from "./mocks/MockUSDT.sol";
 
 // Fork-choice tests use easy PoW only in this subclass. Real tests deploy the unmodified production relay.
 contract EasyRelay is BitcoinRelay {
+    mapping(bytes32 => bytes32) private testParents;
+    function _storeLink(bytes32 hash,bytes32 parent,uint32 id) internal override {
+        testParents[hash] = parent; super._storeLink(hash,bytes32(0),id);
+    }
+    function _parent(bytes32 hash) internal view override returns(bytes32) { return testParents[hash]; }
     constructor(bytes memory cp, RelayerRewards rewards_) BitcoinRelay(cp,1000,0,1e30, rewards_) {}
     function targetOf(uint32) public pure override returns(uint256) { return type(uint256).max/2; }
 }
