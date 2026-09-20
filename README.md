@@ -95,7 +95,10 @@ MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json INDEXER_URL=http:/
 ```
 
 The v3 manifest enables `RELAY_TIMESTAMPS=1` for the keeper and indexer automatically. When launching those
-processes directly, set it explicitly. Keeper simulation uses the actual worker address; an old bootstrap
+processes directly, set it explicitly. The BSC testnet v3 startup sets `KEEPER_GAS_PRICE=0.1gwei` and uses
+legacy transactions because some testnet RPC fee estimators suggest a tip below the node minimum. Override
+that environment value for operator policy, or set it empty to restore automatic fee selection. This is
+a keeper setting, not a protocol constant or a gas-price oracle. Keeper simulation uses the actual worker address; an old bootstrap
 that cannot yet pass the fold gate progresses through standalone header submissions.
 See [T2b report](docs/tasks/T2B_REPORT.md) for Core provenance, limitations, validation and live evidence.
 

@@ -26,6 +26,9 @@ if(a[0]==='call'){
   if(s.mode==='catchup'&&end<s.tip){s.staleSimulations++;fail('relay stale');}save();output(16);
  }else fail('unexpected read '+name);
 }else if(a[0]==='send'){
+ if(s.mode==='catchup'){
+  if(!a.includes('--legacy')||a[a.indexOf('--gas-price')+1]!=='0.1gwei')fail('missing explicit testnet gas price');
+ }else if(a.includes('--legacy')||a.includes('--gas-price'))fail('automatic gas selection was overridden');
  if(name==='submit'||name==='submitAndFold'){
   const count=(a[3].length-2)/160;
   for(let i=0;i<count;i++)if(a[3].slice(2+i*160,2+(i+1)*160)!==s.headers[s.best+1+i])fail('wrong relayed bytes');
@@ -55,7 +58,7 @@ for(const mode of ['catchup','fresh'])test(`keeper ${mode}: advance headers safe
   res.statusCode=404;res.end();
  });server.listen(0,'127.0.0.1');await once(server,'listening');
  const url='http://127.0.0.1:'+server.address().port;let log='';
- const child=spawn(process.execPath,[new URL('./bitcoin-keeper.mjs',import.meta.url).pathname],{env:{...process.env,CAST:cast,TEST_KEEPER_STATE:stateFile,BITCOIN_API:url,RPC:url,KEYSTORE_ACCOUNT:'test-double-only',PASSWORD_FILE:'/nonexistent/test-double-only',CONTRACT:'0x2222222222222222222222222222222222222222',RELAY:'0x3333333333333333333333333333333333333333',REWARDS:'0x4444444444444444444444444444444444444444',REWARD_MODEL:'operations-reserve',RELAY_TIMESTAMPS:'1',REWARD_TOKENS:'',FACTORY:'',VAULT:'',FEE_ROUTER:'',INTERVAL:'0.02'},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,[new URL('./bitcoin-keeper.mjs',import.meta.url).pathname],{env:{...process.env,CAST:cast,KEEPER_GAS_PRICE:mode==='catchup'?'0.1gwei':'',TEST_KEEPER_STATE:stateFile,BITCOIN_API:url,RPC:url,KEYSTORE_ACCOUNT:'test-double-only',PASSWORD_FILE:'/nonexistent/test-double-only',CONTRACT:'0x2222222222222222222222222222222222222222',RELAY:'0x3333333333333333333333333333333333333333',REWARDS:'0x4444444444444444444444444444444444444444',REWARD_MODEL:'operations-reserve',RELAY_TIMESTAMPS:'1',REWARD_TOKENS:'',FACTORY:'',VAULT:'',FEE_ROUTER:'',INTERVAL:'0.02'},stdio:['ignore','pipe','pipe']});
  child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
  try{
   let result;

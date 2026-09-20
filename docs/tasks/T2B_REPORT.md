@@ -1,7 +1,7 @@
 # T2b — Bitcoin header time validation and bounded catch-up
 
 Branch: `codex/bitcoin-timestamps`, based on `8ca02b1` (T1 operations reserve).
-Status: implementation and local validation complete; testnet deployment evidence will be recorded below.
+Status: implementation, local validation and deployment complete; live keeper verification in progress.
 Independent release review remains pending. No mainnet transaction is part of this task.
 
 ## Delivered behaviour
@@ -66,6 +66,7 @@ require a new immutable deployment. See [THREAT_MODEL](../THREAT_MODEL.md).
 - **8 Node tests passed**: original fixtures/byte order, Core REST adapter, HTTP persistence/reorg, extended
   timestamp fixtures and two real keeper-process tests. Keeper tests use a local HTTP source and a non-signing
   cast double to check stale multi-batch catch-up and normal atomic following with actual-caller simulation.
+  These tests also check explicit legacy gas-price arguments and preservation of automatic selection when unset.
 - Regenerate fixtures with `scripts/fetch-bitcoin-timestamps.mjs` and `scripts/generate-bitcoin-time-vectors.mjs`.
   Only optional Core-vector generation needs a C++17 compiler. Production Node/terminal stay dependency-free.
 - `forge build --sizes` passed. Runtime bytes: relay 6894, index 4547, reserve 4191, router 1115, vault 9509,

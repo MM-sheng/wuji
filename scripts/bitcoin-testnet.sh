@@ -11,7 +11,8 @@ j=json.load(open(os.environ.get('MANIFEST','contracts/deployments/bsc-testnet.js
 env=os.environ.copy();env.update(SOURCE='bitcoin',PORT=os.environ.get('PORT','8789'),CHAIN_ID='97',GENESIS_HEIGHT=str(j['genesisHeight']),RELAY=j['BitcoinRelay'],CONTRACT=j['WujiIndex'],FACTORY=j['WujiVaultFactory'],RPC=j['rpc'],FEE_ROUTER=j.get('FeeRouter',''))
 if j.get('version') in ('bitcoin-reserve-v2','bitcoin-timestamps-v3'):
  env.update(REWARD_MODEL='operations-reserve',REWARDS=j['RelayerRewards'],REWARD_TOKENS=os.environ.get('REWARD_TOKENS',','.join(j['rewardTokens'])))
-if j.get('version') == 'bitcoin-timestamps-v3': env.update(RELAY_TIMESTAMPS='1')
+if j.get('version') == 'bitcoin-timestamps-v3':
+ env.update(RELAY_TIMESTAMPS='1',KEEPER_GAS_PRICE=os.environ.get('KEEPER_GAS_PRICE','0.1gwei'))
 prefix=os.environ.get('PROCESS_PREFIX','wuji-bitcoin')
 for name,script in [('indexer','indexer/index.mjs'),('keeper','indexer/keeper.mjs')]:
  pidfile=Path('/tmp/'+prefix+'-'+name+'.pid')
