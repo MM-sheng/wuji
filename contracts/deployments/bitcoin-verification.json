@@ -1,0 +1,41 @@
+{
+  "verifiedAt": "2026-09-20T12:33:56.293Z",
+  "evmBlock": 132134917,
+  "verified": [
+    {
+      "name": "BitcoinRelay",
+      "address": "0xdeb96757708da1491b7e3b32f48feb9948e11f88",
+      "bytes": 4072
+    },
+    {
+      "name": "WujiIndex",
+      "address": "0xea6e13c6bda56dd38d442dc7a4c598977c04fa93",
+      "bytes": 2756
+    },
+    {
+      "name": "SeriesTokenDeployer",
+      "address": "0xc6cdce6fd709c63b18113cc657ecf658b507a69e",
+      "bytes": 3515
+    },
+    {
+      "name": "WujiVaultFactory",
+      "address": "0x5a78fd29f7aa297d2dfe967994c8783cb0aac34f",
+      "bytes": 15282
+    },
+    {
+      "name": "WujiVault",
+      "address": "0x890b7dAbb92c063C77b13B6bD3f0fdAD7a1B23D1",
+      "bytes": 9509
+    },
+    {
+      "name": "WujiVault",
+      "address": "0x12547F3591726FAB2886E69a7Dc18B1722cDAf03",
+      "bytes": 9509
+    }
+  ],
+  "relayHeight": 967828,
+  "relayHash": "000000000000000000020fa530e46faabbecf2b7ebf75b6a7e79935e57475cb3",
+  "lastHeight": 967825,
+  "S_wad": "0",
+  "liveFoldPending": true
+}

@@ -41,7 +41,7 @@ contract WujiVaultTest is WujiTestBase {
         vm.roll(GENESIS);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
-        index = new WujiIndex(GENESIS, INTERVAL);
+        index = new WujiIndex(relay(), GENESIS, INTERVAL);
         vault = new WujiVault(usdt, index, NOTIONAL, treasury, new SeriesTokenDeployer());
         for (uint256 i = 0; i < 2; i++) {
             address a = i == 0 ? alice : bob;
@@ -56,14 +56,14 @@ contract WujiVaultTest is WujiTestBase {
         uint64 from = uint64(block.number);
         if (n == 0) return 0;
         dS = writeHashes(index, from, from + n - 1, salt);
-        index.tick(n);
+        index.fold(n);
     }
 
     function reachSettlement(uint256 salt) internal returns (int256 dS) {
-        uint64 boundary = vault.currentSettlementBlock();
+        uint64 boundary = vault.currentSettlementHeight();
         uint64 from = uint64(block.number);
         if (from <= boundary) dS = writeHashes(index, from, boundary, salt);
-        while (!index.checkpointed(boundary)) index.tick();
+        while (!index.checkpointed(boundary)) index.fold();
     }
 
     function series(uint256 id)
@@ -154,38 +154,21 @@ contract WujiVaultTest is WujiTestBase {
     }
 
     function test_shareClampsAtBounds() public {
-        // hand-craft: 255 blocks of all-0xff hashes → byteSum 8160 → +4080·UNIT each → ΔS = 255·4080·3.3e11 wad ≈ 3.4e17
-        // that is not enough to clamp (needs ΔS ≥ 1e18), so use a series whose s0 is far away instead:
-        // deploy a vault on an index whose S we then push through several ticks.
-        int256 total;
-        for (uint256 k = 0; k < 6; k++) {
-            total += advanceAll(255, true); // ≈ +2.06e18 → clamp high
-        }
-        assertGt(total, int256(WAD));
+        vm.mockCall(address(index), abi.encodeWithSelector(index.S.selector), abi.encode(int256(2e18)));
         assertEq(vault.yangShare(), WAD);
-        (uint256 y, uint256 n) = vault.values();
-        assertEq(y, NOTIONAL);
-        assertEq(n, 0);
-    }
-
-    function advanceAll(uint64 n, bool up) internal returns (int256 dS) {
-        uint64 from = uint64(block.number);
-        // bytes32(0) would read as "unset" in the mock history, so the down case uses 0x01..01 (byteSum 32)
-        bytes32 h = up
-            ? bytes32(type(uint256).max)
-            : bytes32(uint256(0x0101010101010101010101010101010101010101010101010101010101010101));
-        dS = writeConstant(index, from, from + n - 1, h);
-        index.tick(n);
+        (uint256 y,uint256 n)=vault.values(); assertEq(y,NOTIONAL); assertEq(n,0);
+        vm.mockCall(address(index), abi.encodeWithSelector(index.S.selector), abi.encode(int256(-2e18)));
+        assertEq(vault.yangShare(),0); (y,n)=vault.values(); assertEq(y,0); assertEq(n,NOTIONAL);
     }
 
     // ---------------------------------------------------------------- settlement
 
-    function test_settleRevertsBeforeSettlementBlock() public {
-        vm.expectRevert("settlement block not mined");
+    function test_settleRevertsBeforeSettlementHeight() public {
+        vm.expectRevert("settlement height not final");
         vault.settle();
     }
 
-    function test_mintRevertsAtSettlementBlockUntilSettled() public {
+    function test_mintRevertsAtSettlementHeightUntilSettled() public {
         reachSettlement(20);
         vm.prank(alice);
         vm.expectRevert("series ended: settle first");
@@ -230,17 +213,17 @@ contract WujiVaultTest is WujiTestBase {
     }
 
     function test_settleRequiresIndexCatchupToCheckpoint() public {
-        uint64 boundary = vault.currentSettlementBlock();
+        uint64 boundary = vault.currentSettlementHeight();
         int256 expected = writeHashes(index, uint64(block.number), boundary, 77);
         assertEq(index.pending(), INTERVAL);
 
-        vm.expectRevert("index backlog: tick first");
+        vm.expectRevert("index backlog: fold first");
         vault.settle();
         assertEq(vault.currentId(), 0);
-        assertEq(index.lastBlock(), GENESIS - 1);
+        assertEq(index.lastHeight(), GENESIS - 1);
 
-        assertEq(index.tick(), 1024);
-        assertEq(boundary - index.lastBlock(), INTERVAL - 1024);
+        assertEq(index.fold(1744), 1744);
+        assertEq(boundary - index.lastHeight(), INTERVAL - 1744);
         vault.settle();
         assertEq(index.S(), expected);
         (,, int256 nextS0,,,) = series(1);

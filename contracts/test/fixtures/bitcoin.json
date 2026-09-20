@@ -1,0 +1,21 @@
+{
+  "start": 798336,
+  "count": 2028,
+  "checkpointHeader": "00000020b148242c702297083237178df18c925e5e87bce7da5a02000000000000000000031c3862dc7764d3e5fa14e7c30671c1f41b4c6dec2985f6593c9b9be747dbfb9d0fae64be8e051708aa32dd",
+  "checkpointHeight": 798335,
+  "epochStartTime": 1687992515,
+  "U": -31661,
+  "S_wad": "-379932000000000000",
+  "known800000": {
+    "hash": "00000000000000000002a7c4c1e48d76c5a37902165a270156b7a8d72728a054",
+    "internalHash": "54a02827d7a8b75601275a160279a3c5768de4c1c4a702000000000000000000",
+    "R": "74323d1b46bfc56d162ea5725ebc666028c5ee2b0a4824e32dedff53fe3ec1fd",
+    "delta": -187,
+    "S_wad": "-2244000000000000",
+    "timestamp": 1690168629
+  },
+  "source": [
+    "https://mempool.space/api",
+    "https://blockstream.info/api"
+  ]
+}
