@@ -1,7 +1,7 @@
 # T2b — Bitcoin header time validation and bounded catch-up
 
 Branch: `codex/bitcoin-timestamps`, based on `8ca02b1` (T1 operations reserve).
-Status: implementation, local validation and deployment complete; live keeper verification in progress.
+Status: implementation, local validation and testnet end-to-end verification complete.
 Independent release review remains pending. No mainnet transaction is part of this task.
 
 ## Delivered behaviour
@@ -93,8 +93,9 @@ not an arbitrary-transaction upper bound. T1 figures below are the previous repo
 | One fixed-amount claim | 82462 | 82462 |
 
 A test-only easy-PoW branch's fourth header replacing four canonical heights costs **222877 execution gas**
-in its prepared test state. This measures one shallow rewrite with ancestor reads, not arbitrary deep-fork
-cost or production mining. Long rewrites can still exceed host transaction gas limits.
+in its prepared test state. EasyRelay stores an additional full-parent mapping, so this is not a production
+fork-gas quote. It measures one synthetic shallow rewrite with ancestor reads, not arbitrary deep-fork cost
+or production mining. Long rewrites can still exceed host transaction gas limits.
 
 The original T2 <=70000 steady/new-worker and full-fixture assertions remain against the exact frozen packed
 baseline (`e6ec55e`, renamed contract/comment only). **New production timestamp validation exceeds that old
@@ -119,7 +120,78 @@ The JSON records `historySource` and `historyVerification` separately: this was 
 verification of the ancestor payload. The alternative dual-source preparation was rate-limited before writing.
 No genesis reset or new trusted checkpoint was silently introduced.
 
-The new v3 manifest, runtime verification and live-operation replay will be recorded in separate
-`contracts/deployments/timestamps-*` artifacts. Old stacks remain immutable comparisons. The test deployment
-uses the existing encrypted keystore and donated mock collateral only; signing nonces must be coordinated
-with existing local keepers. No MetaMask flow or production-collateral test is claimed.
+Contract source: `7ea65cfac5409d552e8fecf23dfeca91fb27e172`. The subsequent keeper-only fee configuration fix is `e4731f6`.
+All 16 deployment receipts succeeded in EVM blocks 132160326–132160327,
+using 16722575 receipt gas. Deployment funded 100000 MockUSDT and 100 MockWBNB.
+These mocks have no economic value. The eight runtime bytecodes and immutable bindings passed verification;
+the bootstrap MTP was 1789905283 and relayFresh was false before catch-up, as expected.
+
+| Contract | Address |
+|---|---|
+| BitcoinRelay | `0xa75d3b6581194584c1845b7dc7fed03a02bc2cbf` |
+| WujiIndex | `0xe26b0951082c61575ecfe04c44b19c4dca2cd19b` |
+| Operations reserve | `0x955450f36e3abb771924ae151f4d383f109daf3e` |
+| FeeRouter | `0xeea9c3f9bfd7f1b2420bdbd1bc31d225e98e5c43` |
+| VaultFactory | `0x1e68e65eacf1a2e5631906a490914c8586c53065` |
+| USDT vault | `0x381e19FA6654316ee5F7f55Db03cF2d56eD374b9` |
+| WBNB vault | `0x57DBC0C73C8aE7B8131831A1b990dC5d74f14688` |
+
+The previous public RPC timed out before any deployment broadcast. The deployment instead used
+`https://bsc-testnet-dataseed.bnbchain.org`, an endpoint listed in the
+[official BSC RPC documentation](https://docs.bnbchain.org/bnb-smart-chain/developers/json_rpc/json-rpc-endpoint/).
+That node initially rejected the keeper's automatically estimated 1-wei tip as below its 0.1-gwei minimum.
+The v3 startup now sets an explicit 0.1-gwei legacy transaction price; `KEEPER_GAS_PRICE` can override it,
+or an empty value restores automatic estimation. This changes operator configuration only, not contract rules.
+The two keeper-process tests passed after the fix. No failed deployment or additional immutable contract was created.
+
+Public deployment and bootstrap evidence is in `bsc-testnet-timestamps-v3.json` and
+`timestamps-bootstrap-verification.json`. Final live runtime/state verification and bounty replay use the separate
+`timestamps-verification.json` and `timestamps-operation.json` artifacts. They are not the independent two-source
+end-to-end verifier still planned in T4.
+
+The terminal is **http://localhost:8792/** with its own cache and processes. Old stacks remain immutable comparisons.
+The existing encrypted keystore signs test transactions; private keys are never arguments or logged. Local keeper
+signing was briefly coordinated and restored for deployment. These comparison workers still share a test wallet,
+so nonce contention remains possible; independent production workers require separate funded accounts (T8).
+No MetaMask flow, new mock mint/redeem round-trip, production collateral or full-period settlement is claimed.
+
+
+## Final live verification
+
+At EVM block 132162046, all eight runtimes/bindings still matched the local build; the relay was at
+Bitcoin height 967855 with MTP 1789917649, and relayFresh=true. The index was
+at height 967849, exactly six descendants behind. At the indexer's EVM observation block
+132162010, recomputing all 24 cached raw headers gave U=2374 and
+S_wad=28488000000000000; contract S, lastHeight and raw lastHash matched exactly.
+
+The keeper completed two atomic transactions:
+
+- Folded heights 967826–967841; transaction `0x5eaf94e21bc2194b5ad51b7ea28451634d045083d6991f580c21f8e62fc95634` used 2338269 receipt gas.
+- Folded heights 967842–967849; transaction `0xa4394f860be49e27ea211a70a7c4c24698c3e2fb4408fde3adde126001cf0d00` used 788403 receipt gas.
+
+The first relayed 24 headers (967826–967849) and folded 16; the second relayed six headers (967850–967855)
+and folded the remaining eight eligible heights. These are catch-up batches, not one-height operating costs.
+The startup claim cadence paid the first 16 heights in both mock assets. The next eight allocations remain
+fixed and claimable; the default 144-height automatic claim cadence does not imply immediate withdrawal.
+
+| Asset | Funded | Available reserve | Fixed unpaid allocation | Already paid |
+|---|---:|---:|---:|---:|
+| MockUSDT | 100000 | 99760.275797706217509467 | 79.844146311978123341 | 159.880055981804367192 |
+| MockWBNB | 100 | 99.760275797706217524 | 0.079844146311978119 | 0.159880055981804357 |
+
+At EVM block 132162031, replaying every funding/bounty/claim event matched both token balances, reserves,
+allocations and per-worker claimable balances. Funding = reserve + unpaid allocations + paid claims.
+Both claim receipts succeeded at 47667 gas each. The full transaction hashes and raw-unit ledger are in
+`timestamps-operation.json`; all observed keeper transaction receipts used 0.1 gwei.
+
+The dataseed endpoints returned `limit exceeded` for even single-block event queries. `LOG_RPC` therefore
+used PublicNode, after confirming chain ID and exact observation-block hash agreement with the deployment
+RPC. This selects a working event reader without silently dropping events or changing the ledger assertions.
+
+Browser verification switched both USDT and WBNB views: both showed the new asset/vault addresses,
+“允许计入确认块”, “bit-for-bit identical” and contract 0 behind at Bitcoin height 967849. Before catch-up,
+the same page displayed “中继过时 · 暂缓计入”. The UI follows immutable rules; no override or privileged
+recovery transaction was used. The 8792 tab and both background processes remain available.
+
+Next queue item is T3 (Sepolia / WETH and same-height cross-chain comparison). Independent audit, T9 frozen
+one-sided exit, T8 independent operators/full-period observation and the later ZK relay remain outstanding.

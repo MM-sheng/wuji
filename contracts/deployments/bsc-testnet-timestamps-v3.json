@@ -1,0 +1,208 @@
+{
+  "chainId": 97,
+  "source": "bitcoin",
+  "rpc": "https://bsc-testnet-dataseed.bnbchain.org",
+  "explorer": "https://testnet.bscscan.com",
+  "deployedAt": "2026-09-20T15:45:05.707Z",
+  "genesisHeight": 967826,
+  "checkpointInterval": 4320,
+  "confirmations": 6,
+  "unitWad": "12000000000000",
+  "checkpoint": {
+    "genesisHeight": 967826,
+    "checkpointHeight": 967825,
+    "checkpointHeader": "00e002209464fca963f09ddc196e6eb6844cfa2fed64a4dd14b101000000000000000000fdd9cf69e83eb416d967e49f154e615184e4bb96cdd1fa3780e2eedd2e85e6a14ecfaf6ac51e02175137652d",
+    "checkpointHash": "00000000000000000000d67cbca716ef045392720cefb43e8287994ae216c06b",
+    "epochStartHeight": 967680,
+    "epochStartTime": 1789801745,
+    "checkpointChainWork": "570195989278543477056646",
+    "workConvention": "normalized to the checkpoint own work; common pre-checkpoint work is omitted for every branch",
+    "confirmations": 6,
+    "checkpointInterval": 4320,
+    "verifiedSources": [
+      "https://mempool.space/api",
+      "https://blockstream.info/api"
+    ],
+    "checkpointAncestors": "0000d423e7355f4edc1ac4e006778de24e9f6a8f3c5a30a72bcb000000000000000000009b8cc370c9b34c14a9b9180362c47b1b166911eac89f11c736fed4a5ebd3756605abaf6ac51e02179d369a9200a025284efd1829453209aea3e83adf3a4013398bfdc4d4b41101000000000000000000e2f83bb1c421aaf46bb1867b6e6287a8eacb040d4a73960bac4120b3a6f8124612acaf6ac51e0217316e655f0040c724d80be5f850e53068ba8c91de1844ba2a36a02843d95901000000000000000000bf1ef26df6acb880efd05c557e643f082fc8b74797208c0fc4db5a1cc5fd7f7b44b1af6ac51e02172232be5b00a05b255f1e7952b1242e5e7926fe04dce1ab25062c041c489c01000000000000000000e6f48ae948c16ced2266cb119ac7925eafde396440033f764cd61bc85006e59045b3af6ac51e0217cf3efb6a004006202422133d517d36cae6de0353a763ff15f79717a5853a0100000000000000000094e9c69302fe4ab6fc775c0cff74e7900e4fe6ebe288332bdc477aeeed816289abb4af6ac51e02179350474500a00420cc9d2431de7fe43e2adf382fc830cdd54db68cd0a8dc00000000000000000000d79ba7ff16262796d5bfeb275f8f72cb232b51eb87a73c66cb252e89646198ff55beaf6ac51e0217d43d92ce002040223ad6c55d56e84f5f7a22a866b8109b12139d78970a2f0000000000000000000048f93e60c52d23962f4dfdc429a01320197f5eb1ec21817d6a2812d1692a03da83c9af6ac51e0217a3bd043b00e0ff3f5f36938043d1d8a23e6cd63b4bdb59e5447c5766430100000000000000000000a08fb23bb6e6ee89d87f8529b212c4b6e8eeba284d99262ada9a6b1c28c58f154dcbaf6ac51e02171a8761850000ff3f0b70da3e2e3f5e950d28fe08ea448d55129f3d3dbe1900000000000000000000d8e57109029f687388b854212387e22e1c4757bb89d068ed15b5f94890aca952eecbaf6ac51e0217caebb43d000001203f0ad66756d3f3c7ecb45a15af65179e93a9868e1533000000000000000000007a32cb8b9eaf0e5b22575b6e8196703d24a92a1742274cc74cd6889dfc2c9acb71cdaf6ac51e0217d128edf70000412b69fae74d24d57e875e446425c0544a631cd557bb0bd900000000000000000000dff79a93b1729a041d9af1b9fbe7ecd3bf8a9f77f77fd223bdd3ad0d4bae691543ceaf6ac51e0217774c4577",
+    "historySource": "https://mempool.space/api",
+    "historyVerification": "Eleven linked raw headers authenticated by the unchanged, previously compared checkpoint parent hash. verifiedSources refers to the existing checkpoint and epoch, not a new two-source download of every ancestor."
+  },
+  "treasury": "0xeea9c3f9bfd7f1b2420bdbd1bc31d225e98e5c43",
+  "BitcoinRelay": "0xa75d3b6581194584c1845b7dc7fed03a02bc2cbf",
+  "WujiIndex": "0xe26b0951082c61575ecfe04c44b19c4dca2cd19b",
+  "SeriesTokenDeployer": "0xa694197819dcad1ee981491ad420f216ada5ea34",
+  "WujiVaultFactory": "0x1e68e65eacf1a2e5631906a490914c8586c53065",
+  "MockUSDT": "0xcc7459b3f3ff46c79b55ec69a6f0705089223426",
+  "MockWBNB": "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15",
+  "vaults": {
+    "USDT": {
+      "address": "0x381e19FA6654316ee5F7f55Db03cF2d56eD374b9",
+      "asset": "0xCc7459B3f3ff46C79B55ec69a6F0705089223426",
+      "notional": "100000000000000000000"
+    },
+    "WBNB": {
+      "address": "0x57DBC0C73C8aE7B8131831A1b990dC5d74f14688",
+      "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
+      "notional": "1000000000000000000"
+    }
+  },
+  "transactions": [
+    {
+      "hash": "0x0bc3d47744fab5b665ca0a576598a6fd7490fb38a90bf52b74dadec80cca46b5",
+      "name": "RelayerRewards",
+      "operation": "CREATE",
+      "address": "0x955450f36e3abb771924ae151f4d383f109daf3e",
+      "status": "0x1",
+      "block": 132160326,
+      "gasUsed": 1009866
+    },
+    {
+      "hash": "0xe2b8e1514c07395bddc808841faf35b0dfee08fc04193944dd8d20195eb63b88",
+      "name": "BitcoinRelay",
+      "operation": "CREATE",
+      "address": "0xa75d3b6581194584c1845b7dc7fed03a02bc2cbf",
+      "status": "0x1",
+      "block": 132160326,
+      "gasUsed": 2186067
+    },
+    {
+      "hash": "0x34f66d567d8bc334adf0d302bcec0e581eb81cc198927c30df8142383dfef1c8",
+      "name": "WujiIndex",
+      "operation": "CREATE",
+      "address": "0xe26b0951082c61575ecfe04c44b19c4dca2cd19b",
+      "status": "0x1",
+      "block": 132160326,
+      "gasUsed": 1105729
+    },
+    {
+      "hash": "0x749ca74907f5d9621d1a9b32e7acd8f9ce7fd848d7e6cdad73caaa95ef9cd25b",
+      "name": "FeeRouter",
+      "operation": "CREATE",
+      "address": "0xeea9c3f9bfd7f1b2420bdbd1bc31d225e98e5c43",
+      "status": "0x1",
+      "block": 132160326,
+      "gasUsed": 322014
+    },
+    {
+      "hash": "0xf6a327e5f312be239047ffb3b203714e14f6284bc9469e181ee0061f5f19ce15",
+      "name": "SeriesTokenDeployer",
+      "operation": "CREATE",
+      "address": "0xa694197819dcad1ee981491ad420f216ada5ea34",
+      "status": "0x1",
+      "block": 132160326,
+      "gasUsed": 811758
+    },
+    {
+      "hash": "0x95339abc982e54440454bfeade5ac61afca9e7ad69b0fada0465377c83c06fe5",
+      "name": "WujiVaultFactory",
+      "operation": "CREATE",
+      "address": "0x1e68e65eacf1a2e5631906a490914c8586c53065",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 3355233
+    },
+    {
+      "hash": "0xae033d78fe86d393731a78ab79ee28de671d4783737d18bacf988a646e9f77e9",
+      "name": "MockUSDT",
+      "operation": "CREATE",
+      "address": "0xcc7459b3f3ff46c79b55ec69a6f0705089223426",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 507924
+    },
+    {
+      "hash": "0xbc1cd20d4eef197dd7a3409e3ffbc32c5426b29afacdb4b8f94e6160ba160bdb",
+      "name": "MockUSDT",
+      "operation": "mint(address,uint256)",
+      "address": "0xcc7459b3f3ff46c79b55ec69a6f0705089223426",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 68427
+    },
+    {
+      "hash": "0x9a171a6d4a0a9f39fbfdffd5ea2a25c55449eacb05083eda85ff3730f1fd5c98",
+      "name": "MockWBNB",
+      "operation": "CREATE",
+      "address": "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 507944
+    },
+    {
+      "hash": "0x529cc867b6645ada1b0492cdfe1b4b03f4ef1e58a373ed58e6508c43bd84f952",
+      "name": "MockWBNB",
+      "operation": "mint(address,uint256)",
+      "address": "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 68439
+    },
+    {
+      "hash": "0x8718c976a50655496b0e92f82607a5921f3323ff164c925827bd87d42279e015",
+      "name": "WujiVaultFactory",
+      "operation": "create(address,uint256)",
+      "address": "0x1e68e65eacf1a2e5631906a490914c8586c53065",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 3264766
+    },
+    {
+      "hash": "0x9d890ff366a7502ff5c86bd24c2d7307d41a06ec69d6ebc72e1680b4f08c1076",
+      "name": "WujiVaultFactory",
+      "operation": "create(address,uint256)",
+      "address": "0x1e68e65eacf1a2e5631906a490914c8586c53065",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 3247654
+    },
+    {
+      "hash": "0x6df74c2289ac31852e5f66c56f237286b768dd2784ff196d31e5c124afd2fda9",
+      "name": "MockUSDT",
+      "operation": "approve(address,uint256)",
+      "address": "0xcc7459b3f3ff46c79b55ec69a6f0705089223426",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 46390
+    },
+    {
+      "hash": "0x6eb8d3ca7805de00091bab1dfcb2c7c6ddf21fdc2eb5cd02c0808a7ce9348ea9",
+      "name": "RelayerRewards",
+      "operation": "fund(address,uint256)",
+      "address": "0x955450f36e3abb771924ae151f4d383f109daf3e",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 86999
+    },
+    {
+      "hash": "0x70a121b6f2037a681bf7db0a0226bc8a33a582d0572fff50a41478c9b0dd79a4",
+      "name": "MockWBNB",
+      "operation": "approve(address,uint256)",
+      "address": "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 46378
+    },
+    {
+      "hash": "0x627197abd2be73af1ea54736e5d37c7ab7f4b25af99ff4e0650bbd5e8749d877",
+      "name": "RelayerRewards",
+      "operation": "fund(address,uint256)",
+      "address": "0x955450f36e3abb771924ae151f4d383f109daf3e",
+      "status": "0x1",
+      "block": 132160327,
+      "gasUsed": 86987
+    }
+  ],
+  "RelayerRewards": "0x955450f36e3abb771924ae151f4d383f109daf3e",
+  "FeeRouter": "0xeea9c3f9bfd7f1b2420bdbd1bc31d225e98e5c43",
+  "rewardBps": 10000,
+  "version": "bitcoin-timestamps-v3",
+  "sourceCommit": "7ea65cfac5409d552e8fecf23dfeca91fb27e172",
+  "status": "confirmed",
+  "bountyDivisor": 10000,
+  "maxFutureBlockTime": 7200,
+  "maxRelayAge": 10800,
+  "rewardTokens": [
+    "0xcc7459b3f3ff46c79b55ec69a6f0705089223426",
+    "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15"
+  ]
+}

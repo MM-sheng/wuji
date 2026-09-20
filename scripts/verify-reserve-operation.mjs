@@ -10,18 +10,25 @@ const j=JSON.parse(fs.readFileSync(manifest));
 assert.ok(['bitcoin-reserve-v2','bitcoin-timestamps-v3'].includes(j.version));assert.equal(j.status,'confirmed');
 const cast=process.env.CAST||path.join(os.homedir(),'.foundry/bin/cast');
 const encode=(...a)=>execFileSync(cast,a,{encoding:'utf8'}).trim();
-async function rpc(method,params){
- const r=await(await fetch(j.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();
+async function rpc(method,params,endpoint=j.rpc){
+ const r=await(await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();
  if(r.error)throw Error(r.error.message);return r.result;
 }
 assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),97);
 const at=await rpc('eth_blockNumber',[]);
+const logsRpc=process.env.LOG_RPC||j.rpc;
+if(logsRpc!==j.rpc){
+ assert.equal(Number(BigInt(await rpc('eth_chainId',[],logsRpc))),97);
+ const [a,b]=await Promise.all([rpc('eth_getBlockByNumber',[at,false]),rpc('eth_getBlockByNumber',[at,false],logsRpc)]);
+ assert.ok(a&&b,'event provider has not reached the observation block');
+ assert.equal(a.hash,b.hash,'event provider disagrees on the observation block');
+}
 const call=(to,sig,args=[],block=at)=>rpc('eth_call',[{to,data:encode('calldata',sig,...args)},block]);
 const start=Math.min(...j.transactions.map(t=>t.block));
 const topics=Object.fromEntries(['Funded(address,address,uint256)','Bounty(address,address,uint64,uint64,uint256)','Claimed(address,address,uint256)'].map(s=>[encode('keccak',s),s.split('(')[0]]));
 const events=[];
 for(let from=start;from<=Number(BigInt(at));from+=1000){
- events.push(...await rpc('eth_getLogs',[{address:j.RelayerRewards,fromBlock:'0x'+from.toString(16),toBlock:'0x'+Math.min(from+999,Number(BigInt(at))).toString(16),topics:[Object.keys(topics)]}]));
+ events.push(...await rpc('eth_getLogs',[{address:j.RelayerRewards,fromBlock:'0x'+from.toString(16),toBlock:'0x'+Math.min(from+999,Number(BigInt(at))).toString(16),topics:[Object.keys(topics)]}],logsRpc));
 }
 events.sort((a,b)=>Number(BigInt(a.blockNumber)-BigInt(b.blockNumber))||Number(BigInt(a.logIndex)-BigInt(b.logIndex)));
 const assets=new Map(j.rewardTokens.map(t=>[t,{reserve:0n,allocated:0n,funded:0n,paid:0n,workers:new Map(),heights:0n}]));
@@ -74,7 +81,7 @@ for(const hash of new Set(evidence.map(e=>e.hash))){
  const r=await rpc('eth_getTransactionReceipt',[hash]);assert.equal(r.status,'0x1');
  transactions.push({hash,status:r.status,block:Number(BigInt(r.blockNumber)),gasUsed:Number(BigInt(r.gasUsed)),effectiveGasPrice:BigInt(r.effectiveGasPrice).toString()});
 }
-const result={verifiedAt:new Date().toISOString(),manifest,sourceCommit:j.sourceCommit,evmBlock:Number(BigInt(at)),events:evidence,transactions,assets:Object.fromEntries([...assets].map(([t,a])=>[t,{...a,workers:Object.fromEntries(a.workers)}])),reconciliation:{evmBlock:c.observedAt,height:c.lastHeight,U,S_wad:S,lastHash:c.lastHash,matched:true,method:'Recomputed every cached raw header, then read contract state at the indexer observation block; this is not the two-source independent verifier planned in T4.'}};
+const result={verifiedAt:new Date().toISOString(),manifest,eventSource:logsRpc,sourceCommit:j.sourceCommit,evmBlock:Number(BigInt(at)),events:evidence,transactions,assets:Object.fromEntries([...assets].map(([t,a])=>[t,{...a,workers:Object.fromEntries(a.workers)}])),reconciliation:{evmBlock:c.observedAt,height:c.lastHeight,U,S_wad:S,lastHash:c.lastHash,matched:true,method:'Recomputed every cached raw header, then read contract state at the indexer observation block; this is not the two-source independent verifier planned in T4.'}};
 const output=process.env.OPERATION_OUTPUT||'contracts/deployments/reserve-operation.json';
 fs.writeFileSync(output,JSON.stringify(result,(_,v)=>typeof v==='bigint'?v.toString():v,2)+'\n');
 console.log('PASS',output,JSON.stringify(result.reconciliation));

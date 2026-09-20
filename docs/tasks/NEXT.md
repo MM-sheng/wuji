@@ -84,6 +84,8 @@ byte-for-byte.
 
 Implemented on `codex/bitcoin-timestamps`; delivery and evidence: [T2B_REPORT.md](T2B_REPORT.md).
 MTP11, future two-hour bound, mainnet version floors and the three-hour advertised-tip-age gate are in source.
+112 Solidity tests and 8 Node tests passed. The separate :8792 testnet deployment passed runtime/binding
+checks, live catch-up through Bitcoin 967855, two-asset bounty replay and exact-height index reconciliation.
 The age gate does not prove global synchronization. Independent review remains open.
 
 - Implement median-time-past (11-block median; store or walk ancestors — measure gas) and the 2-hour future-time

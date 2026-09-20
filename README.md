@@ -91,8 +91,11 @@ and folding resumes when the best tip meets the rule. The terminal displays this
 ```bash
 MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json PORT=8792 PROCESS_PREFIX=wuji-timestamps DATA_DIR="$PWD/indexer/data/timestamps-v3" bash scripts/bitcoin-testnet.sh
 MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json VERIFICATION_OUTPUT=contracts/deployments/timestamps-verification.json node scripts/verify-bitcoin-deployment.mjs
-MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json INDEXER_URL=http://localhost:8792 OPERATION_OUTPUT=contracts/deployments/timestamps-operation.json node scripts/verify-reserve-operation.mjs
+LOG_RPC=https://bsc-testnet-rpc.publicnode.com MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json INDEXER_URL=http://localhost:8792 OPERATION_OUTPUT=contracts/deployments/timestamps-operation.json node scripts/verify-reserve-operation.mjs
 ```
+
+`LOG_RPC` selects an event-capable read provider when the deployment RPC rejects `eth_getLogs`. The replay
+checks that both providers agree on the observation block hash before combining logs and contract state.
 
 The v3 manifest enables `RELAY_TIMESTAMPS=1` for the keeper and indexer automatically. When launching those
 processes directly, set it explicitly. The BSC testnet v3 startup sets `KEEPER_GAS_PRICE=0.1gwei` and uses
