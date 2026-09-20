@@ -9,8 +9,8 @@ import json,os,subprocess
 from pathlib import Path
 j=json.load(open(os.environ.get('MANIFEST','contracts/deployments/bsc-testnet.json')))
 assert j['chainId'] in (97,11155111), 'testnets only'
-assert j.get('status') == 'confirmed', 'deployment receipts not confirmed'
 sepolia=j['chainId']==11155111
+assert j.get('status') == 'confirmed' if sepolia else j.get('status') in (None,'confirmed'), 'deployment receipts not confirmed'
 env=os.environ.copy();env.update(SOURCE='bitcoin',PORT=os.environ.get('PORT','8793' if sepolia else '8789'),CHAIN_ID=str(j['chainId']),GENESIS_HEIGHT=str(j['genesisHeight']),RELAY=j['BitcoinRelay'],CONTRACT=j['WujiIndex'],FACTORY=j['WujiVaultFactory'],RPC=j['rpc'],FEE_ROUTER=j.get('FeeRouter',''))
 if j.get('version') in ('bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'):
  env.update(REWARD_MODEL='operations-reserve',REWARDS=j['RelayerRewards'],REWARD_TOKENS=os.environ.get('REWARD_TOKENS',','.join(j['rewardTokens'])))

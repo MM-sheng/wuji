@@ -31,6 +31,10 @@ for(const v of Object.values(j.vaults)){
 if(j.version==='bitcoin-sepolia-v3'){
  assert.equal(j.chainId,11155111);assert.equal(j.vaults.WETH.asset.toLowerCase(),'0xfff9976782d46cc05630d1f6ebab18b2324d6b14');
  assert.equal(BigInt(await read(j.vaults.WETH.asset,'decimals()')),18n);
+ assert.equal(Number(BigInt(await read(j.BitcoinRelay,'checkpointHeight()'))),j.checkpoint.checkpointHeight);
+ const hash='0x'+step(j.checkpoint.checkpointHeader).internalHash;
+ assert.equal(await read(j.BitcoinRelay,'checkpointHash()'),hash);
+ assert.equal(BigInt(await rpc('eth_call',[{to:j.BitcoinRelay,data:sig('chainWork(bytes32)')+hash.slice(2)},at])),BigInt(j.checkpoint.checkpointChainWork));
 }
 if(j.RelayerRewards){
  const addressOf=async(a,s)=>'0x'+(await read(a,s)).slice(-40);
