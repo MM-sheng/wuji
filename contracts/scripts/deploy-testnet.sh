@@ -19,6 +19,7 @@ for pidfile in /tmp/wuji-keeper.pid /tmp/wuji-bitcoin-keeper.pid /tmp/wuji-rewar
 done
 set -a; source "${ENV_FILE:-.env}"; set +a
 set -a; source deployments/bitcoin-checkpoint.env; set +a
+export RPC="${DEPLOY_RPC:-$RPC}"
 export ALLOW_MOCK_ASSET=true EXPECTED_CHAIN_ID=97
 # Password-file paths in an external env belong to that env's directory.
 if [[ "$PASSWORD_FILE" != /* ]]; then PASSWORD_FILE="$(dirname "${ENV_FILE:-$PWD/.env}")/$PASSWORD_FILE"; fi
