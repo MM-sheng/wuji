@@ -67,9 +67,11 @@ contract Deploy is Script {
         uint64 nonce = vm.getNonce(deployer);
         address predictedRelay = vm.computeCreateAddress(deployer, nonce + 1);
         address predictedIndex = vm.computeCreateAddress(deployer, nonce + 2);
-        RelayerRewards rewards = new RelayerRewards(predictedRelay, predictedIndex);
-        BitcoinRelay relay = new BitcoinRelay(vm.envBytes("BTC_CHECKPOINT_HEADER"),uint64(vm.envUint("BTC_CHECKPOINT_HEIGHT")),uint32(vm.envUint("BTC_EPOCH_START_TIME")),vm.envUint("BTC_CHECKPOINT_WORK"), rewards);
-        idx = new WujiIndex(relay,uint64(vm.envUint("GENESIS_HEIGHT")),uint64(checkpointInterval), rewards);
+        uint256 genesis = vm.envUint("GENESIS_HEIGHT");
+        require(genesis <= type(uint64).max, "genesis overflow");
+        RelayerRewards rewards = new RelayerRewards(predictedIndex, uint64(genesis));
+        BitcoinRelay relay = new BitcoinRelay(vm.envBytes("BTC_CHECKPOINT_HEADER"),uint64(vm.envUint("BTC_CHECKPOINT_HEIGHT")),uint32(vm.envUint("BTC_EPOCH_START_TIME")),vm.envUint("BTC_CHECKPOINT_WORK"));
+        idx = new WujiIndex(relay,uint64(genesis),checkpointInterval, rewards);
         require(address(relay) == predictedRelay && address(idx) == predictedIndex, "CREATE nonce mismatch");
         FeeRouter router = new FeeRouter(rewards);
         treasury = address(router);

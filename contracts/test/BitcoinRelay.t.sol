@@ -15,7 +15,7 @@ contract EasyRelay is BitcoinRelay {
         testParents[hash] = parent; super._storeLink(hash,bytes32(0),id);
     }
     function _parent(bytes32 hash) internal view override returns(bytes32) { return testParents[hash]; }
-    constructor(bytes memory cp, RelayerRewards rewards_) BitcoinRelay(cp,1000,0,1e30, rewards_) {}
+    constructor(bytes memory cp) BitcoinRelay(cp,1000,0,1e30) {}
     function targetOf(uint32) public pure override returns(uint256) { return type(uint256).max/2; }
 }
 contract BitcoinRelayTest is Test {
@@ -26,7 +26,7 @@ contract BitcoinRelayTest is Test {
         cp=vm.parseBytes(string.concat("0x",vm.parseJsonString(meta,".checkpointHeader")));
         headers=vm.parseBytes(vm.readFile("test/fixtures/bitcoin-798336.hex"));
         vectors=vm.parseBytes(vm.readFile("test/fixtures/bitcoin-vectors.hex"));
-        relay=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30, RelayerRewards(address(0)));
+        relay=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
     }
     function slice(bytes memory b,uint256 start,uint256 count) internal pure returns(bytes memory out) {
         out=new bytes(count); for(uint256 i;i<count;i++) out[i]=b[start+i];
@@ -89,7 +89,7 @@ contract BitcoinRelayTest is Test {
         hash=parent;for(uint256 i;i<count;i++){bytes memory h=next(r,hash,salt+i);r.submit(h);hash=sha256(abi.encodePacked(sha256(h)));}
     }
     function test_threeBlockForkAndDeepReorg() public {
-        EasyRelay r=new EasyRelay(cp, RelayerRewards(address(0)));
+        EasyRelay r=new EasyRelay(cp);
         bytes32 root=r.bestHash(); extend(r,root,10,1);
         WujiIndex idx=new WujiIndex(BitcoinRelay(address(r)),1001,4320, RelayerRewards(address(0)));idx.fold();assertEq(idx.lastHeight(),1004);
         bytes32 ancestor=r.headerAt(1007);bytes32 heavier=extend(r,ancestor,4,100);
@@ -109,7 +109,7 @@ contract BitcoinRelayTest is Test {
     function test_shorterButHigherWorkForkWinsAtRetarget() public {
         uint32 time=uint32(uint8(cp[68]))|uint32(uint8(cp[69]))<<8|uint32(uint8(cp[70]))<<16|uint32(uint8(cp[71]))<<24;
         uint32 bits=uint32(uint8(cp[72]))|uint32(uint8(cp[73]))<<8|uint32(uint8(cp[74]))<<16|uint32(uint8(cp[75]))<<24;
-        BitcoinRelay r=new BitcoinRelay(cp,2014,time-1209600,1e30, RelayerRewards(address(0)));
+        BitcoinRelay r=new BitcoinRelay(cp,2014,time-1209600,1e30);
         bytes32 root=r.bestHash();bytes32 tip=synthetic(r,root,bits,time,1);
         tip=synthetic(r,tip,bits,time+600,2);tip=synthetic(r,tip,bits,time+1200,3);tip=synthetic(r,tip,bits,time+1800,4);
         uint256 oldWork=r.chainWork(tip);assertEq(r.bestHeight(),2018);

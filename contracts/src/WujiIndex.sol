@@ -22,8 +22,7 @@ contract WujiIndex {
     event Checkpoint(uint64 indexed height, int256 S);
     constructor(BitcoinRelay relay_, uint64 genesis, uint64 interval, RelayerRewards rewards_) {
         if (address(rewards_) != address(0)) {
-            require(rewards_.index() == address(this) && rewards_.relay() == address(relay_), "reward index mismatch");
-            require(address(relay_.rewards()) == address(rewards_), "reward source mismatch");
+            require(rewards_.index() == address(this) && rewards_.GENESIS_HEIGHT() == genesis, "reward index mismatch");
         }
         rewards = rewards_;
         require(address(relay_).code.length > 0, "relay not contract");
@@ -39,7 +38,13 @@ contract WujiIndex {
         uint64 f = finalizedHeight(); return f > lastHeight ? f - lastHeight : 0;
     }
     function fold() external returns (uint64) { return fold(DEFAULT_MAX); }
-    function fold(uint256 max) public returns (uint64) {
+    /// @notice Fold without a bounty. These heights cannot earn rewards retroactively.
+    function fold(uint256 max) public returns (uint64) { return fold(max, new address[](0)); }
+    /// @notice Fold and allocate one-off bounties in a sorted, unique list of at most eight tokens.
+    function fold(uint256 max, address[] memory rewardTokens) public returns (uint64) {
+        require(rewardTokens.length == 0 || address(rewards) != address(0), "rewards disabled");
+        require(rewardTokens.length <= 8, "token limit");
+        require(rewardTokens.length == 0 || max <= DEFAULT_MAX, "height limit");
         require(lastHash == bytes32(0) || relay.headerAt(lastHeight) == lastHash, "deep Bitcoin reorg");
         uint256 count = pending(); if (count > max) count = max;
         if (count == 0) return 0;
@@ -53,10 +58,9 @@ contract WujiIndex {
                 nextCheckpointHeight = h + CHECKPOINT_INTERVAL;
             }
             lastHash = hash;
-            if (address(rewards) != address(0) && h > relay.checkpointHeight()) relay.rewardFinalized(h);
         }
         lastHeight = to; S = value;
-        if (address(rewards) != address(0)) rewards.credit(msg.sender, count); emit Fold(from, to, value); return uint64(count);
+        if (address(rewards) != address(0)) rewards.credit(msg.sender, from, to, rewardTokens); emit Fold(from, to, value); return uint64(count);
     }
     function byteSum(bytes32 h) public pure returns (uint256 x) {
         x = uint256(h);

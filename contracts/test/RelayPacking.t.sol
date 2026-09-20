@@ -2,11 +2,11 @@
 pragma solidity ^0.8.24;
 import {BitcoinRelayTest} from "./BitcoinRelay.t.sol";
 import {BitcoinRelay} from "../src/BitcoinRelay.sol";
-import {RelayerRewards} from "../src/RelayerRewards.sol";
+import {HistoricalRewards} from "./reference/HistoricalRewards.sol";
 import {BitcoinRelayBaseline} from "./reference/BitcoinRelayBaseline.sol";
 // Exposes packing only for lossless-encoding tests; never deployed in production.
 contract PackingHarness is BitcoinRelay {
-    constructor(bytes memory cp,uint32 time) BitcoinRelay(cp,798335,time,1e30,RelayerRewards(address(0))) {}
+    constructor(bytes memory cp,uint32 time) BitcoinRelay(cp,798335,time,1e30) {}
     function parentRoundTrip(bytes32 parent,uint32 id) external returns(bytes32,uint32) {
         bytes32 key=keccak256("packing test");_storeLink(key,parent,id);
         return (_parent(key),uint32(links[key]>>224));
@@ -22,24 +22,24 @@ contract RelayPackingTest is BitcoinRelayTest {
     }
     function test_rejectsCheckpointNarrowing() public {
         vm.expectRevert("height overflow");
-        new BitcoinRelay(cp,uint64(type(uint32).max)+1,0,1e30,RelayerRewards(address(0)));
+        new BitcoinRelay(cp,uint64(type(uint32).max)+1,0,1e30);
         vm.expectRevert("work overflow");
-        new BitcoinRelay(cp,798335,0,uint256(type(uint128).max)+1,RelayerRewards(address(0)));
+        new BitcoinRelay(cp,798335,0,uint256(type(uint128).max)+1);
     }
     function test_workAdditionRejectsOverflowAtomically() public {
-        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),type(uint128).max,RelayerRewards(address(0)));
+        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),type(uint128).max);
         bytes32 root=r.bestHash();
         vm.expectRevert("work overflow");r.submit(slice(headers,0,80));
         assertEq(r.bestHash(),root); assertEq(r.bestHeight(),798335);
         assertEq(r.chainWork(root),type(uint128).max);
     }
     function test_heightAdditionRejectsOverflowAtomically() public {
-        BitcoinRelay r=new BitcoinRelay(cp,type(uint32).max,0,1e30,RelayerRewards(address(0)));
+        BitcoinRelay r=new BitcoinRelay(cp,type(uint32).max,0,1e30);
         vm.expectRevert("height overflow");r.submit(slice(headers,0,80));
         assertEq(r.bestHeight(),type(uint32).max);
     }
     function test_allRealHeadersMatchFrozenBaseline() public {
-        BitcoinRelayBaseline old=new BitcoinRelayBaseline(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,RelayerRewards(address(0)));
+        BitcoinRelayBaseline old=new BitcoinRelayBaseline(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,HistoricalRewards(address(0)));
         bytes memory all = headers;
         uint256 totalGas;
         for(uint256 i;i<2028;i+=24) {

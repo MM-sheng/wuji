@@ -10,12 +10,10 @@ import {SeriesToken, SeriesTokenDeployer} from "./SeriesToken.sol";
 
 /// @title WujiVault — 无极生太极，太极生两仪
 /// @notice Deposit NOTIONAL of collateral, receive one YANG and one YIN of the current series.
-///         At every moment  value(YANG) + value(YIN) == NOTIONAL,  so the vault can never owe more
-///         than it holds. Nobody is anyone's counterparty except the other half of their own pair.
-///
-///         Within a series:   yangShare = ½ + ½·(S_now − S_start)         clamped to [0, 1]
-///         so each block moves ½·r_block of the notional from the losing side to the winning side —
-///         a FIXED base, which is the only transfer rule that keeps the pair summing to NOTIONAL.
+///         Under ordinary ERC-20 accounting, a pair's gross settlement allocation sums to NOTIONAL.
+///         The index S, instantaneous allocation, expiry payoff and executable market price differ.
+///         The share is an absolute-position function, independent of the intermediate path:
+///         yangShare = clamp(1/2 + (S_now - S_start)/2, 0, 1). It is not a lending price feed.
 ///
 ///         Every series ends at a block fixed before its hash exists. After that block anyone may settle():
 ///         the share is frozen from its index checkpoint and the next series opens at ½/½. Settled tokens redeem
@@ -93,14 +91,14 @@ contract WujiVault is ReentrancyGuard {
         return _share(s.s0, s1);
     }
 
-    /// @notice Live collateral value of one YANG and one YIN of the current series.
+    /// @notice Gross settlement allocations, NOT market prices or early single-sided redemption quotes.
     function values() external view returns (uint256 yangValue, uint256 yinValue) {
         uint256 sh = yangShare();
         yangValue = NOTIONAL * sh / WAD;
         yinValue = NOTIONAL - yangValue;
     }
 
-    /// @notice Everything the vault owes across all series, at current/settled values. Always ≤ balance.
+    /// @notice All series liabilities in collateral units; covered under ordinary ERC-20 accounting assumptions.
     function liabilities() external view returns (uint256 total) {
         for (uint256 i = 0; i < series.length; i++) {
             Series storage s = series[i];

@@ -156,6 +156,38 @@ deliberately (who gains at which state) and choose X accordingly. Write-up in TH
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.
 - Then: independent audit of the exact release commit; bug bounty; `docs/MAINNET_CHECKLIST.md` fully ticked.
 
+## T10 · ZK-SPV relay — verify a month of Bitcoin headers in one proof (after T2b; makes Ethereum L1 affordable)
+
+Goal: replace per-header on-chain verification (≈16.6M gas/day, ~$50/day on L1 at 1 gwei) with one succinct proof
+per batch (≈300k gas regardless of batch size, ~$1/month). This is what makes the target stack (Bitcoin source,
+Ethereum L1 settlement, ETH collateral) run on zero budget.
+
+Design (write `docs/tasks/T10_DESIGN.md` first, build after review):
+- **Guest program** (zkVM: SP1 or RISC Zero — pick by proving cost, verifier gas and audit surface; cite the existing
+  Bitcoin header-chain examples/ZeroSync as prior art) that takes a starting header state (hash, height, bits,
+  epoch-start time, cumulative work) and N raw headers, and re-implements **exactly** `BitcoinRelay`'s rules: sha256d
+  ≤ target, parent linkage, retarget with clamp and compact encoding, MTP and future-time limits (from T2b), work
+  accumulation. Output: final state + a commitment to every header hash in the batch (Merkle root, so `/proof` and
+  `fold` can address individual heights).
+- **`ZkBitcoinRelay` contract**: stores the trusted checkpoint state; `submitProof(proof, newState, headersRoot)`
+  verifies with the zkVM's on-chain verifier and advances the main chain. Fork choice stays work-based: a proof
+  extending an older state with more cumulative work replaces the tip; six-deep folding unchanged. Individual
+  header hashes become available to `WujiIndex` via Merkle proofs (or the proof output includes the hashes for the
+  finalised range directly — measure calldata cost vs storage).
+- **Fallback path**: keep the per-header `submit` as an escape hatch so liveness never depends on any prover; both
+  paths must yield identical state (differential test).
+- **Prover**: off-chain, anyone; the keeper generates the proof on a normal machine (report CPU time and RAM for a
+  4320-header batch) or uses a prover network. No trusted setup beyond the zkVM's; document the zkVM's own trust
+  assumptions (circuit soundness, verifier contract immutability) in THREAT_MODEL — this is the one new trust
+  element and must be stated plainly.
+- Tests: the existing real-header fixtures through both paths; retarget inside a batch; a batch that crosses a
+  checkpoint height; invalid header inside a batch must fail to prove.
+- Report: gas per batch, proving time/cost, and the new monthly cost table for Ethereum L1, BSC and one L2.
+
+Zero-budget path until T10 lands: stay on BSC testnet; first mainnet on a cheap venue (BSC or an Ethereum L2 —
+with Bitcoin as the source a sequencer can only delay, not bias) paid by volunteer keepers; move the canonical
+deployment to Ethereum L1 once T10 makes it ~$1/month.
+
 ---
 
 ## Explicitly not now

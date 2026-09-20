@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 /// @notice Bitcoin mainnet SPV header relay rooted at a trusted immutable checkpoint.
 /// @dev Hash keys use raw SHA256d digest order; explorer display order is reversed.
 /// MTP and future-time limits are omitted; actual work is still checked and summed. No transaction validation.
-import {RelayerRewards} from "../../src/RelayerRewards.sol";
+import {HistoricalRewards as RelayerRewards} from "./HistoricalRewards.sol";
 // Frozen reference from 143592b, used only for differential tests.
 contract BitcoinRelayBaseline {
     RelayerRewards public immutable rewards;

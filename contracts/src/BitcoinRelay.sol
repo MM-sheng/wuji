@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
-import {RelayerRewards} from "./RelayerRewards.sol";
 /// @notice Mainnet Bitcoin SPV relay. Raw SHA256d hashes use digest order, not explorer order.
 /// @dev Exact work is reconstructed from branch-local difficulty epochs. No MTP/block-body checks.
 contract BitcoinRelay {
-    RelayerRewards public immutable rewards;
     uint256 public constant POW_LIMIT = 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     // Valid mainnet hashes fit 224 bits in numeric PoW order. The remaining 32 bits identify metadata.
     mapping(bytes32 => uint256) internal links;
@@ -15,7 +13,6 @@ contract BitcoinRelay {
     mapping(uint64 => bytes32) internal main;
     mapping(address => uint32) internal workerId;
     mapping(uint32 => address) internal workers;
-    mapping(uint64 => bool) public rewarded;
     uint32 internal nodeCount;
     uint32 internal epochCount;
     uint32 internal workerCount;
@@ -25,9 +22,7 @@ contract BitcoinRelay {
     bytes32 public immutable checkpointHash;
     struct Info { uint32 height; uint32 time; uint32 epoch; uint32 worker; }
     event Header(bytes32 indexed hash, uint64 indexed height, uint256 work);
-    constructor(bytes memory header, uint64 height, uint32 epochTime, uint256 work, RelayerRewards rewards_) {
-        if (address(rewards_) != address(0)) require(rewards_.relay() == address(this), "reward relay mismatch");
-        rewards = rewards_;
+    constructor(bytes memory header, uint64 height, uint32 epochTime, uint256 work) {
         require(header.length == 80, "header length");
         bytes32 hash = sha256(abi.encodePacked(sha256(header)));
         uint32 bits = read32(header,72); uint32 time = read32(header,68);
@@ -126,12 +121,6 @@ contract BitcoinRelay {
     }
     /// @notice Original worker via an immutable ID. Constant-time lookup, including orphan branches.
     function submitter(bytes32 hash) public view returns(address) { return workers[_info(hash).worker]; }
-    function rewardFinalized(uint64 height) external {
-        require(address(rewards) != address(0) && msg.sender == rewards.index(), "index only");
-        require(height > checkpointHeight && bestHeight >= height && bestHeight-height >= 6, "not finalized");
-        if(rewarded[height]) return;
-        rewarded[height] = true; rewards.credit(submitter(main[height]),1);
-    }
     function headerAt(uint64 height) external view returns(bytes32) { return height < checkpointHeight || height > bestHeight ? bytes32(0) : main[height]; }
     function heightOf(bytes32 hash) external view returns(uint64) { require(links[hash] != 0,"unknown header"); return _info(hash).height; }
     function chainWork(bytes32 hash) public view returns(uint256) { if(links[hash] == 0)return 0;Info memory n=_info(hash);return _work(n,epochs[n.epoch]); }
