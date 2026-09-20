@@ -3,7 +3,11 @@ pragma solidity ^0.8.24;
 /// @notice Bitcoin mainnet SPV header relay rooted at a trusted immutable checkpoint.
 /// @dev Hash keys use raw SHA256d digest order; explorer display order is reversed.
 /// MTP and future-time limits are omitted; actual work is still checked and summed. No transaction validation.
+import {RelayerRewards} from "./RelayerRewards.sol";
 contract BitcoinRelay {
+    RelayerRewards public immutable rewards;
+    mapping(bytes32 => address) public submitter;
+    mapping(uint64 => bool) public rewarded;
     uint256 public constant POW_LIMIT = 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     struct Node { bytes32 parent; uint256 work; uint64 height; uint32 time; uint32 bits; uint32 epochTime; bool known; }
     mapping(bytes32 => Node) internal nodes;
@@ -13,7 +17,9 @@ contract BitcoinRelay {
     uint64 public immutable checkpointHeight;
     bytes32 public immutable checkpointHash;
     event Header(bytes32 indexed hash, uint64 indexed height, uint256 work);
-    constructor(bytes memory header, uint64 height, uint32 epochTime, uint256 work) {
+    constructor(bytes memory header, uint64 height, uint32 epochTime, uint256 work, RelayerRewards rewards_) {
+        if (address(rewards_) != address(0)) require(rewards_.relay() == address(this), "reward relay mismatch");
+        rewards = rewards_;
         require(header.length == 80, "header length");
         bytes32 hash = sha256(abi.encodePacked(sha256(header)));
         uint32 bits = read32(header,72); uint32 time = read32(header,68);
@@ -41,6 +47,7 @@ contract BitcoinRelay {
             uint256 target = targetOf(bits); require(uint256(reverse(hash)) <= target, "PoW");
             uint256 work = p.work + workOf(target);
             nodes[hash] = Node(parent,work,height,time,bits,height % 2016 == 0 ? time : p.epochTime,true);
+            submitter[hash] = msg.sender;
             emit Header(hash,height,work);
             if(work > nodes[bestHash].work) {
                 bytes32 cursor = hash; uint64 at = height;
@@ -52,6 +59,15 @@ contract BitcoinRelay {
                 bestHeight = height; bestHash = hash;
             }
         }
+    }
+    /// @notice Only the immutable index can acknowledge a six-deep, successfully folded height.
+    /// Rewards are attributed to the original submitter, never to the caller of fold.
+    function rewardFinalized(uint64 height) external {
+        require(address(rewards) != address(0) && msg.sender == rewards.index(), "index only");
+        require(height > checkpointHeight && bestHeight >= height && bestHeight - height >= 6, "not finalized");
+        if (rewarded[height]) return;
+        rewarded[height] = true;
+        rewards.credit(submitter[main[height]], 1);
     }
     function headerAt(uint64 height) external view returns(bytes32) { return height < checkpointHeight || height > bestHeight ? bytes32(0) : main[height]; }
     function heightOf(bytes32 hash) external view returns(uint64) { require(nodes[hash].known,"unknown header"); return nodes[hash].height; }

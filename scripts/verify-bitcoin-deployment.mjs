@@ -1,10 +1,10 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';import os from 'node:os';import path from 'node:path';
 import {BitcoinAPI,step} from '../indexer/bitcoin.mjs';
-const j=JSON.parse(fs.readFileSync('contracts/deployments/bsc-testnet.json'));
+const j=JSON.parse(fs.readFileSync(process.env.MANIFEST||'contracts/deployments/bsc-testnet.json'));
 async function rpc(method,params){const r=await(await fetch(j.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();if(r.error)throw Error(r.error.message);return r.result;}
 assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),97);
 const verified=[];
-for(const [name,address] of [...['BitcoinRelay','WujiIndex','SeriesTokenDeployer','WujiVaultFactory'].map(n=>[n,j[n]]),...Object.values(j.vaults).map(v=>['WujiVault',v.address])]){
+for(const [name,address] of [...['BitcoinRelay','WujiIndex','SeriesTokenDeployer','WujiVaultFactory','RelayerRewards','FeeRouter'].filter(n=>j[n]).map(n=>[n,j[n]]),...Object.values(j.vaults).map(v=>['WujiVault',v.address])]){
  const artifact=JSON.parse(fs.readFileSync(`contracts/out/${name==='SeriesTokenDeployer'?'SeriesToken':name}.sol/${name}.json`));
  const actual=Buffer.from((await rpc('eth_getCode',[address,'latest'])).slice(2),'hex');
  const expected=Buffer.from(artifact.deployedBytecode.object.replace(/^0x/,''),'hex');assert.equal(actual.length,expected.length);
@@ -18,7 +18,12 @@ assert.equal(Number(BigInt(await read(j.WujiIndex,'GENESIS_HEIGHT()'))),j.genesi
 assert.equal(Number(BigInt(await read(j.WujiIndex,'CONFIRMATIONS()'))),6);
 assert.equal(Number(BigInt(await read(j.WujiIndex,'CHECKPOINT_INTERVAL()'))),4320);
 assert.equal(BigInt(await read(j.WujiIndex,'UNIT()')),12000000000000n);
+if(j.RelayerRewards){
+ const addressOf=async(a,s)=>'0x'+(await read(a,s)).slice(-40);
+ for(const [a,s,expected] of [[j.RelayerRewards,'relay()',j.BitcoinRelay],[j.RelayerRewards,'index()',j.WujiIndex],[j.BitcoinRelay,'rewards()',j.RelayerRewards],[j.WujiIndex,'rewards()',j.RelayerRewards],[j.FeeRouter,'rewards()',j.RelayerRewards],[j.WujiVaultFactory,'treasury()',j.FeeRouter],...Object.values(j.vaults).map(v=>[v.address,'treasury()',j.FeeRouter])])assert.equal((await addressOf(a,s)).toLowerCase(),expected.toLowerCase(),s);
+ assert.equal(BigInt(await read(j.FeeRouter,'REWARD_BPS()')),5000n);
+}
 const height=Number(BigInt(await read(j.BitcoinRelay,'bestHeight()'))),hash=await read(j.BitcoinRelay,'bestHash()');
 const api=new BitcoinAPI(),source=await api.at(height);assert.equal(hash.slice(2),step(source.header).internalHash);
 const result={verifiedAt:new Date().toISOString(),evmBlock:parseInt(at,16),verified,relayHeight:height,relayHash:source.hash,lastHeight:Number(BigInt(await read(j.WujiIndex,'lastHeight()'))),S_wad:BigInt.asIntN(256,BigInt(await read(j.WujiIndex,'S()'))).toString(),liveFoldPending:height<j.genesisHeight+6};
-fs.writeFileSync('contracts/deployments/bitcoin-verification.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result,null,2));
+fs.writeFileSync(process.env.VERIFICATION_OUTPUT||'contracts/deployments/bitcoin-verification.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result,null,2));

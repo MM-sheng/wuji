@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {RelayerRewards} from "../src/RelayerRewards.sol";
+import {FeeRouter} from "../src/FeeRouter.sol";
 import {BitcoinRelay} from "../src/BitcoinRelay.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
@@ -11,42 +13,34 @@ import {SeriesTokenDeployer} from "../src/SeriesToken.sol";
 import {MockUSDT} from "../test/mocks/MockUSDT.sol";
 import {MockWBNB} from "../test/mocks/MockWBNB.sol";
 
-/// Deploys WujiIndex (genesis = deploy block), WujiVaultFactory, and one vault per requested collateral.
+/// Deploys reward sources with predicted CREATE addresses, an immutable router, and collateral vaults.
 ///
-///   EXPECTED_CHAIN_ID=56 TREASURY=<addr> VAULTS=<asset>:<notional>,<asset>:<notional> [SERIES_BLOCKS=5760000] \
+///   EXPECTED_CHAIN_ID=56 DEPLOYER=<addr> VAULTS=<asset>:<notional>,<asset>:<notional> [CHECKPOINT_INTERVAL=4320] \
 ///   forge script script/Deploy.s.sol --rpc-url $RPC --broadcast --account $KEYSTORE_ACCOUNT --password-file $PASSWORD_FILE
 ///
 /// Testnet (ALLOW_MOCK_ASSET=true, never on chain 56): with VAULTS unset, deploys MockUSDT (100/pair) and
 /// MockWBNB (1/pair), mints test balances to the deployer, and opens both vaults.
 contract Deploy is Script {
     function run() external {
-        address treasury = vm.envOr("TREASURY", address(0));
+        address deployer = vm.envAddress("DEPLOYER");
         uint256 checkpointInterval = vm.envOr("CHECKPOINT_INTERVAL", uint256(4320));
         uint256 expectedChainId = vm.envOr("EXPECTED_CHAIN_ID", uint256(0));
         bool allowMockAsset = vm.envOr("ALLOW_MOCK_ASSET", false);
         string memory spec = vm.envOr("VAULTS", string(""));
         require(expectedChainId != 0 && block.chainid == expectedChainId, "wrong or missing EXPECTED_CHAIN_ID");
         require(!allowMockAsset || block.chainid != 56, "mock disabled on BSC mainnet");
-        if (allowMockAsset && treasury == address(0)) treasury = msg.sender;
-        require(treasury != address(0), "TREASURY required");
-        require(checkpointInterval <= type(uint64).max, "SERIES_BLOCKS too large");
 
-        vm.startBroadcast();
-        BitcoinRelay relay = new BitcoinRelay(vm.envBytes("BTC_CHECKPOINT_HEADER"),uint64(vm.envUint("BTC_CHECKPOINT_HEIGHT")),uint32(vm.envUint("BTC_EPOCH_START_TIME")),vm.envUint("BTC_CHECKPOINT_WORK"));
-        WujiIndex idx = new WujiIndex(relay,uint64(vm.envUint("GENESIS_HEIGHT")),uint64(checkpointInterval));
-        console.log("BitcoinRelay:",address(relay));
-        SeriesTokenDeployer tokens = new SeriesTokenDeployer();
-        WujiVaultFactory factory = new WujiVaultFactory(idx, treasury, tokens);
-        console.log("WujiIndex:", address(idx));
-        console.log("SeriesTokenDeployer:", address(tokens));
-        console.log("WujiVaultFactory:", address(factory));
+        require(checkpointInterval <= type(uint64).max, "CHECKPOINT_INTERVAL too large");
+
+        vm.startBroadcast(deployer);
+        (WujiIndex idx, WujiVaultFactory factory, address treasury) = _protocol(deployer, uint64(checkpointInterval));
 
         if (bytes(spec).length == 0) {
             require(allowMockAsset, "VAULTS required; mock disabled");
             MockUSDT usdt = new MockUSDT();
-            usdt.mint(msg.sender, 1_000_000e18);
+            usdt.mint(deployer, 1_000_000e18);
             MockWBNB wbnb = new MockWBNB();
-            wbnb.mint(msg.sender, 10_000e18);
+            wbnb.mint(deployer, 10_000e18);
             console.log("MockUSDT:", address(usdt));
             console.log("MockWBNB:", address(wbnb));
             _create(factory, address(usdt), 100e18);
@@ -62,10 +56,32 @@ contract Deploy is Script {
             }
         }
         vm.stopBroadcast();
-        console.log("genesis block:", idx.GENESIS_HEIGHT());
-        console.log("series blocks:", idx.CHECKPOINT_INTERVAL());
+        console.log("genesis height:", idx.GENESIS_HEIGHT());
+        console.log("series heights:", idx.CHECKPOINT_INTERVAL());
         console.log("chain id:", block.chainid);
         console.log("treasury:", treasury);
+    }
+
+
+    function _protocol(address deployer, uint64 checkpointInterval) internal returns(WujiIndex idx, WujiVaultFactory factory, address treasury) {
+        uint64 nonce = vm.getNonce(deployer);
+        address predictedRelay = vm.computeCreateAddress(deployer, nonce + 1);
+        address predictedIndex = vm.computeCreateAddress(deployer, nonce + 2);
+        RelayerRewards rewards = new RelayerRewards(predictedRelay, predictedIndex);
+        BitcoinRelay relay = new BitcoinRelay(vm.envBytes("BTC_CHECKPOINT_HEADER"),uint64(vm.envUint("BTC_CHECKPOINT_HEIGHT")),uint32(vm.envUint("BTC_EPOCH_START_TIME")),vm.envUint("BTC_CHECKPOINT_WORK"), rewards);
+        idx = new WujiIndex(relay,uint64(vm.envUint("GENESIS_HEIGHT")),uint64(checkpointInterval), rewards);
+        require(address(relay) == predictedRelay && address(idx) == predictedIndex, "CREATE nonce mismatch");
+        FeeRouter router = new FeeRouter(rewards);
+        treasury = address(router);
+        console.log("RelayerRewards:", address(rewards));
+        console.log("FeeRouter:", address(router));
+        console.log("BitcoinRelay:",address(relay));
+        SeriesTokenDeployer tokens = new SeriesTokenDeployer();
+        factory = new WujiVaultFactory(idx, treasury, tokens);
+        console.log("WujiIndex:", address(idx));
+        console.log("SeriesTokenDeployer:", address(tokens));
+        console.log("WujiVaultFactory:", address(factory));
+
     }
 
     function _create(WujiVaultFactory factory, address asset, uint256 notional) internal {

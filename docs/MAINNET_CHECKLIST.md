@@ -54,3 +54,12 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 - [ ] Resolve or explicitly accept >60k/header gas, deep-reorg rewiring cost and omitted MTP/future-time checks. Do not call this a full Bitcoin node.
 - [ ] Observe real relay submissions, six-confirmation fold and a full 4320-height settlement period. No mainnet deployment before independent review.
 - [ ] Operate an always-on keystore-signed relayer and an independent data source; no private keys in argv/logs/git.
+
+## Reward-enabled release (T1)
+
+- [ ] Audit exact rewards/router release, including credit authentication and CREATE nonce bindings.
+- [ ] Review lifetime-point economics: no guarantee that future workers cover gas or that fees sustain liveness.
+- [ ] Verify 50/50 ordinary-token split, DEAD address semantics, router dust, reward precision reserve and multi-token isolation.
+- [ ] Confirm attribution waits for six-deep folding; document irreversible payouts after a deep reorg.
+- [ ] Exercise bounded claim catch-up and 16-height keeper batches on the release deployment.
+- [ ] Verify new factory and both vault treasuries point to FeeRouter, not a personal wallet.

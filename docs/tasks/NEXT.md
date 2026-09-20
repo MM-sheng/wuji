@@ -10,6 +10,9 @@ Today the contracts pass it; the keeper, fees, indexer and front-end do not.
 
 ## T1 · Protocol pays its own keepers — `RelayerRewards` + `FeeRouter` (highest priority, changes contracts, must land before audit)
 
+Implementation and testnet verification: [T1_REPORT.md](T1_REPORT.md), branch `codex/relayer-rewards`.
+Header rewards are intentionally credited at six-deep folding, rather than immediately at submission, to exclude transient orphan branches. Review/merge and independent audit remain pending.
+
 Problem: relaying headers and folding costs gas; today one machine does it for free. Nobody else has a reason to.
 
 Build:

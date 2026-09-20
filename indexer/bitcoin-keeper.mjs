@@ -53,7 +53,20 @@ async function once(){
  // Detect deep reorgs even if pending() is zero, before any settlement transactions.
  cast('call',CONTRACT,'fold(uint256)(uint64)','0');
  const pending=num(cast('call',CONTRACT,'pending()(uint256)'));
- if(pending){const count=Math.min(pending,256);const r=JSON.parse(send(CONTRACT,'fold(uint256)',6_000_000,String(count)));if(r.status!=='0x1'&&r.status!==1)throw Error('fold reverted');log('fold',count,r.transactionHash);}
+ if(pending){const count=Math.min(pending,16);const r=JSON.parse(send(CONTRACT,'fold(uint256)',6_000_000,String(count)));if(r.status!=='0x1'&&r.status!==1)throw Error('fold reverted');log('fold',count,r.transactionHash);}
+ // Optional immutable fee router. Token failures must not block header relay/folding.
+ if(process.env.FEE_ROUTER){
+  const assets=new Set();
+  for(const v of FACTORY?listVaults():VAULT?[VAULT]:[]) {
+   try { assets.add(cast('call',v,'asset()(address)')); } catch(e) { log('fee asset:',redact(e.message)); }
+  }
+  for(const asset of assets) {
+   try {
+    const balance=BigInt(cast('call',asset,'balanceOf(address)(uint256)',process.env.FEE_ROUTER).split(' ')[0]);
+    if(balance>=2n){const r=JSON.parse(send(process.env.FEE_ROUTER,'route(address)',700_000,asset));if(r.status!=='0x1'&&r.status!==1)throw Error('route reverted');log('route',asset,r.transactionHash);}
+   } catch(e) { log('fee route:',redact(e.stderr||e.message)); }
+  }
+ }
  const last=num(cast('call',CONTRACT,'lastHeight()(uint64)'));
  for(const v of FACTORY?listVaults():VAULT?[VAULT]:[]){
   const boundary=num(cast('call',v,'currentSettlementHeight()(uint64)'));

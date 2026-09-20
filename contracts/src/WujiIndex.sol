@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
+import {RelayerRewards} from "./RelayerRewards.sol";
 import {BitcoinRelay} from "./BitcoinRelay.sol";
 /// @notice Fold six-deep Bitcoin headers. R = SHA256(raw SHA256d(header)) in digest order, not explorer order.
 contract WujiIndex {
@@ -8,6 +9,7 @@ contract WujiIndex {
     uint64 public constant CONFIRMATIONS = 6;
     uint256 public constant DEFAULT_MAX = 256;
     BitcoinRelay public immutable relay;
+    RelayerRewards public immutable rewards;
     uint64 public immutable GENESIS_HEIGHT;
     uint64 public immutable CHECKPOINT_INTERVAL;
     int256 public S;
@@ -18,7 +20,12 @@ contract WujiIndex {
     mapping(uint64 => bool) public checkpointed;
     event Fold(uint64 indexed fromHeight, uint64 indexed toHeight, int256 S);
     event Checkpoint(uint64 indexed height, int256 S);
-    constructor(BitcoinRelay relay_, uint64 genesis, uint64 interval) {
+    constructor(BitcoinRelay relay_, uint64 genesis, uint64 interval, RelayerRewards rewards_) {
+        if (address(rewards_) != address(0)) {
+            require(rewards_.index() == address(this) && rewards_.relay() == address(relay_), "reward index mismatch");
+            require(address(relay_.rewards()) == address(rewards_), "reward source mismatch");
+        }
+        rewards = rewards_;
         require(address(relay_).code.length > 0, "relay not contract");
         require(genesis > 0 && genesis >= relay_.checkpointHeight(), "genesis before checkpoint");
         require(interval > 0 && genesis <= type(uint64).max - interval, "checkpoint interval");
@@ -46,8 +53,10 @@ contract WujiIndex {
                 nextCheckpointHeight = h + CHECKPOINT_INTERVAL;
             }
             lastHash = hash;
+            if (address(rewards) != address(0) && h > relay.checkpointHeight()) relay.rewardFinalized(h);
         }
-        lastHeight = to; S = value; emit Fold(from, to, value); return uint64(count);
+        lastHeight = to; S = value;
+        if (address(rewards) != address(0)) rewards.credit(msg.sender, count); emit Fold(from, to, value); return uint64(count);
     }
     function byteSum(bytes32 h) public pure returns (uint256 x) {
         x = uint256(h);

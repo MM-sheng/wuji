@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {WujiTestBase} from "./Base.t.sol";
+import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
 import {WujiVaultFactory} from "../src/WujiVaultFactory.sol";
@@ -21,7 +22,7 @@ contract WujiVaultFactoryTest is WujiTestBase {
     function setUp() public {
         installHistory();
         vm.roll(1000); vm.warp(1_800_000_000);
-        index = new WujiIndex(relay(), 1000, 8000);
+        index = new WujiIndex(relay(), 1000, 8000, RelayerRewards(address(0)));
         factory = new WujiVaultFactory(index, treasury, new SeriesTokenDeployer());
         usdt = new MockUSDT(); wbnb = new MockWBNB();
         usdt.mint(alice, 1e24); wbnb.mint(alice, 1e24);

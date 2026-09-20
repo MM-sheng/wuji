@@ -80,3 +80,14 @@ the indexer's `S_wad` and `WujiIndex.S()`.
 - **Availability:** public API failure or dishonest data can stall or mislead the off-chain view. The relay independently checks PoW and difficulty. Local Core/Esplora endpoints are supported; use independent sources to compare checkpoints and live results. Never treat an HTTP success as proof of Bitcoin consensus.
 - **Gas/liveness:** reorg rewiring is proportional to changed branch depth; extremely deep branches can exceed a transaction gas budget. The current storage design exceeds the 60k/header target. These limits must be resolved or explicitly accepted before mainnet.
 - **Test boundary:** synthetic feeder headers in economic invariants do not validate mining. Production relay tests use 2028 real headers and invalid mutations; branch-choice unit tests use an easy-PoW subclass that is not deployed.
+
+## T1 fee router and relayer rewards
+
+- Fee destination: immutable 50% lifetime relayer points / 50% DEAD address. Sending a token to DEAD does not imply totalSupply burning.
+- Relay credits are deferred until the index folds the six-deep canonical height. Transient orphan headers earn no points. The original submitter receives the point even when another account extends its branch or folds it. Known/duplicate headers cannot overwrite attribution. Front-running a new valid header is accepted competition, not double payment.
+- An already-paid height is never paid again. A deep reorg prevents index folding, but cannot reverse previously claimed rewards, matching the existing settlement limitation.
+- Work weights are fixed at one point per submitted finalized header and one per folded height, independent of actual gas price/cost. Lifetime points dilute new workers and do not guarantee economical liveness. Empty fee pools pay nothing; no subsidy or guaranteed yield exists.
+- Funding allocation occurs at sync, not at ERC-20 transfer time. Anyone can trigger sync. Fees arriving before any work are allocated on a later sync with positive points. This timing is explicit and not an oracle for transaction-level fee timing.
+- Per-token accumulators and per-worker lots prevent new work from taking previously synchronized rewards. Bounded claim catch-up prevents a long work history from requiring one unbounded transaction. Precision dust remains reserved; no rescue key exists.
+- No credit path calls arbitrary ERC-20 code. Tokens which rebase, charge transfer fees, lie about balances, blacklist recipients or revert remain unsupported; their failure can block their own routing/claims, not other tokens or header credit. Fee router/reward token entrypoints have reentrancy guards.
+- CREATE nonce prediction is security-critical: deployment assertions and post-deploy address checks must bind rewards.relay/index and relay/index.rewards. No binding may be changed after deployment.

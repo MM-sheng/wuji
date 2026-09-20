@@ -55,3 +55,20 @@ It stays at 100 until the genesis height has six descendants. Averages are not b
 
 The old BSC deployments are archived in `contracts/deployments/bsc-testnet-legacy.json`.
 On the Bitcoin branch, use `scripts/bitcoin-testnet.sh`; do not run the old BSC startup script against the new manifest.
+
+### Reward-enabled Bitcoin testnet (T1)
+
+The latest `contracts/deployments/bsc-testnet.json` uses an immutable fee router: 50% to
+relayer/folder lifetime points and 50% to the DEAD address. The previous Bitcoin deployment is
+preserved in `contracts/deployments/bsc-testnet-bitcoin-v1.json` for the original series observation.
+Run alongside the old terminal without sharing its cache:
+
+```bash
+PORT=8790 PROCESS_PREFIX=wuji-rewards DATA_DIR="$PWD/indexer/data/rewards" bash scripts/bitcoin-testnet.sh
+VERIFICATION_OUTPUT=contracts/deployments/rewards-verification.json node scripts/verify-bitcoin-deployment.mjs
+```
+
+The keeper routes ordinary ERC-20 vault fees automatically when a router balance is at least two
+smallest units. Workers call `RelayerRewards.claim(token)` to withdraw; a long unclaimed work history
+may require repeated calls (128 new point lots per default call). Rewards are not guaranteed gas reimbursement.
+See [T1 review](docs/tasks/T1_REPORT.md) for the accounting and finality rules.

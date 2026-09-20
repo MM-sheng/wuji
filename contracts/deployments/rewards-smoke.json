@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-09-20T13:13:05.529Z",
+  "worker": "0x6657289562f870677325124f3ACbdebB0ea80B95",
+  "points": "4",
+  "lastHeight": "967827",
+  "S_wad": "5592000000000000",
+  "fee": "50000000000000000",
+  "rewardPaid": "25000000000000000",
+  "dead": "25000000000000000",
+  "transactions": [
+    {
+      "action": "approve(address,uint256)",
+      "to": "0xb63d0a493f5496c2bfec7b03a066672b72b9f228",
+      "hash": "0xb4de7300f445ca6cc2a11eb55df028b58e6b08cf59a90c395bf0d827803ad4cd",
+      "gasUsed": 46366
+    },
+    {
+      "action": "mint(uint256)",
+      "to": "0x0225B5E4E46AbE72886713f54753FB7e9433192F",
+      "hash": "0x055a0556d69069cc4acef481d8d879e85c55920b03248b0cacdbc823c0b2e989",
+      "gasUsed": 203075
+    },
+    {
+      "action": "route(address)",
+      "to": "0x29dd54d49dbced11c6e9886c51e4f9e5915612b8",
+      "hash": "0x65dd42d2c5aa3efd7ce6974ea61f5cdac0c1c1a2206891922af2b95a4deffbb3",
+      "gasUsed": 205206
+    },
+    {
+      "action": "claim(address)",
+      "to": "0x4f83502eda07f069316b8e8dfbb8bee7e01a6df3",
+      "hash": "0x9e75d4ebcf7802c6d72b82602d213f784f8358e45b886bc6a2e9cdbc582c6986",
+      "gasUsed": 136807
+    }
+  ]
+}

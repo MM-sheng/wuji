@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
+import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiTestBase} from "./Base.t.sol";
 contract WujiIndexTest is WujiTestBase {
     WujiIndex idx;
-    function setUp() public { installHistory(); idx=new WujiIndex(relay(),1000,10); }
+    function setUp() public { installHistory(); idx=new WujiIndex(relay(),1000,10, RelayerRewards(address(0))); }
     function testFuzz_byteSumMatchesNaive(bytes32 h) public view {
         uint256 sum; for(uint256 i;i<32;i++) sum+=uint8(h[i]); assertEq(idx.byteSum(h),sum);
     }
@@ -21,9 +22,9 @@ contract WujiIndexTest is WujiTestBase {
     function test_boundedAndDelayedFoldIsSamePath() public {
         int256 expected=writeHashes(idx,1000,1299,8);
         assertEq(idx.fold(),256); assertEq(idx.fold(),44); assertEq(idx.S(),expected);
-        WujiIndex other=new WujiIndex(relay(),1000,10); other.fold(300); assertEq(other.S(),idx.S());
+        WujiIndex other=new WujiIndex(relay(),1000,10, RelayerRewards(address(0))); other.fold(300); assertEq(other.S(),idx.S());
     }
-    function test_futureGenesis() public { WujiIndex other=new WujiIndex(relay(),10000,4320); assertEq(other.pending(),0); assertEq(other.fold(),0); }
+    function test_futureGenesis() public { WujiIndex other=new WujiIndex(relay(),10000,4320, RelayerRewards(address(0))); assertEq(other.pending(),0); assertEq(other.fold(),0); }
     function test_deepReorgEvenOnNoopMustRevert() public {
         writeHashes(idx,1000,1009,1); idx.fold(); history.replace(1009,bytes32(uint256(1)));
         vm.expectRevert("deep Bitcoin reorg");idx.fold(0);
@@ -34,7 +35,7 @@ contract WujiIndexTest is WujiTestBase {
         int256 before=idx.S(); int256 afterPart=writeHashes(idx,1004,1009,2); idx.fold(); assertEq(idx.S(),before+afterPart);
     }
     function test_constructorBounds() public {
-        vm.expectRevert("genesis before checkpoint");new WujiIndex(relay(),998,10);
-        vm.expectRevert("checkpoint interval");new WujiIndex(relay(),1000,0);
+        vm.expectRevert("genesis before checkpoint");new WujiIndex(relay(),998,10, RelayerRewards(address(0)));
+        vm.expectRevert("checkpoint interval");new WujiIndex(relay(),1000,0, RelayerRewards(address(0)));
     }
 }

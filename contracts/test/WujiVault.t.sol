@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {WujiTestBase} from "./Base.t.sol";
+import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiVault} from "../src/WujiVault.sol";
 import {SeriesToken, SeriesTokenDeployer} from "../src/SeriesToken.sol";
@@ -41,7 +42,7 @@ contract WujiVaultTest is WujiTestBase {
         vm.roll(GENESIS);
         vm.warp(1_800_000_000);
         usdt = new MockUSDT();
-        index = new WujiIndex(relay(), GENESIS, INTERVAL);
+        index = new WujiIndex(relay(), GENESIS, INTERVAL, RelayerRewards(address(0)));
         vault = new WujiVault(usdt, index, NOTIONAL, treasury, new SeriesTokenDeployer());
         for (uint256 i = 0; i < 2; i++) {
             address a = i == 0 ? alice : bob;
