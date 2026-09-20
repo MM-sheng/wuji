@@ -13,7 +13,7 @@ test('Sepolia indexer refuses the wrong RPC and pins vault metadata to its index
     calls.push(params);const {to,data}=params[0],sig=data.slice(0,10);let value;
     if(to===contract)value={'0x4be1c796':word(0),'0x25159aa9':word(genesis-1),'0x207c8a4c':word(genesis),'0x3fa21806':word(0)}[sig];
     else if(to===factory)value={'0x06661abd':word(1),'0x8c64ea4a':word(BigInt(vault))}[sig];
-    else if(to===vault)value={'0xdbc1faef':word(500000000000000000n),'0xe00dd161':word(0),'0x38d52e0f':word(BigInt(asset)),'0xb4add307':word(0),'0xdc22cb6a':[BigInt(address(5)),BigInt(address(6)),0,genesis,genesis+4319,0,0].map(word).join(''),'0xbf911794':word(32)+word(4)+Buffer.from('WETH').toString('hex').padEnd(64,'0'),'0x858dccb3':word(1000000000000000n)}[sig];
+    else if(to===vault)value={'0xdbc1faef':word(500000000000000000n),'0xe00dd161':word(0),'0x38d52e0f':word(BigInt(asset)),'0xb4add307':word(1),'0xdc22cb6a':[BigInt(address(5)),BigInt(address(6)),0,genesis,genesis+4319,0,0].map(word).join(''),'0xbf911794':word(32)+word(4)+Buffer.from('WETH').toString('hex').padEnd(64,'0'),'0x858dccb3':word(1000000000000000n)}[sig];
     else if(to===asset&&sig==='0x70a08231')value=word(0);
     if(value===undefined){res.end(JSON.stringify({id,jsonrpc:'2.0',error:{message:'unexpected call '+data}}));return;}result='0x'+value;
    }
@@ -29,6 +29,6 @@ test('Sepolia indexer refuses the wrong RPC and pins vault metadata to its index
  const until=async fn=>{for(let i=0;i<100;i++){try{const h=await(await fetch('http://127.0.0.1:'+port+'/head')).json();if(fn(h))return h;}catch{}await new Promise(r=>setTimeout(r,100));}throw Error('indexer timeout');};
  try{
   const wrong=await until(h=>h.chain?.err);assert.match(wrong.chain.err,/RPC chain mismatch/);assert.equal(calls.length,0);
-  chainId=11155111;const h=await until(h=>h.chain?.vault);assert.equal(h.chain.vault.chainId,11155111);assert.equal(h.chain.vault.networkName,'Ethereum Sepolia');assert.equal(h.chain.vault.explorer,'https://sepolia.etherscan.io');assert.equal(h.chain.vault.symbol,'WETH');assert.equal(h.chain.vault.notional,0.001);assert.ok(calls.length>10);for(const p of calls)assert.equal(p[1],'0x55');
+  chainId=11155111;const h=await until(h=>h.chain?.vault);assert.equal(h.chain.vault.chainId,11155111);assert.equal(h.chain.vault.networkName,'Ethereum Sepolia');assert.equal(h.chain.vault.explorer,'https://sepolia.etherscan.io');assert.equal(h.chain.vault.symbol,'WETH');assert.equal(h.chain.vault.notional,0.001);assert.equal(h.chain.vault.solvent,false,'one wei deficit must not pass a float tolerance');assert.equal(h.chain.vault.liabilities_wad,'1');assert.ok(calls.length>10);for(const p of calls)assert.equal(p[1],'0x55');
  }finally{child.kill();await once(child,'exit');server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 });

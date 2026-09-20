@@ -35,6 +35,7 @@ async function readVault(V,at) {
   if (sym) { try { const off = Number(BigInt('0x' + sym.slice(2, 66))), len = Number(BigInt('0x' + sym.slice(2 + off * 2, 2 + off * 2 + 64))); c.v.symbol = Buffer.from(sym.slice(2 + off * 2 + 64, 2 + off * 2 + 64 + len * 2), 'hex').toString(); } catch (e) {} }
   const notional = await read(V, '0x858dccb3');
   c.v.notional = Number(BigInt(notional)) / 1e18;
+  c.v.balance_wad=BigInt(bal).toString();c.v.liabilities_wad=BigInt(liab).toString();c.v.solvent=BigInt(bal)>=BigInt(liab);
   return c.v;
 }
 async function pollChain(){

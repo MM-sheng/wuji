@@ -666,6 +666,7 @@
   }
   // ================= 两仪 · ON-CHAIN =================
   const fmt4=n=>n.toLocaleString('en-US',{minimumFractionDigits:4,maximumFractionDigits:4});
+  const fmtAmount=n=>n!==0&&Math.abs(n)<1e-8?n.toExponential(4):n.toLocaleString('en-US',{maximumFractionDigits:8});
   const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'—';
   const ago=s=>{s=Math.max(0,s|0);if(s<60)return s+'s';if(s<3600)return (s/60|0)+'m '+(s%60)+'s';const d=s/86400|0,h=(s%86400)/3600|0,m=(s%3600)/60|0;return (d?d+'d ':'')+h+'h '+m+'m';};
   let vaultIdx=+(prefs.vault||0);
@@ -690,7 +691,7 @@
       <div class="kv"><span>ΔS since open</span><b class="${cls(c.S-Number(v.s0_wad)/1e18)}">${sgn(c.S-Number(v.s0_wad)/1e18)}${(c.S-Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
       <div class="kv"><span>YANG-${v.seriesId}</span><b><a href="${ex}/token/${v.yang}" target="_blank">${short(v.yang)}</a></b></div>
       <div class="kv"><span>YIN-${v.seriesId}</span><b><a href="${ex}/token/${v.yin}" target="_blank">${short(v.yin)}</a></b></div>
-      <div class="kv"><span>≈ Balance / liabilities</span><b class="${v.balance+1e-9>=v.liabilities?'ok':'bad'}">${fmt(v.balance)} / ${fmt(v.liabilities)}</b></div>
+      <div class="kv"><span>≈ Balance / liabilities</span><b class="${(v.solvent??(v.balance+1e-9>=v.liabilities))?'ok':'bad'}">${fmtAmount(v.balance)} / ${fmtAmount(v.liabilities)}</b></div>
       <div class="kv"><span>Vault</span><b><a href="${ex}/address/${v.address}" target="_blank">${short(v.address)}</a></b></div>
       <div style="margin-top:8px;color:var(--dim);font-size:10px;line-height:1.6">Market price: not provided. 到期前不能按显示份额单边赎回；不得用作借贷抵押价格源。余额为近似显示，合约整数为准。工厂可接受任意代币，但不承诺同等安全。</div>`;
     const agree=c.reconciliation==='matched';
@@ -759,10 +760,10 @@
     const v=vv, b=W.bal, wrong=W.chainId!==v.chainId;
     el.innerHTML=`
       <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
-      <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmt(b.usdt)}</b></div>
+      <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmtAmount(b.usdt)}</b></div>
       <div class="msg2">代币数量 · 右侧为按结算份额折算的毛额（非市价）</div>
-      <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmt(b.yang*v.notional*v.yangShare)} ${v.symbol||''}</span></div>
-      <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmt(b.yin*v.notional*(1-v.yangShare))} ${v.symbol||''}</span></div>
+      <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmtAmount(b.yang*v.notional*v.yangShare)} ${v.symbol||''}</span></div>
+      <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmtAmount(b.yin*v.notional*(1-v.yangShare))} ${v.symbol||''}</span></div>
       <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · ${v.notional} ${v.symbol||''}/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
       <div class="msg2">${W.msg||`mint: 1 pair = 1 YANG + 1 YIN for ${v.notional} ${v.symbol||''} (+0.05%). redeem: a pair → ${v.notional} ${v.symbol||''} any time.`}</div>`;
     $('wMint').onclick=doMint; $('wRedeem').onclick=doRedeem; }
