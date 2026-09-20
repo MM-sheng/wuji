@@ -92,10 +92,20 @@ the indexer's `S_wad` and `WujiIndex.S()`.
 - No credit path calls arbitrary ERC-20 code. Tokens which rebase, charge transfer fees, lie about balances, blacklist recipients or revert remain unsupported; their failure can block their own routing/claims, not other tokens or header credit. Fee router/reward token entrypoints have reentrancy guards.
 - CREATE nonce prediction is security-critical: deployment assertions and post-deploy address checks must bind rewards.relay/index and relay/index.rewards. No binding may be changed after deployment.
 
-## T2 packed numeric bounds (not yet deployed)
+## T2 compact representation
 
-Node work is bounded to uint128 and height to uint32. Inputs and sums are checked before explicit casts;
-exceeding the representable range halts acceptance rather than truncating work or wrapping height.
-Known headers use nonzero cumulative work, which follows from positive validated PoW work at the checkpoint
-and each descendant. Full parent hashes and canonical hashes are retained. The optimized byte reversal is
-fuzzed against the reference loop, and the packed relay is compared to the frozen T1 relay over 2028 real headers.
+Work remains bounded to uint128 and height to uint32, checked in wider arithmetic before narrowing.
+Node, epoch and worker IDs are checked before exhaustion; no wraparound or record alias is permitted.
+Parent hash compression relies ONLY on the existing Bitcoin-mainnet PoW_LIMIT of 2^224-1, with an explicit
+range check and lossless round-trip tests. It is not appropriate for a chain with a looser PoW limit.
+
+Two node metadata records share a word. IDs are never reused, so insertion only fills a previously empty half.
+Branch-local epoch records are immutable. Within an epoch, baseWork + offset * blockWork is exact; a retarget
+creates a separate record with the new baseWork/bits/firstTime. Arbitrary checkpoint heights preserve the real
+epoch-start timestamp independently of the work baseline. Differential fixtures and shorter/heavier forks test this.
+
+Work reconstruction and worker lookup remain constant-time; no unbounded scan was moved into reward claims.
+Header submission makes no untrusted callbacks, so committing the cached best tip at batch end is atomic.
+Synthetic easy-target tests alone store full parents separately because their hashes violate the mainnet bound.
+The production deployment has no such alternate storage path. Gas targets apply to measured batches, not arbitrary
+fork rewrites, first-worker setup, or single-header transactions. Independent review must include the compact encoding.

@@ -1,0 +1,112 @@
+{
+  "checkedAt": "2026-09-20T13:55:00.628Z",
+  "reason": "Deployment stopped after concurrent review commit 7f48f2a superseded lifetime-points rewards. Not selected for terminal/keeper.",
+  "transactions": [
+    {
+      "hash": "0x77f901a91eb315e789306557cb64dbb098764e19b00eab04e28653c256e3a534",
+      "contract": "RelayerRewards",
+      "to": "0x5ea884aaed7a6e80b942e397042e3fde88b2e5a7",
+      "status": "0x1",
+      "block": 132145596,
+      "gasUsed": 832169
+    },
+    {
+      "hash": "0x869590c9887e80bd2831ee9516d635bfc3abe23301041050f2962e57f3a84c70",
+      "contract": "BitcoinRelay",
+      "to": "0x447ecac913985e82e07f20d3a9feb0a31478726e",
+      "status": "0x1",
+      "block": 132145598,
+      "gasUsed": 1768802
+    },
+    {
+      "hash": "0xdbbfe6f658a5f4cf8653f196765e7cf5e2895e5260b10c1f7b821b840cc24156",
+      "contract": "WujiIndex",
+      "to": "0x1214e23402de7502f575d881dad61143533f16a1",
+      "status": "0x1",
+      "block": 132145598,
+      "gasUsed": 846053
+    },
+    {
+      "hash": "0xa408013bb6b03732c0b388963ea9349e77bd9e1e07569be2505a92d0678b8334",
+      "contract": "FeeRouter",
+      "to": "0x3760f61c3c4b69eb49a7ab9354cfb65fa3618f5b",
+      "status": "0x1",
+      "block": 132145598,
+      "gasUsed": 323777
+    },
+    {
+      "hash": "0x2e9f3f00afc4a721b38f59d7bf62d3bf9ce5035a1f0ea0739d47960f11f209c9",
+      "contract": "SeriesTokenDeployer",
+      "to": "0x6e029e85d58beaba683a3f00896fca81fc0cc934",
+      "status": "0x1",
+      "block": 132145598,
+      "gasUsed": 811758
+    },
+    {
+      "hash": "0xa7ff4a8dda3257c87104e98b24d52636a6489140d57b66ebff099d3674fb6b6a",
+      "contract": "WujiVaultFactory",
+      "to": "0xbd726433f087581ae55cc3cf1b11682265db931c",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 3355197
+    },
+    {
+      "hash": "0xc4ed16cde2048577e1f92455138b9c018cc4c12b23742ec47dbe7588f113005d",
+      "contract": "MockUSDT",
+      "to": "0xe0f3e52d11dd11835e0019adbdaf0216c5dbb5f5",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 507924
+    },
+    {
+      "hash": "0x449abf6e26b2b03ec94d141716f5c75f35e1156279798ef4b11ba56c131ea9da",
+      "contract": "MockUSDT",
+      "to": "0xe0f3e52d11dd11835e0019adbdaf0216c5dbb5f5",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 68427
+    },
+    {
+      "hash": "0x28deccbd284db80f4fd73a3a5ecf70ed693f5c8bafe6db64ceac1eaf8f8b3157",
+      "contract": "MockWBNB",
+      "to": "0xdc083622da7a45194d50c7fb0b6592d2aa0b041b",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 507944
+    },
+    {
+      "hash": "0xde6d6b6584c9c25de784475433804fd51ae505436b8d83c39a1c67434bc9f376",
+      "contract": "MockWBNB",
+      "to": "0xdc083622da7a45194d50c7fb0b6592d2aa0b041b",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 68439
+    },
+    {
+      "hash": "0x5876546830ae9408352be8625b660d53f7b51064e6556b8750b63017e280e211",
+      "contract": "WujiVaultFactory",
+      "to": "0xbd726433f087581ae55cc3cf1b11682265db931c",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 3264459
+    },
+    {
+      "hash": "0x1a106d6a5c1cffa381c95520d1aa237462aeb23348dcac8fc34bd251b0c05368",
+      "contract": "WujiVaultFactory",
+      "to": "0xbd726433f087581ae55cc3cf1b11682265db931c",
+      "status": "0x1",
+      "block": 132145599,
+      "gasUsed": 3247359
+    }
+  ],
+  "chainId": 97,
+  "source": "bitcoin",
+  "sourceCommit": "7f48f2a",
+  "status": "confirmed-but-unused",
+  "active": false,
+  "terminalPort": null,
+  "keeperStarted": false,
+  "explorer": "https://testnet.bscscan.com",
+  "genesisHeight": 967826,
+  "rewardModel": "superseded-lifetime-points-and-50-percent-DEAD"
+}

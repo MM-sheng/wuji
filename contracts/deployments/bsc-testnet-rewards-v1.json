@@ -1,0 +1,122 @@
+{
+  "chainId": 97,
+  "source": "bitcoin",
+  "rpc": "https://bsc-testnet-rpc.publicnode.com",
+  "explorer": "https://testnet.bscscan.com",
+  "deployedAt": "2026-09-20T13:10:28.487542+00:00",
+  "genesisHeight": 967826,
+  "checkpointInterval": 4320,
+  "confirmations": 6,
+  "unitWad": "12000000000000",
+  "checkpoint": {
+    "genesisHeight": 967826,
+    "checkpointHeight": 967825,
+    "checkpointHeader": "00e002209464fca963f09ddc196e6eb6844cfa2fed64a4dd14b101000000000000000000fdd9cf69e83eb416d967e49f154e615184e4bb96cdd1fa3780e2eedd2e85e6a14ecfaf6ac51e02175137652d",
+    "checkpointHash": "00000000000000000000d67cbca716ef045392720cefb43e8287994ae216c06b",
+    "epochStartHeight": 967680,
+    "epochStartTime": 1789801745,
+    "checkpointChainWork": "570195989278543477056646",
+    "workConvention": "normalized to the checkpoint own work; common pre-checkpoint work is omitted for every branch",
+    "confirmations": 6,
+    "checkpointInterval": 4320,
+    "verifiedSources": [
+      "https://mempool.space/api",
+      "https://blockstream.info/api"
+    ]
+  },
+  "treasury": "0x29dd54d49dbced11c6e9886c51e4f9e5915612b8",
+  "BitcoinRelay": "0xf2bb05e55cb46c293a6ac356c3bf49b46e7c4484",
+  "WujiIndex": "0xec4dc4a50833d35c771aff9a2dac936ddb986cd8",
+  "SeriesTokenDeployer": "0xb398fc0d786a2679eb7275973c7920d0a7bf6c69",
+  "WujiVaultFactory": "0x9030eff3864cfdbad92a95f57cc21cd79680acf1",
+  "MockUSDT": "0xb63d0a493f5496c2bfec7b03a066672b72b9f228",
+  "MockWBNB": "0xb630b3de818191601c0eba10d41ebc987d04e6c5",
+  "vaults": {
+    "USDT": {
+      "address": "0x0225B5E4E46AbE72886713f54753FB7e9433192F",
+      "notional": "100e18"
+    },
+    "WBNB": {
+      "address": "0x21e0a44ec893DFe543B48723a0221A9787037290",
+      "notional": "1e18"
+    }
+  },
+  "transactions": [
+    {
+      "hash": "0x056d8390259e7aa4c932f39e6b9ac67d527a02df1a77d5906121f5d628f9f05c",
+      "block": 132139703,
+      "status": "0x1",
+      "gasUsed": 832169
+    },
+    {
+      "hash": "0x7a6fb7d2733ed7a76620ad035195ef7560413cd41a9837be02efc2f2d603af34",
+      "block": 132139704,
+      "status": "0x1",
+      "gasUsed": 1305259
+    },
+    {
+      "hash": "0xa004c67687d438d712eb446e73cbcb1e31423c8453bb37640766a464f162f0f0",
+      "block": 132139706,
+      "status": "0x1",
+      "gasUsed": 846053
+    },
+    {
+      "hash": "0x5cfce763b3621e3ebb99463ecaea159b9bfc9e29214502b82d3241019f390d79",
+      "block": 132139706,
+      "status": "0x1",
+      "gasUsed": 323777
+    },
+    {
+      "hash": "0x9e6074cd7776c6b2922b1f029cb49f4fb33c6815b5ccc20f3707f9b0795dd08a",
+      "block": 132139706,
+      "status": "0x1",
+      "gasUsed": 811758
+    },
+    {
+      "hash": "0x14671fbbc6d35033559cc77b626427197b51ddca7713588a4825baffe8e75108",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 3355233
+    },
+    {
+      "hash": "0xe076450ff142f7120dea4a46dc4d65d323feff45733967f1eb25e3b5a71ec7ed",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 507924
+    },
+    {
+      "hash": "0xa96c00498688a120bbfa805945ca8171ccb51297227472e7df4f88711369e80c",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 68427
+    },
+    {
+      "hash": "0xd0397555a42b32e92b4ae22fa9b9d7c600ea16cfa37373e65576f62348d0f363",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 507944
+    },
+    {
+      "hash": "0xb0e454c62d964b9cc2bd377e47fe1bb5f85a4d3d7ab9d75bc4ef54eac2c05c00",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 68439
+    },
+    {
+      "hash": "0x41cc492f4763c7b5d8670ae8da58d01c9a2ad5b72bc5350a675639fe6bd9353e",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 3264471
+    },
+    {
+      "hash": "0x168bf767340c295a59fa92f985de9385ede712afae18ff1666b3b4afaaa88923",
+      "block": 132139709,
+      "status": "0x1",
+      "gasUsed": 3247359
+    }
+  ],
+  "RelayerRewards": "0x4f83502eda07f069316b8e8dfbb8bee7e01a6df3",
+  "FeeRouter": "0x29dd54d49dbced11c6e9886c51e4f9e5915612b8",
+  "rewardBps": 5000,
+  "version": "bitcoin-rewards-v1"
+}

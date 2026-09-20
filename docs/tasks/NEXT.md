@@ -64,8 +64,9 @@ Build:
 
 ## T2 · Relay storage packing (gas)
 
-Two-slot implementation and controlled measurements: [T2_REPORT.md](T2_REPORT.md), branch `codex/relay-packing`.
-The 70k target remains OPEN: rewards-enabled submit is 100612 gas/header; no new deployment yet.
+Compact storage implementation and controlled measurements: [T2_REPORT.md](T2_REPORT.md), branch `codex/relay-packing`.
+Measured steady/new-worker reward batches are 68069/69919 gas per header; first-retarget initialization is higher.
+Regression tests enforce the steady-batch and whole-fixture targets. See the report for review/deployment status.
 
 `submit` is 103k gas/header; target ≤ 70k. Pack `Node` into two slots (parent hash; then work as `uint128` —
 Bitcoin's total work fits comfortably — height `uint32`, time `uint32`, bits `uint32`, epochTime `uint32`, known
