@@ -12,15 +12,28 @@
   - 白皮书第一行。它同时是宇宙论和机制说明：无极（金库里的抵押品）→ 太极（一对）→ 两仪（YANG / YIN，相加恒为整体）。
   - 英文：*From nothing, one; from one, two — and the two are always whole.*
 
-## 未定：名字
+## 已定：名字 = WUJI（2026-09-20 定稿，不再讨论）
 
-代码、仓库、测试网当前用 **WUJI** 作为工作名。**主网前一个月最终决定**——产品成型后再命名，比现在准。
+- 唯一一个"名字就是机制"的候选：无极 → 太极 → 两仪 = 抵押品 → 一对 → YANG/YIN。
+- 唯一干净的候选：无同名加密项目、无同名代币、`wuji.finance` `wuji.market` 可注册。
+- 中文里的武侠/玄学听感由视觉规范消除，而不是换词：全大写等宽 **WUJI**，符号 μ，深色冷色无装饰；**永不出现**太极图、书法、龙、红金、云纹。词的气质最终由产品定义（Apple、Bitcoin、Ether 皆如此）。
+
+### 身份定稿
+
+| | |
+|---|---|
+| 名 | WUJI |
+| 符号 | μ |
+| 一句话 | 无极生太极，太极生两仪 · *From nothing, one; from one, two — and the two are always whole.* |
+| 副标 | *A market about nothing. Heartbeat: Bitcoin.* |
+| 两仪 | YANG / YIN |
+| 域名 | wuji.finance（主站）· wuji.market（终端）——待注册 |
 
 ### 调研过的候选（2026-09-20）
 
 | 候选 | 结论 | 原因 |
 |---|---|---|
-| **WUJI / 无极** | 备选，当前工作名 | 结构最贴（无极生两仪）；无同名加密项目、无同名代币；`wuji.finance` `wuji.market` 可注册（09-18 查）。缺点：中文听感带武侠/电影《无极》/摩托车品牌的包袱，需要靠工程感的视觉设计去玄学化 |
+| **WUJI / 无极** | **选定** | 结构最贴（无极生两仪）；无同名加密项目、无同名代币；`wuji.finance` `wuji.market` 可注册（09-18 查）。缺点：中文听感带武侠/电影《无极》/摩托车品牌的包袱，需要靠工程感的视觉设计去玄学化 |
 | **NOISE** | **放弃** | 已有同行业活跃项目 Noise（注意力市场，Base，Delphi 研报，有融资）；链上已有多个 NOISE 代币；"Noise Protocol" 是 WireGuard 用的加密框架。词已属于别人 |
 | **ALEA** | 备选 | 拉丁语"骰子"，*alea iacta est*，每个比特币区块掷一次。无同名代币；有 Alea Research（研究机构）；口头易与 Aleo（隐私 L1）混淆。`alea.finance` `alea.money` 可注册，`alea.market` 已占 |
 | **MU** | 只做符号 | 两字母无法独占；美光股票代码；`mu.finance` 已占。作为符号 μ 它完美，作为名字太小 |
@@ -35,9 +48,9 @@
 3. 没有包袱（电影、摩托车、算命、赌场、同行）
 4. 经得起严肃场合（基金经理、审计报告、白皮书标题）
 
-### 建议现在就做
+### 待办
 
-- 注册 `wuji.finance`、`wuji.market`、`alea.finance`（几十美元，锁住两条路）
+- 注册 `wuji.finance`、`wuji.market`
 - 查 X / GitHub / Telegram 上对应用户名
 
 ## 不变的
