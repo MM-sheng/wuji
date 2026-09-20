@@ -91,3 +91,11 @@ the indexer's `S_wad` and `WujiIndex.S()`.
 - Per-token accumulators and per-worker lots prevent new work from taking previously synchronized rewards. Bounded claim catch-up prevents a long work history from requiring one unbounded transaction. Precision dust remains reserved; no rescue key exists.
 - No credit path calls arbitrary ERC-20 code. Tokens which rebase, charge transfer fees, lie about balances, blacklist recipients or revert remain unsupported; their failure can block their own routing/claims, not other tokens or header credit. Fee router/reward token entrypoints have reentrancy guards.
 - CREATE nonce prediction is security-critical: deployment assertions and post-deploy address checks must bind rewards.relay/index and relay/index.rewards. No binding may be changed after deployment.
+
+## T2 packed numeric bounds (not yet deployed)
+
+Node work is bounded to uint128 and height to uint32. Inputs and sums are checked before explicit casts;
+exceeding the representable range halts acceptance rather than truncating work or wrapping height.
+Known headers use nonzero cumulative work, which follows from positive validated PoW work at the checkpoint
+and each descendant. Full parent hashes and canonical hashes are retained. The optimized byte reversal is
+fuzzed against the reference loop, and the packed relay is compared to the frozen T1 relay over 2028 real headers.

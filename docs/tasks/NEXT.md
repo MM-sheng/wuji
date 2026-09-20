@@ -35,6 +35,9 @@ Build:
 
 ## T2 · Relay storage packing (gas)
 
+Two-slot implementation and controlled measurements: [T2_REPORT.md](T2_REPORT.md), branch `codex/relay-packing`.
+The 70k target remains OPEN: rewards-enabled submit is 100612 gas/header; no new deployment yet.
+
 `submit` is 103k gas/header; target ≤ 70k. Pack `Node` into two slots (parent hash; then work as `uint128` —
 Bitcoin's total work fits comfortably — height `uint32`, time `uint32`, bits `uint32`, epochTime `uint32`, known
 `bool`). Keep `main[height]`. Do not remove any validation. Report a before/after gas table; fixtures must still pass
