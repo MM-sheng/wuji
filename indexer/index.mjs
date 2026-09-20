@@ -4,6 +4,7 @@
 //   node indexer/index.mjs            (env: RPC, PORT, DATA_DIR, GENESIS_BLOCK)
 //
 import http from 'node:http';
+import { discoverGaps, freezeRange } from './gap-sync.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -47,6 +48,7 @@ function grow() { cap *= 2; const u = new Float64Array(cap), t = new Uint32Array
 function push(u, ts) { if (n === cap) grow(); U[n] = u; TS[n] = ts; n++; }
 
 function loadFile() {
+  recoverGapCommit();
   if (!fs.existsSync(FILE)) return;
   const buf = fs.readFileSync(FILE); const cnt = Math.floor(buf.length / REC);
   for (let i = 0; i < cnt; i++) { const o = i * REC; push(buf.readDoubleLE(o), buf.readUInt32LE(o + 8)); }
@@ -54,12 +56,31 @@ function loadFile() {
   if (fs.existsSync(meta)) { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); lastHash = m.lastHash; gaps = m.gaps || []; gapScanned = m.gapScanned || 0; }
   console.log(`loaded ${n} blocks from disk (up to #${GENESIS_BLOCK + n - 1}), ${gaps.length} gap(s)`);
 }
-const writeMeta = () => fs.writeFileSync(path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`), JSON.stringify({ lastHash, n, gaps, gapScanned }));
-function rewriteFile() {
+const META = path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`);
+const JOURNAL = FILE + '.gap-commit';
+const atomicWrite = (file, data) => { fs.writeFileSync(file + '.tmp', data); fs.renameSync(file + '.tmp', file); };
+const metadata = () => ({ lastHash, n, gaps, gapScanned });
+const writeMeta = () => atomicWrite(META, JSON.stringify(metadata()));
+function recoverGapCommit() {
+  if (!fs.existsSync(JOURNAL)) return;
+  const j = JSON.parse(fs.readFileSync(JOURNAL, 'utf8'));
+  atomicWrite(FILE, Buffer.from(j.data, 'base64'));
+  atomicWrite(META, JSON.stringify(j.meta));
+  fs.unlinkSync(JOURNAL);
+}
+function commitGaps() {
+  // Journal both files together: a crash cannot apply a Gap twice on restart.
+  const buf = encodeFile();
+  atomicWrite(JOURNAL, JSON.stringify({ meta: metadata(), data: buf.toString('base64') }));
+  atomicWrite(FILE, buf); pending = [];
+  writeMeta(); fs.unlinkSync(JOURNAL);
+}
+function encodeFile() {
   const buf = Buffer.alloc(n * REC);
   for (let i = 0; i < n; i++) { const o = i * REC; buf.writeDoubleLE(U[i], o); buf.writeUInt32LE(TS[i], o + 8); }
-  fs.writeFileSync(FILE, buf);
+  return buf;
 }
+function rewriteFile() { atomicWrite(FILE, encodeFile()); }
 let pending = [];
 function persist() {
   if (!pending.length) return;
@@ -77,31 +98,38 @@ function truncate(to) { // reorg: drop blocks >= to (index), rewrite file
 let gaps = [], gapScanned = 0;                                  // [[fromBlock, toBlock], ...] (block numbers), scan cursor
 const GAP_TOPIC = '0x3a5a176d63fddd02fb08e1625bc0823f0c05a15a1a28bcc5f49364bb77bac178'; // Gap(uint64,uint64)
 const inGap = b => gaps.some(g => b >= g[0] && b <= g[1]);
-function applyGap(from, to) {                                   // zero the increments of already-indexed blocks in [from, to]
-  const i0 = Math.max(0, from - GENESIS_BLOCK), i1 = Math.min(n - 1, to - GENESIS_BLOCK);
-  if (i1 < i0) return 0;
-  const base = i0 > 0 ? U[i0 - 1] : 0, cum = U[i1] - base;     // total contribution of the frozen blocks
-  for (let i = i0; i <= i1; i++) U[i] = base;
-  for (let i = i1 + 1; i < n; i++) U[i] -= cum;
-  return cum;
-}
+let gapError = null;
 async function scanGaps() {
-  if (!CONTRACT) return;
-  const head = GENESIS_BLOCK + n - 1; if (head <= gapScanned) return;
-  let from = Math.max(GENESIS_BLOCK, gapScanned + 1), changed = false;
-  while (from <= head) {
-    const to = Math.min(head, from + 4999);                     // public RPCs cap getLogs ranges
-    const r = await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address: CONTRACT, topics: [GAP_TOPIC], fromBlock: hex(from), toBlock: hex(to) }] });
-    for (const l of r.result || []) {
-      const g = [Number(BigInt(l.topics[1])), Number(BigInt(l.topics[2]))];
+  if (!CONTRACT || !n) return;
+  const end = GENESIS_BLOCK + n - 1;
+  if (end <= gapScanned) return;
+  const counters = new Map();
+  const counterAt = async b => {
+    if (!counters.has(b)) {
+      const value = await call(CONTRACT, SEL.frozenBlocks, hex(b));
+      // Before deployment the address has no code and eth_call returns 0x.
+      counters.set(b, value === '0x' ? 0 : Number(BigInt(value)));
+    }
+    return counters.get(b);
+  };
+  const logsAt = async b => {
+    const r = await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address: CONTRACT, topics: [GAP_TOPIC], fromBlock: hex(b), toBlock: hex(b) }] });
+    if (!Array.isArray(r.result)) throw new Error('invalid Gap log response');
+    return r.result.map(l => [Number(BigInt(l.topics[1])), Number(BigInt(l.topics[2]))]);
+  };
+  await discoverGaps(Math.max(GENESIS_BLOCK, gapScanned + 1), end, counterAt, logsAt, (found, scanned) => {
+    let changed = false;
+    for (const g of found) {
       if (gaps.some(x => x[0] === g[0] && x[1] === g[1])) continue;
-      gaps.push(g); const cum = applyGap(g[0], g[1]); changed = true;
+      const previous = gaps.at(-1);
+      if (g[0] < GENESIS_BLOCK || (previous && g[0] <= previous[1])) throw new Error('overlapping or out-of-order Gap');
+      gaps.push(g); const cum = freezeRange(U, n, GENESIS_BLOCK, g[0], g[1]); changed = true;
       console.warn(`gap mirrored: blocks #${g[0]}..#${g[1]} frozen by the contract (removed ΔU=${cum})`);
     }
-    gapScanned = to; from = to + 1;
-  }
-  if (changed) rewriteFile();
-  writeMeta();
+    gapScanned = scanned;
+    if (changed) commitGaps(); else writeMeta();
+  });
+  gapError = null;
 }
 
 // ---------- RPC ----------
@@ -132,7 +160,7 @@ async function getBlock(b) { return (await rpc({ jsonrpc: '2.0', id: 1, method: 
 
 // ---------- on-chain cross-check (raw eth_call, no ABI library) ----------
 const SEL = { S: '0x4be1c796', lastBlock: '0x806b984f', frozenBlocks: '0x6998a0d0', yangShare: '0xdbc1faef', currentId: '0xe00dd161', series: '0xdc22cb6a', asset: '0x38d52e0f', liabilities: '0xb4add307', balanceOf: '0x70a08231' };
-const call = async (to, data) => (await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] })).result;
+const call = async (to, data, block = 'latest') => (await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, block] })).result;
 const toInt = h => { const v = BigInt(h); return v >= (1n << 255n) ? v - (1n << 256n) : v; };
 let chain = null;
 let vaultList = { at: 0, list: [] };
@@ -159,12 +187,15 @@ async function readVault(V) {
 async function pollChain() {
   if (!CONTRACT) return;
   try {
-    const [sW, lb, fz] = await Promise.all([call(CONTRACT, SEL.S), call(CONTRACT, SEL.lastBlock), call(CONTRACT, SEL.frozenBlocks)]);
+    const block = hex(Math.max(GENESIS_BLOCK, (await headNumber()) - CONFIRM));
+    const [sW, lb, fz] = await Promise.all([call(CONTRACT, SEL.S, block), call(CONTRACT, SEL.lastBlock, block), call(CONTRACT, SEL.frozenBlocks, block)]);
     const c = { contract: CONTRACT, S_wad: toInt(sW).toString(), lastBlock: Number(BigInt(lb)), frozenBlocks: Number(BigInt(fz)) };
     // what the indexer says S should be at the contract's lastBlock (exact integer U · 3.3e11)
     const i = c.lastBlock - GENESIS_BLOCK;
     if (i >= 0 && i < n) { c.indexer_S_wad = (BigInt(U[i]) * 330000000000n).toString(); c.agree = c.indexer_S_wad === c.S_wad; }
-    c.gaps = gaps.length; c.gapScanned = gapScanned;
+    c.gaps = gaps.length; c.gapScanned = gapScanned; c.gapError = gapError; c.observedAt = parseInt(block, 16);
+    c.mirroredFrozenBlocks = gaps.reduce((sum, [a, b]) => sum + Math.max(0, Math.min(b, c.lastBlock) - a + 1), 0);
+    c.reconciliation = c.indexer_S_wad === undefined ? 'index-behind' : c.mirroredFrozenBlocks !== c.frozenBlocks ? 'gaps-pending' : c.agree ? 'matched' : 'mismatch';
     c.S = Number(toInt(sW)) / 1e18; c.price = 100 * Math.exp(c.S);
     const vaultAddrs = FACTORY ? await listVaults() : VAULT ? [VAULT] : [];
     if (vaultAddrs.length) {
@@ -175,8 +206,6 @@ async function pollChain() {
     chain = c;
   } catch (e) { chain = { contract: CONTRACT, err: e.message }; }
 }
-(async () => { for (;;) { await pollChain(); await sleep(3000); } })();
-(async () => { for (;;) { try { if (!syncing) await scanGaps(); } catch (e) { console.warn('gap scan:', e.message); } await sleep(20000); } })();
 
 // ---------- sync loop ----------
 let head = 0, syncing = true, lastErr = null;
@@ -224,9 +253,9 @@ async function proof(b) {
   const blk = await getBlock(b); const bs = byteSum(blk.hash), d = bs - MEAN, uPrev = i ? U[i - 1] : 0;
   return { block: b, hash: blk.hash, parentHash: blk.parentHash, timestamp: parseInt(blk.timestamp, 16),
     byteSum: bs, delta: inGap(b) ? 0 : d, rawDelta: d, frozen: inGap(b), U_prev: uPrev, U: U[i], U_check: uPrev + (inGap(b) ? 0 : d), consistent: uPrev + (inGap(b) ? 0 : d) === U[i],
-    unit: UNIT, r: d * UNIT, S: S_of(U[i]), S_wad: (BigInt(U[i]) * 330000000000n).toString(), price: priceAt(i), yang: yangAt(i, 0),
-    bscscan: `https://bscscan.com/block/${b}`, contract: 'WujiIndex.increment(hash) == (byteSum(hash) − 4080) · 3.3e11 wad; S = Σ increment',
-    method: 'byteSum = Σ of the 32 bytes of blockhash; U = Σ(byteSum − 4080); S = U · 3.3e-7; price = 100·e^S' };
+    unit: UNIT, r: (inGap(b) ? 0 : d) * UNIT, rawR: d * UNIT, S: S_of(U[i]), S_wad: (BigInt(U[i]) * 330000000000n).toString(), price: priceAt(i), yang: yangAt(i, 0),
+    bscscan: `https://${CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/block/${b}`, contract: 'WujiIndex.increment(hash) == (byteSum(hash) − 4080) · 3.3e11 wad; S = Σ increment',
+    method: 'byteSum = Σ of the 32 bytes of blockhash; U = Σ effective delta (0 inside contract Gap intervals, otherwise byteSum − 4080); S = U · 3.3e-7; price = 100·e^S' };
 }
 
 // ---------- http ----------
@@ -265,4 +294,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   loadFile();
   server.listen(PORT, () => console.log(`wuji indexer  http://localhost:${PORT}  genesis #${GENESIS_BLOCK}  unit=${UNIT} σ≈${SIGMA.toExponential(3)}`));
   loop();
+  (async () => { for (;;) { await pollChain(); await sleep(3000); } })();
+  (async () => { for (;;) { try { if (!syncing) await scanGaps(); } catch (e) { gapError = e.message; console.warn('gap scan:', e.message); } await sleep(20000); } })();
 }

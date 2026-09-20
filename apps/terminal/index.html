@@ -663,7 +663,7 @@
     const v=v0, ex=v.explorer, yang=100*v.yangShare, yin=100-yang;
     const blocksLeft=Math.max(0,v.settlementBlock-HEAD.block), eta=blocksLeft*.45;
     wrap.hidden=false;$('tYang').textContent=fmt(yang);$('tYin').textContent=fmt(yin);$('tSeries').textContent=(v.symbol||'')+' #'+v.seriesId;
-    $('cChain').textContent=c.frozenBlocks?'⚠':'✓';
+    $('cChain').textContent=c.reconciliation==='matched'?'✓':'⚠';
     const list=c.vaults||[v]; const sel=list.length>1?`<div class="tb" style="display:flex;gap:2px;margin-bottom:8px">${list.map((x,i)=>`<button data-v="${i}" class="${i===vaultIdx?'on':''}" style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;color:${i===vaultIdx?'var(--ink)':'var(--dim)'};background:${i===vaultIdx?'var(--panel2)':'none'};border:1px solid ${i===vaultIdx?'var(--line2)':'transparent'}">${x.symbol||'?'} · ${x.notional}/pair</button>`).join('')}</div>`:'';
     $('tjSeries').innerHTML=sel+`
       <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}</div><div class="yin">${fmt(yin)} YIN</div></div>
@@ -677,12 +677,13 @@
       <div class="kv"><span>YIN-${v.seriesId}</span><b><a href="${ex}/token/${v.yin}" target="_blank">${short(v.yin)}</a></b></div>
       <div class="kv"><span>Vault balance / liabilities</span><b class="${v.balance+1e-9>=v.liabilities?'ok':'bad'}">${fmt(v.balance)} / ${fmt(v.liabilities)} ${v.balance+1e-9>=v.liabilities?'✓ solvent':'✗'}</b></div>
       <div class="kv"><span>Vault</span><b><a href="${ex}/address/${v.address}" target="_blank">${short(v.address)}</a></b></div>`;
-    const agree=c.indexer_S_wad!==undefined&&c.indexer_S_wad===c.S_wad;
+    const agree=c.reconciliation==='matched';
+    const agreement=agree?'✓ bit-for-bit identical':c.reconciliation==='index-behind'?'等待索引追上合约':c.reconciliation==='gaps-pending'?'正在同步冻结记录':'✗ MISMATCH';
     $('tjChain').innerHTML=`
       <div class="kv"><span>WujiIndex</span><b><a href="${ex}/address/${c.contract}" target="_blank">${short(c.contract)}</a></b></div>
       <div class="kv"><span>Contract S (wad)</span><b>${c.S_wad}</b></div>
       <div class="kv"><span>Indexer S @ same block</span><b>${c.indexer_S_wad??'—'}</b></div>
-      <div class="kv"><span>Agreement</span><b class="${agree?'ok':'bad'}">${agree?'✓ bit-for-bit identical':c.frozenBlocks?'differs: frozen blocks':'✗ MISMATCH'}</b></div>
+      <div class="kv"><span>Agreement</span><b class="${agree?'ok':'bad'}">${agreement}</b></div>
       <div class="kv"><span>Contract last block</span><b>#${c.lastBlock.toLocaleString()}</b></div>
       <div class="kv"><span>Index head block</span><b>#${HEAD.block.toLocaleString()} · contract ${(HEAD.block-c.lastBlock).toLocaleString()} behind</b></div>
       <div class="kv"><span>Frozen blocks</span><b class="${c.frozenBlocks?'bad':'ok'}">${c.frozenBlocks}</b></div>
