@@ -85,7 +85,7 @@ byte-for-byte.
   to be within a bounded distance of `block.timestamp`, so six-deep folding cannot happen on a stale local view.
 - Differential tests against more real epochs (at least 3 retargets) and a Core-derived vector set for MTP.
 
-## T3 · Deploy to Ethereum Sepolia and show identical S (review item #17 wording)
+## T3 · Deploy to Ethereum Sepolia with **ETH (WETH) collateral** — this is the mainnet shape (see ARCHITECTURE 目标栈)
 
 Same contracts, same `GENESIS_HEIGHT`, same relay checkpoint, deployed on Sepolia (chain 11155111). Run a second
 keeper against it. Add `scripts/compare-chains.mjs` that reads `S`, `lastHeight`, `lastHash` from both the BSC-testnet
