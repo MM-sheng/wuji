@@ -12,7 +12,8 @@ const { RPC, KEYSTORE_ACCOUNT, PASSWORD_FILE, CONTRACT, VAULT, FACTORY } = proce
 const INTERVAL = +(process.env.INTERVAL || 45);
 if (!RPC || !KEYSTORE_ACCOUNT || !PASSWORD_FILE || !CONTRACT) { console.error('need RPC, KEYSTORE_ACCOUNT, PASSWORD_FILE, CONTRACT (run contracts/scripts/set-key.sh)'); process.exit(1); }
 const CAST = process.env.CAST || path.join(os.homedir(), '.foundry', 'bin', 'cast');
-const cast = (...a) => execFileSync(CAST, [...a, '--rpc-url', RPC], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+const RPC0 = RPC.split(',')[0];
+const cast = (...a) => execFileSync(CAST, [...a, '--rpc-url', RPC0], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const PWFILE = path.isAbsolute(PASSWORD_FILE) ? PASSWORD_FILE : path.join(process.cwd(), 'contracts', PASSWORD_FILE);
 const send = (to, sig, gas, ...args) => cast('send', to, sig, ...args, '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), '--json');
 const redact = s => { const lines = String(s).replace(/0x[0-9a-fA-F]{64}/g, '0x…').split('\n').map(l => l.trim()).filter(Boolean); return lines.find(l => /^Error|insufficient|revert|nonce|underpriced|timeout/i.test(l)) || lines.find(l => !/^Command failed/.test(l)) || 'cast send failed'; };

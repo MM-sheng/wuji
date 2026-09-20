@@ -66,7 +66,10 @@ contract WujiVault is ReentrancyGuard {
         NOTIONAL = notional_;
         treasury = treasury_;
         collateralSymbol = _symbolOf(address(asset_));
-        index_.tick();
+        // Fold at most a small backlog here: an unbounded tick would make vault creation cost arbitrary gas
+        // (a 1024-block history fold is ~6M). With a larger backlog, advance the index first, then create.
+        require(index_.pending() <= 256, "index backlog: tick first");
+        index_.tick(256);
         uint64 boundary = index_.nextCheckpointBlock();
         require(boundary >= block.number, "index stale: tick first");
         _open(index_.S(), index_.GENESIS_BLOCK(), boundary);

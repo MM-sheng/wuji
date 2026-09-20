@@ -51,22 +51,57 @@ function loadFile() {
   const buf = fs.readFileSync(FILE); const cnt = Math.floor(buf.length / REC);
   for (let i = 0; i < cnt; i++) { const o = i * REC; push(buf.readDoubleLE(o), buf.readUInt32LE(o + 8)); }
   const meta = path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`);
-  if (fs.existsSync(meta)) lastHash = JSON.parse(fs.readFileSync(meta, 'utf8')).lastHash;
-  console.log(`loaded ${n} blocks from disk (up to #${GENESIS_BLOCK + n - 1})`);
+  if (fs.existsSync(meta)) { const m = JSON.parse(fs.readFileSync(meta, 'utf8')); lastHash = m.lastHash; gaps = m.gaps || []; gapScanned = m.gapScanned || 0; }
+  console.log(`loaded ${n} blocks from disk (up to #${GENESIS_BLOCK + n - 1}), ${gaps.length} gap(s)`);
+}
+const writeMeta = () => fs.writeFileSync(path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`), JSON.stringify({ lastHash, n, gaps, gapScanned }));
+function rewriteFile() {
+  const buf = Buffer.alloc(n * REC);
+  for (let i = 0; i < n; i++) { const o = i * REC; buf.writeDoubleLE(U[i], o); buf.writeUInt32LE(TS[i], o + 8); }
+  fs.writeFileSync(FILE, buf);
 }
 let pending = [];
 function persist() {
   if (!pending.length) return;
   const buf = Buffer.alloc(pending.length * REC);
   pending.forEach((i, k) => { const o = k * REC; buf.writeDoubleLE(U[i], o); buf.writeUInt32LE(TS[i], o + 8); });
-  fs.appendFileSync(FILE, buf); pending = [];
-  fs.writeFileSync(path.join(DATA_DIR, `meta-${GENESIS_BLOCK}.json`), JSON.stringify({ lastHash, n }));
+  fs.appendFileSync(FILE, buf); pending = []; writeMeta();
 }
 function truncate(to) { // reorg: drop blocks >= to (index), rewrite file
-  n = to; lastHash = null; pending = [];
-  const buf = Buffer.alloc(n * REC);
-  for (let i = 0; i < n; i++) { const o = i * REC; buf.writeDoubleLE(U[i], o); buf.writeUInt32LE(TS[i], o + 8); }
-  fs.writeFileSync(FILE, buf);
+  n = to; lastHash = null; pending = []; rewriteFile();
+}
+
+// ---------- frozen gaps: mirror the contract's Gap events so the indexer IS the on-chain path ----------
+// The contract is canonical once deployed. Blocks it froze (nobody ticked within the history window) contribute 0.
+// Without a contract (pure index, no deployment yet) there are no gaps and every block counts.
+let gaps = [], gapScanned = 0;                                  // [[fromBlock, toBlock], ...] (block numbers), scan cursor
+const GAP_TOPIC = '0x3a5a176d63fddd02fb08e1625bc0823f0c05a15a1a28bcc5f49364bb77bac178'; // Gap(uint64,uint64)
+const inGap = b => gaps.some(g => b >= g[0] && b <= g[1]);
+function applyGap(from, to) {                                   // zero the increments of already-indexed blocks in [from, to]
+  const i0 = Math.max(0, from - GENESIS_BLOCK), i1 = Math.min(n - 1, to - GENESIS_BLOCK);
+  if (i1 < i0) return 0;
+  const base = i0 > 0 ? U[i0 - 1] : 0, cum = U[i1] - base;     // total contribution of the frozen blocks
+  for (let i = i0; i <= i1; i++) U[i] = base;
+  for (let i = i1 + 1; i < n; i++) U[i] -= cum;
+  return cum;
+}
+async function scanGaps() {
+  if (!CONTRACT) return;
+  const head = GENESIS_BLOCK + n - 1; if (head <= gapScanned) return;
+  let from = Math.max(GENESIS_BLOCK, gapScanned + 1), changed = false;
+  while (from <= head) {
+    const to = Math.min(head, from + 4999);                     // public RPCs cap getLogs ranges
+    const r = await rpc({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address: CONTRACT, topics: [GAP_TOPIC], fromBlock: hex(from), toBlock: hex(to) }] });
+    for (const l of r.result || []) {
+      const g = [Number(BigInt(l.topics[1])), Number(BigInt(l.topics[2]))];
+      if (gaps.some(x => x[0] === g[0] && x[1] === g[1])) continue;
+      gaps.push(g); const cum = applyGap(g[0], g[1]); changed = true;
+      console.warn(`gap mirrored: blocks #${g[0]}..#${g[1]} frozen by the contract (removed ΔU=${cum})`);
+    }
+    gapScanned = to; from = to + 1;
+  }
+  if (changed) rewriteFile();
+  writeMeta();
 }
 
 // ---------- RPC ----------
@@ -128,7 +163,8 @@ async function pollChain() {
     const c = { contract: CONTRACT, S_wad: toInt(sW).toString(), lastBlock: Number(BigInt(lb)), frozenBlocks: Number(BigInt(fz)) };
     // what the indexer says S should be at the contract's lastBlock (exact integer U · 3.3e11)
     const i = c.lastBlock - GENESIS_BLOCK;
-    if (i >= 0 && i < n) { c.indexer_S_wad = (BigInt(U[i]) * 330000000000n).toString(); c.agree = c.indexer_S_wad === c.S_wad || c.frozenBlocks > 0; }
+    if (i >= 0 && i < n) { c.indexer_S_wad = (BigInt(U[i]) * 330000000000n).toString(); c.agree = c.indexer_S_wad === c.S_wad; }
+    c.gaps = gaps.length; c.gapScanned = gapScanned;
     c.S = Number(toInt(sW)) / 1e18; c.price = 100 * Math.exp(c.S);
     const vaultAddrs = FACTORY ? await listVaults() : VAULT ? [VAULT] : [];
     if (vaultAddrs.length) {
@@ -140,6 +176,7 @@ async function pollChain() {
   } catch (e) { chain = { contract: CONTRACT, err: e.message }; }
 }
 (async () => { for (;;) { await pollChain(); await sleep(3000); } })();
+(async () => { for (;;) { try { if (!syncing) await scanGaps(); } catch (e) { console.warn('gap scan:', e.message); } await sleep(20000); } })();
 
 // ---------- sync loop ----------
 let head = 0, syncing = true, lastErr = null;
@@ -154,7 +191,8 @@ async function syncOnce() {
       if (lastHash && b.parentHash !== lastHash) {           // reorg: rewind 64 blocks and retry
         console.warn(`reorg at #${GENESIS_BLOCK + n}: rewinding`); truncate(Math.max(0, n - 64)); return;
       }
-      push((n ? U[n - 1] : 0) + (byteSum(b.hash) - MEAN), parseInt(b.timestamp, 16));
+      const bn = GENESIS_BLOCK + n;
+      push((n ? U[n - 1] : 0) + (inGap(bn) ? 0 : byteSum(b.hash) - MEAN), parseInt(b.timestamp, 16));
       pending.push(n - 1); lastHash = b.hash;
     }
     persist();
@@ -185,7 +223,7 @@ async function proof(b) {
   const i = b - GENESIS_BLOCK; if (i < 0 || i >= n) return { error: 'block not indexed' };
   const blk = await getBlock(b); const bs = byteSum(blk.hash), d = bs - MEAN, uPrev = i ? U[i - 1] : 0;
   return { block: b, hash: blk.hash, parentHash: blk.parentHash, timestamp: parseInt(blk.timestamp, 16),
-    byteSum: bs, delta: d, U_prev: uPrev, U: U[i], U_check: uPrev + d, consistent: uPrev + d === U[i],
+    byteSum: bs, delta: inGap(b) ? 0 : d, rawDelta: d, frozen: inGap(b), U_prev: uPrev, U: U[i], U_check: uPrev + (inGap(b) ? 0 : d), consistent: uPrev + (inGap(b) ? 0 : d) === U[i],
     unit: UNIT, r: d * UNIT, S: S_of(U[i]), S_wad: (BigInt(U[i]) * 330000000000n).toString(), price: priceAt(i), yang: yangAt(i, 0),
     bscscan: `https://bscscan.com/block/${b}`, contract: 'WujiIndex.increment(hash) == (byteSum(hash) − 4080) · 3.3e11 wad; S = Σ increment',
     method: 'byteSum = Σ of the 32 bytes of blockhash; U = Σ(byteSum − 4080); S = U · 3.3e-7; price = 100·e^S' };

@@ -8,19 +8,20 @@
   "MockUSDT": "0xbeE172F0fB092f94051E116e8ADBD0e66597b295",
   "WujiIndex": "0x94c23631aCCfDCFa4D4fF4E964F87C750a6a0D88",
   "treasury": "0x6657289562f870677325124f3ACbdebB0ea80B95",
-  "note": "factory deployment: one index, many collaterals; 8000-block series with deterministic checkpoints",
+  "note": "factory deployment: one index, many collaterals; 8000-block series with deterministic checkpoints. Vault bytecode embedded in this factory predates the bounded-constructor-tick change (commit after 2c27d0c).",
   "SeriesTokenDeployer": "0x4Ad80A411c22346b1367e9c9db1d717a0d82Af71",
   "WujiVaultFactory": "0xF7bE2203e35343c3e64391DF29DF6f05e9f4Ab75",
   "MockWBNB": "0xd3E00DCaEf286B9fD339BA58baefA02CB5738128",
   "vaults": {
     "USDT": {
       "address": "0x3F34d7751c8dF2ca01739A1C744A68884eF40357",
-      "notional": "100e18"
+      "notional": "100e18",
+      "note": "series 0 settled at checkpoint #131871489 by the keeper; series roll every 8000 blocks"
     },
     "WBNB": {
       "address": "0x717e12e564AcaC8ad3Fa9c4dd86AA9daf1ccDEB1",
       "notional": "1e18",
-      "status": "pending: creation tx (nonce 148) needs more tBNB in the deployer"
+      "YANG-0": "0xA5d0550cD5Ec9683D09884efeAeE7F719f36A702"
     }
   }
 }

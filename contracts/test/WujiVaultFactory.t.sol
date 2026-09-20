@@ -77,6 +77,23 @@ contract WujiVaultFactoryTest is WujiTestBase {
         assertEq(v.collateralSymbol(), "TOKEN");
     }
 
+    function test_createRefusesLargeIndexBacklog() public {
+        writeHashes(index, 1000, 1999, 77);          // 1000 unfolded blocks
+        vm.expectRevert("index backlog: tick first");
+        factory.create(usdt, 100e18);
+        index.tick(1024);                             // anyone advances the index...
+        factory.create(usdt, 100e18);                 // ...then creation is cheap and exact
+        assertEq(factory.count(), 1);
+    }
+
+    function test_createFoldsSmallBacklogItself() public {
+        writeHashes(index, 1000, 1199, 78);          // 200 unfolded blocks: within the constructor's budget
+        WujiVault v = factory.create(usdt, 100e18);
+        assertEq(index.pending(), 0);
+        (,, int256 s0,,,,) = v.series(0);
+        assertEq(s0, index.S());
+    }
+
     function test_mintInWbnbVault() public {
         WujiVault vb = factory.create(wbnb, 1e18);
         vm.startPrank(alice);
