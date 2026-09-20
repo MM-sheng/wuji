@@ -1,7 +1,7 @@
 # Working in this repo (for any coding agent)
 
 Read `docs/ARCHITECTURE.md` first. It is the source of truth for every product decision; if you change a
-decision, change that file in the same PR. Open task briefs live in `docs/tasks/`.
+decision, change that file in the same PR. Open task briefs live in `docs/tasks/`; the current queue is `docs/tasks/NEXT.md`.
 
 ## Non-negotiables
 
