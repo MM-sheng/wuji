@@ -5,7 +5,7 @@
 ## 已定
 
 - **符号：μ**
-  - 金融数学里 μ 是漂移率（dS = μS dt + σS dW）。这个资产的全部定义就是 **μ = 0**。
+  - 金融数学里 μ 常表示漂移。这里指向理想随机模型中指数 S 增量的零均值，不表示代币价格、收益或美元风险为零。
   - 禅宗的"無"（mu）：取消问题本身的回答。"这个市场为什么涨？""無。"
   - 用途：logo、代币图标、终端顶栏、favicon。单字符，任何尺寸都清晰。
 - **一句话：无极生太极，太极生两仪。**
@@ -15,7 +15,7 @@
 ## 已定：名字 = WUJI（2026-09-20 定稿，不再讨论）
 
 - 唯一一个"名字就是机制"的候选：无极 → 太极 → 两仪 = 抵押品 → 一对 → YANG/YIN。
-- 唯一干净的候选：无同名加密项目、无同名代币、`wuji.finance` `wuji.market` 可注册。
+- 名字已确定；下面的域名/同名项目调研是历史记录，不代表当前注册状态或商标清查结论。
 - 中文里的武侠/玄学听感由视觉规范消除，而不是换词：全大写等宽 **WUJI**，符号 μ，深色冷色无装饰；**永不出现**太极图、书法、龙、红金、云纹。词的气质最终由产品定义（Apple、Bitcoin、Ether 皆如此）。
 
 ### 身份定稿
@@ -25,7 +25,7 @@
 | 名 | WUJI |
 | 符号 | μ |
 | 一句话 | 无极生太极，太极生两仪 · *From nothing, one; from one, two — and the two are always whole.* |
-| 副标 | *A market about nothing. Heartbeat: Bitcoin.* |
+| 副标 | *A market about nothing. Verifiable. Heartbeat: Bitcoin.* |
 | 两仪 | YANG / YIN |
 | 域名 | wuji.finance（主站）· wuji.market（终端）——待注册 |
 
@@ -56,4 +56,6 @@
 ## 不变的
 
 - 两仪代币：`YANG-<抵押品>-<期>` / `YIN-<抵押品>-<期>`。无论主名叫什么，两仪的名字保留。
-- 副标：*A market about nothing. Heartbeat: Bitcoin.*
+- 简写之外，界面和集成文档必须列明链 ID、抵押品地址、面值、期次及 YANG/YIN 方向，以金库/代币地址消歧。
+  共享指数的一族独立债权，不是跨链可互换的同一资产。
+- 副标：*A market about nothing. Verifiable. Heartbeat: Bitcoin.*

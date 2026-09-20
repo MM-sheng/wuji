@@ -17,19 +17,20 @@
     --sans:"Inter",system-ui,-apple-system,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  *{scrollbar-width:thin;scrollbar-color:var(--line2) var(--panel)}
   html,body{height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:12px;-webkit-font-smoothing:antialiased;overflow:hidden}
   button,input{font:inherit;color:inherit}
   button{cursor:pointer;background:none;border:0}
   .up{color:var(--up)} .dn{color:var(--dn)} .flat{color:var(--muted)}
 
-  .term{display:grid;height:100vh;grid-template-rows:36px 1fr 220px;grid-template-columns:1fr 300px;gap:1px;background:var(--line)}
+  .term{display:grid;height:100vh;grid-template-rows:44px 1fr 220px;grid-template-columns:minmax(0,1fr) 300px;gap:1px;background:var(--line)}
   .top{grid-column:1/3}
   .chartwrap{grid-row:2;grid-column:1;background:var(--panel);display:flex;flex-direction:column;min-height:0}
   .rail{grid-row:2;grid-column:2;background:var(--panel);display:flex;flex-direction:column;min-height:0}
   .bottom{grid-row:3;grid-column:1/3;background:var(--panel);display:flex;flex-direction:column;min-height:0}
 
-  .top{background:var(--head);display:flex;align-items:center;padding:0 12px;font-family:var(--mono);font-size:11.5px}
+  .top{background:var(--head);display:flex;align-items:center;padding:0 12px;font-family:var(--mono);font-size:11.5px;min-width:0;overflow-x:auto;white-space:nowrap}
   .sym{display:flex;align-items:center;gap:8px;padding-right:14px;border-right:1px solid var(--line);margin-right:14px;height:100%}
   .sym b{font-size:13px;font-weight:600;letter-spacing:.02em}
   .sym .tag{font-size:9px;color:var(--acc);border:1px solid var(--acc);padding:1px 4px;border-radius:2px;letter-spacing:.08em}
@@ -51,6 +52,11 @@
   .ph .tb button{font-family:var(--mono);font-size:10px;padding:2px 7px;color:var(--dim);border-radius:2px;letter-spacing:.04em}
   .ph .tb button.on{background:var(--panel2);color:var(--ink);border:1px solid var(--line2)}
   .ph .tb button:hover{color:var(--ink)}
+  .chartwrap>.ph{height:auto;min-height:28px;flex-wrap:wrap;padding-top:5px;padding-bottom:5px;gap:6px}
+  #sourceDefinition{flex:1 0 100%;line-height:1.4;letter-spacing:.03em}
+  .chartwrap>.ph .sp{display:none}
+  #bitcoinSource{flex:none;line-height:1.5;overflow-wrap:anywhere}
+  #bitcoinSource a{color:var(--acc)}
 
   .chartbody{position:relative;flex:1;min-height:0}
   #chart{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -128,7 +134,8 @@
   .acct .big .who{font-size:10px;color:var(--muted);text-align:right}
   .acct .big .who input{background:none;border:0;border-bottom:1px dashed var(--line2);color:var(--ink);font-family:var(--mono);font-size:11px;width:90px;text-align:right;outline:none}
 
-  .tabs{display:flex;height:28px;border-bottom:1px solid var(--line);background:var(--head);flex:none}
+  .tabs{display:flex;height:36px;border-bottom:1px solid var(--line);background:var(--head);flex:none;overflow-x:auto;white-space:nowrap}
+  .tabs button{flex-shrink:0}
   .tabs button{padding:0 14px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-right:1px solid var(--line);position:relative}
   .tabs button.on{color:var(--ink);background:var(--panel)}
   .tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--acc)}
@@ -184,7 +191,9 @@
   .wal .msg2{color:var(--muted);font-size:10.5px;min-height:14px;margin-top:6px;word-break:break-all}
   .stat.yy2 .v{font-size:11.5px}
   @media (max-width:900px){
-    .term{grid-template-columns:1fr;grid-template-rows:36px 1fr auto 220px}
+    body{overflow-y:auto}
+    .term{height:auto;min-height:100vh;grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(280px,35vh) auto minmax(300px,40vh)}
+    .top,.bottom{grid-column:1}
     .rail{grid-row:3;grid-column:1} .bottom{grid-row:4;grid-column:1} .chartwrap{grid-column:1}
     .book{display:none} .top .stat:nth-child(n+5){display:none}
   }
@@ -195,18 +204,17 @@
 
   <div class="top">
     <div class="sym"><b style="font-size:17px;font-family:var(--mono)">μ</b><b>WUJI</b><span class="tag" id="sourceTag">testnet</span></div>
-    <div class="stat last"><span class="k">Last</span><span class="v" id="tLast">—</span></div>
+    <div class="stat last"><span class="k">Index · 100e^S</span><span class="v" id="tLast">—</span></div>
     <div class="stat"><span class="k">24h Chg</span><span class="v" id="tChg">—</span></div>
     <div class="stat"><span class="k">24h High</span><span class="v" id="tHigh">—</span></div>
     <div class="stat"><span class="k">24h Low</span><span class="v" id="tLow">—</span></div>
-    <div class="stat"><span class="k">Drift since genesis</span><span class="v" id="tDrift">—</span></div>
+    <div class="stat"><span class="k">Log drift since genesis</span><span class="v" id="tDrift">—</span></div>
     <div class="stat"><span class="k">Rlz Vol 24h</span><span class="v" id="tVol">—</span></div>
-    <div class="stat yy2" id="tYYwrap" hidden><span class="k">阳 · 阴 <span id="tSeries"></span></span><span class="v"><span class="warnv" id="tYang">—</span> <span style="color:var(--dim)">/</span> <span style="color:var(--acc)" id="tYin">—</span></span></div>
+    <div class="stat yy2" id="tYYwrap" hidden><span class="k" title="Settlement share (not price)">结算份额 % · <span id="tSeries"></span></span><span class="v"><span class="warnv" id="tYang">—</span> <span style="color:var(--dim)">/</span> <span style="color:var(--acc)" id="tYin">—</span></span></div>
     <div class="clock"><span class="k">UTC · TICK</span><span class="v" id="tClock">—</span></div>
     <div class="status" id="statusBox"><i></i><span id="statusTxt">LIVE</span></div>
   </div>
 
-  <div id="bitcoinSource" style="display:none;padding:8px 14px;color:var(--muted)"></div>
   <div class="chartwrap">
     <div class="ph">
       <span id="sourceDefinition">WUJI-INDEX · 100·e^S · S = Σ unit·(byteSum(blockhash) − 4080) · one path for everyone, written by the chain</span>
@@ -215,8 +223,9 @@
       <div class="tb" id="typeBar"><button data-type="candle" class="on">Candles</button><button data-type="line">Line</button></div>
       <div class="tb"><button id="taBtn">TA overlay</button></div>
     </div>
+    <div id="bitcoinSource" style="display:none;padding:6px 10px;color:var(--muted)"></div>
     <div class="tape" id="tape"><span class="src">NOISEWIRE</span><span class="h">—</span></div>
-    <div class="chartbody"><canvas id="chart"></canvas><div class="legend" id="legend"></div><div class="msg" id="msg"></div><div class="ta-note" id="taNote" hidden>ALL INDICATORS COMPUTED HONESTLY · PREDICTIVE POWER ON THIS MARKET = 0</div></div>
+    <div class="chartbody"><canvas id="chart"></canvas><div class="legend" id="legend"></div><div class="msg" id="msg"></div><div class="ta-note" id="taNote" hidden>INDICATORS DESCRIBE THE INDEX HISTORY · NO PREDICTIVE EDGE ESTABLISHED</div></div>
     <div class="ctrl">
       <button class="mode live" id="modeBtn">● LIVE</button>
       <span class="k">GENESIS</span>
@@ -228,7 +237,7 @@
   </div>
 
   <div class="rail">
-    <div class="ph"><span>Order book</span><span class="sp"></span><span style="font-weight:400;color:var(--dim)">synthetic depth</span></div>
+    <div class="ph"><span>Paper order book</span><span class="sp"></span><span style="font-weight:400;color:var(--dim)">simulated depth</span></div>
     <div class="book">
       <div class="cols"><span>Price</span><span>Size</span><span>Total</span></div>
       <div class="side asks" id="asks"></div>
@@ -236,7 +245,7 @@
       <div class="side bids" id="bids"></div>
     </div>
     <div class="ticket">
-      <div class="row"><span class="k">Type · Margin</span><span>MARKET · CROSS</span></div>
+      <div class="row"><span class="k">Paper simulation</span><span>MARKET · CROSS</span></div>
       <div class="lev" id="levBar"><button data-lev="1">1×</button><button data-lev="5">5×</button><button data-lev="10" class="on">10×</button><button data-lev="25" class="hot">25×</button><button data-lev="50" class="hot">50×</button></div>
       <div class="row"><span class="k">Qty</span>
         <div class="qty"><button id="szDown">−</button><input id="szVal" type="number" value="5" min="1" max="99999"><button id="szUp">+</button><button class="max" id="szMax">MAX</button></div>
@@ -264,7 +273,7 @@
 
   <div class="bottom">
     <div class="tabs" id="tabs">
-      <button data-p="lead" class="on">Leaderboard</button>
+      <button data-p="lead" class="on">Paper leaderboard</button>
       <button data-p="fills">Fills<em id="cFills">0</em></button>
       <button data-p="news">News<em id="cNews">0</em></button>
       <button data-p="liqs">Liquidations<em id="cLiqs">0</em></button>
@@ -281,14 +290,14 @@
       <table><thead><tr><th>Time (UTC)</th><th>Side</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Fee</th><th class="r">Rlz PnL</th><th class="r">Pos after</th></tr></thead><tbody id="fillsBody"></tbody></table>
     </div>
     <div class="pane" id="p-news">
-      <div class="news"><div class="disc">Every headline below is generated deterministically from the price path, after the move it "explains". The market has no news. It never did.</div><div id="newsBody"></div></div>
+      <div class="news"><div class="disc">Fictional headlines generated from index moves after they happen. They are not real news or information about a token market.</div><div id="newsBody"></div></div>
     </div>
     <div class="pane" id="p-liqs">
       <table><thead><tr><th>Time (UTC)</th><th>Trader</th><th class="r">Lev</th><th class="r">Position</th><th class="r">Entry</th><th class="r">Liq. price</th><th class="r">Lost</th><th>Verdict</th></tr></thead><tbody id="liqsBody"></tbody></table>
     </div>
     <div class="pane" id="p-verdict">
       <div class="verdict">
-        <div><div class="k">Realized drift · genesis</div><div class="v" id="vDrift">—</div><div class="s">per day · expected 0</div></div>
+        <div><div class="k">Log drift · genesis</div><div class="v" id="vDrift">—</div><div class="s">per day · ideal S increment mean = 0</div></div>
         <div><div class="k">Your return · since join</div><div class="v" id="vRet">—</div><div class="s" id="vSince">—</div></div>
         <div><div class="k">vs Monkey · same period</div><div class="v" id="vMonkey">—</div><div class="s">you − coin flip</div></div>
         <div><div class="k">Fee drag · liquidations</div><div class="v" id="vFee">—</div><div class="s" id="vLiqS">share of gross PnL eaten</div></div>
@@ -313,11 +322,13 @@
     </div>
     <div class="pane" id="p-about">
       <div class="about">
-        <b>无极生太极，太极生两仪。</b> A market before reason.<br>
-        WUJI 的路径可以由公开区块头重算。Bitcoin 模式使用 SHA256(SHA256d(header)) 的字节和，6 确认后计入；UNIT = 1.2e-5，每 4320 个比特币高度一个检查点。矿工可通过放弃区块尝试影响随机源，这不是保证收益或完全独立性的证明。<br>
-        价格在区块之间保持不变。点击图表可查看来源区块，链上中继验证工作量与难度，索引服务只是缓存。BSC 对照模式仍使用旧路径规则。<br>
-        猴子也是确定性的：每分钟按哈希抛硬币决定多、空或空仓，对所有人是同一只猴子。它是你的基准。<br>
-        <b>零漂移 + 手续费 = 负和。</b> 交易越多，输得越稳。看看你能不能长期跑赢一只猴子。
+        <b>无极生太极，太极生两仪。</b> A market about nothing. Verifiable. Heartbeat: Bitcoin.<br>
+        WUJI 是可验证的纯随机结算市场与公开基准。“纯随机”是目标模型，不证明矿工无偏、与所有资产独立或保证收益。<br>
+        <b>四个数，不是一回事：</b>指数 S（图表显示 100e^S）；即时结算份额 g = clamp(½+½ΔS)；到期高度的赔付 N·g；买卖双方实际可成交的市场价格。份额按相对开期的绝对位置计算，路径无关。<br>
+        <b>Settlement share (not price)：结算份额不是价格，不能作为借贷抵押价格源。</b>到期前不承诺按显示份额单边赎回；市场价格未提供。费用与舍入按合约执行。<br>
+        Bitcoin 模式用 SHA256(SHA256d(header)) 的字节和，6 确认后计入；每 4320 个高度一期，平均约 30 天。图表连续记录指数，不拼接各期代币重置值。区块之间指数不变，点击图表可查来源。<br>
+        矿工能筛选已知结果；公开区块到链上折叠之间存在信息窗口。索引服务是缓存，链下浮点数仅显示，合约整数为准。不同链、抵押品、面值或期次是独立债权；任意代币金库不承诺同等安全。<br>
+        订单簿、成交、收益榜与猴子账户均为模拟，不代表 YANG/YIN 的实际流动性或回报。零均值只指理想 S 增量，不能推出所有收益期望为零；手续费会减少实际到账。
       </div>
     </div>
   </div>
@@ -330,9 +341,9 @@
   const cssCache={};
   const css=v=>cssCache[v]||(cssCache[v]=getComputedStyle(document.documentElement).getPropertyValue(v).trim());
 
-  // ================= ETERNAL PRICE ENGINE =================
   // ================= CHAIN-FED INDEX =================
-  // Price is 100·exp(S), S = unit·Σ(byteSum(blockhash) − 4080) over every BSC block since genesis (docs/ARCHITECTURE.md §1).
+  // Display index = 100·exp(S). Bitcoin mode rehashes raw SHA256d(header); legacy BSC uses its old rule.
+  // These chart levels and paper fills are not executable YANG/YIN quotes (docs/ARCHITECTURE.md §1–2).
   // The indexer is a cache, not an authority: /proof/:block lets anyone recompute a step from a public RPC.
   const API=location.protocol==='file:'?'http://localhost:8787':'';   // same origin as the indexer that serves this page
   const SIG=0.000138*Math.sqrt(192000/86400);  // ≈ per-second log vol equivalent, used only for volume scaling
@@ -634,12 +645,12 @@
     const rul=$('vRuling');
     if(A.n===0){rul.innerHTML='<span class="t wait">STANDBY</span>这个市场从创世起就没有停过，也没有任何可读信号。你什么时候进场都一样——因为每个时刻都是一样的。';return;}
     let tag,txt;
-    if(A.dead){tag='<span class="t cost">REKT</span>';txt=`账户归零。零漂移的噪音本身永远不会让你破产——它只是随机走。破产需要两个条件：噪音 <b>×</b> 杠杆。你提供了第二个。`;rul.innerHTML=tag+txt;return;}
+    if(A.dead){tag='<span class="t cost">REKT</span>';txt=`模拟账户已归零。该结果包含你的仓位、杠杆、行情路径与费用；随机指数不保证本金或退出价格。`;rul.innerHTML=tag+txt;return;}
     if(LIQS.length&&ret<0){tag='<span class="t cost">LIQUIDATED ×'+LIQS.length+'</span>';txt=`在 ${A.lev}× 杠杆下，日波动 5.9% 意味着 ${fmt(100/A.lev/5.9,1)} 天量级的反向噪音就能触及强平线。这不是运气差，是时间问题。`;rul.innerHTML=tag+txt;return;}
-    if(A.fees>Math.abs(gross)*0.5&&ret<0){tag='<span class="t cost">FEE DRAG</span>';txt=`${A.n} 笔成交，付了 <b>${money(A.fees)}</b> 手续费，占你毛盈亏的 ${fmt(share,0)}%。零漂移 + 成本 = 负和，你的亏损里大部分不是"看错"，是"动了"。`;}
-    else if(diff<0){tag='<span class="t luck">BEHIND MONKEY</span>';txt=`同一段时间里，每分钟抛硬币的猴子比你多赚 <b>${fmt(-diff)}%</b>。它没有观点，也没有止损，它只是动得比你少。`;}
-    else if(ret>0){tag='<span class="t luck">LUCK</span>';txt=`你目前领先猴子 ${fmt(diff)}%。在零漂移的鞅上，这个差值的期望是 0——时间越长，它越会往 0 塌。挂着别动，明天再看。`;}
-    else{tag='<span class="t luck">NOISE</span>';txt=`你亏 ${fmt(-ret)}%，猴子亏得更多。这不是你比猴子强，是你们俩在同一个硬币的两面。`;}
+    if(A.fees>Math.abs(gross)*0.5&&ret<0){tag='<span class="t cost">FEE DRAG</span>';txt=`${A.n} 笔模拟成交，累计费用 <b>${money(A.fees)}</b>，为毛盈亏绝对值的 ${fmt(share,0)}%。费用已计入净收益。`;}
+    else if(diff<0){tag='<span class="t luck">BEHIND MONKEY</span>';txt=`同一观察期内，模拟收益落后猴子账户 <b>${fmt(-diff)}</b> 个百分点。一次比较不能证明策略优劣。`;}
+    else if(ret>0){tag='<span class="t luck">AHEAD OF MONKEY</span>';txt=`模拟收益领先猴子 ${fmt(diff)} 个百分点。样本差异不是预测优势的证明，也不保证以后继续领先。`;}
+    else{tag='<span class="t luck">SAMPLE RESULT</span>';txt=`模拟收益 ${fmt(ret)}%，相对猴子 ${sgn(diff)}${fmt(diff)} 个百分点；比较包含当前未实现盈亏与已付费用。`;}
     rul.innerHTML=tag+txt;
   }
   let newsMemo={b:-1,items:[]};
@@ -668,7 +679,9 @@
     $('cChain').textContent=c.reconciliation==='matched'?'✓':'⚠';
     const list=c.vaults||[v]; const sel=list.length>1?`<div class="tb" style="display:flex;gap:2px;margin-bottom:8px">${list.map((x,i)=>`<button data-v="${i}" class="${i===vaultIdx?'on':''}" style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;color:${i===vaultIdx?'var(--ink)':'var(--dim)'};background:${i===vaultIdx?'var(--panel2)':'none'};border:1px solid ${i===vaultIdx?'var(--line2)':'transparent'}">${x.symbol||'?'} · ${x.notional}/pair</button>`).join('')}</div>`:'';
     $('tjSeries').innerHTML=sel+`
-      <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}</div><div class="yin">${fmt(yin)} YIN</div></div>
+      <div style="color:var(--muted);font-size:10px;margin-bottom:6px">Settlement share (not price) · 结算份额</div>
+      <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}%</div><div class="yin">${fmt(yin)}% YIN</div></div>
+      <div class="kv"><span>Chain · series</span><b>${v.chainId} · #${v.seriesId}</b></div>
       <div class="kv"><span>Collateral</span><b>${v.symbol||'—'} · ${v.notional} per pair · <a href="${ex}/token/${v.asset}" target="_blank">${short(v.asset)}</a></b></div>
       <div class="kv"><span>Series</span><b>#${v.seriesId} · ${v.settled?'SETTLED':'OPEN'}</b></div>
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Start Bitcoin height':'Start block'}</span><b>#${v.startBlock.toLocaleString()}</b></div>
@@ -677,8 +690,9 @@
       <div class="kv"><span>ΔS since open</span><b class="${cls(c.S-Number(v.s0_wad)/1e18)}">${sgn(c.S-Number(v.s0_wad)/1e18)}${(c.S-Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
       <div class="kv"><span>YANG-${v.seriesId}</span><b><a href="${ex}/token/${v.yang}" target="_blank">${short(v.yang)}</a></b></div>
       <div class="kv"><span>YIN-${v.seriesId}</span><b><a href="${ex}/token/${v.yin}" target="_blank">${short(v.yin)}</a></b></div>
-      <div class="kv"><span>Vault balance / liabilities</span><b class="${v.balance+1e-9>=v.liabilities?'ok':'bad'}">${fmt(v.balance)} / ${fmt(v.liabilities)} ${v.balance+1e-9>=v.liabilities?'✓ solvent':'✗'}</b></div>
-      <div class="kv"><span>Vault</span><b><a href="${ex}/address/${v.address}" target="_blank">${short(v.address)}</a></b></div>`;
+      <div class="kv"><span>≈ Balance / liabilities</span><b class="${v.balance+1e-9>=v.liabilities?'ok':'bad'}">${fmt(v.balance)} / ${fmt(v.liabilities)}</b></div>
+      <div class="kv"><span>Vault</span><b><a href="${ex}/address/${v.address}" target="_blank">${short(v.address)}</a></b></div>
+      <div style="margin-top:8px;color:var(--dim);font-size:10px;line-height:1.6">Market price: not provided. 到期前不能按显示份额单边赎回；不得用作借贷抵押价格源。余额为近似显示，合约整数为准。工厂可接受任意代币，但不承诺同等安全。</div>`;
     const agree=c.reconciliation==='matched';
     const agreement=agree?'✓ bit-for-bit identical':c.reconciliation==='index-behind'?'等待索引追上合约':c.reconciliation==='gaps-pending'?'正在同步冻结记录':'✗ MISMATCH';
     $('tjChain').innerHTML=`
@@ -689,13 +703,13 @@
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Contract last Bitcoin height':'Contract last block'}</span><b>#${c.lastBlock.toLocaleString()}</b></div>
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Index Bitcoin height':'Index head block'}</span><b>#${HEAD.block.toLocaleString()} · contract ${(HEAD.block-c.lastBlock).toLocaleString()} behind</b></div>
       ${HEAD.source==='bitcoin'?'':`<div class="kv"><span>Frozen blocks</span><b>${c.frozenBlocks}</b></div>`}
-      <div class="kv"><span>Contract price</span><b>${fmt4(c.price)}</b></div>
+      <div class="kv"><span>Index display · 100e^S</span><b>${fmt4(c.price)}</b></div>
       <div style="margin-top:10px;color:var(--dim);font-size:10px;line-height:1.6">${HEAD.source==='bitcoin'?'S = 1.2e-5 · Σ(byteSum(SHA256(Bitcoin hash)) − 4080)，6 确认后按高度折叠。':'S = 3.3e-7 · Σ(byteSum(blockhash) − 4080)。'}同一高度的整数必须逐位一致。</div>`;
     [...$('tjSeries').querySelectorAll('button[data-v]')].forEach(b=>b.onclick=()=>{vaultIdx=+b.dataset.v;savePrefs();W.bal={};renderTaiji();refreshWallet().catch(()=>{});});
     renderWallet();
   }
 
-  // ---- wallet: raw EIP-1193, hand-rolled ABI for four calls. No library, nothing to trust.
+  // ---- wallet: raw EIP-1193, hand-rolled ABI. No third-party runtime library; wallet/chain trust still applies.
   const W={acct:null,chainId:null,bal:{},busy:false,msg:''};
   const pad=(h)=>h.replace(/^0x/,'').padStart(64,'0');
   const toWad=n=>BigInt(Math.round(n*1e6))*10n**12n;
@@ -727,6 +741,7 @@
     el.innerHTML=`
       <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
       <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmt(b.usdt)}</b></div>
+      <div class="msg2">代币数量 · 右侧为按结算份额折算的毛额（非市价）</div>
       <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmt(b.yang*v.notional*v.yangShare)} ${v.symbol||''}</span></div>
       <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmt(b.yin*v.notional*(1-v.yangShare))} ${v.symbol||''}</span></div>
       <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · ${v.notional} ${v.symbol||''}/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
@@ -741,7 +756,7 @@
     b.className='mode '+(rp?'replay':'live'); b.textContent=rp?'◀ REPLAY · back to live':'● LIVE';
     if(HEAD.source==='bitcoin'){
       $('sourceTag').textContent='无极 · Bitcoin PoW';
-      $('sourceDefinition').textContent='WUJI · Bitcoin SHA256d → SHA256 → byteSum · 6 confirmations · one path across chains';
+      $('sourceDefinition').textContent='WUJI-INDEX · 100e^S · Bitcoin SHA256d → SHA256 → byteSum · 6 confirmations · shared index, separate claims';
       const el=$('bitcoinSource');el.style.display='block';
       const age=HEAD.tipTs?Math.max(0,Math.floor(Date.now()/1000)-HEAD.tipTs):null;
       el.innerHTML=`BTC 链头 #${HEAD.chainHead?.toLocaleString()} · ${HEAD.tipHash?`<a href="https://mempool.space/block/${HEAD.tipHash}" target="_blank">${HEAD.tipHash.slice(0,12)}…${HEAD.tipHash.slice(-12)}</a>`:''} · ${HEAD.blocks?'已计入 #'+HEAD.height:'等待首个满足 6 确认的高度'} · ${age===null?'':`距该块 ${ago(age)} · `}等待下一个块（平均约 10 分钟，无固定倒计时）`;

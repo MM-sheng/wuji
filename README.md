@@ -1,13 +1,31 @@
 # WUJI · 无极
 
 > 无极生太极，太极生两仪。
-> A market before reason. From nothing, yin and yang; together, always whole.
+> A market about nothing. Verifiable. Heartbeat: Bitcoin.
 
-WUJI is an asset correlated with nothing. Its price is written by BNB Chain block hashes — no oracle, no governance, no admin, no reason. Every step is verifiable from any public RPC.
+WUJI is a verifiable pure-randomness settlement market and public benchmark. Its settlement index is
+derived from Bitcoin proof-of-work headers and can be independently recomputed. “Pure randomness” describes
+the intended model; it is not a proof of unbiased mining, independence from every asset, or investment returns.
+There is no owner, governance or upgrade key. Paired YANG/YIN vaults are one application of this public index.
+
+Four different things must be distinguished:
+
+| Object | Meaning |
+|---|---|
+| Index `S` | An integer-derived cumulative path; `100·exp(S)` is its display level, not a traded token price. |
+| Instantaneous settlement share `g` | `clamp(½ + ½·(S−S₀), 0, 1)`, an absolute-position allocation for the current series. |
+| Payoff at expiry | `N·g(S_T)` for YANG and its complement for YIN at the predetermined Bitcoin height, before redemption fees and rounding. |
+| Market price | The executable price offered by buyers/sellers; the terminal does not supply a live market price for these claims. |
+
+The share is **not a price and must never be used as a lending-collateral price feed**. Before expiry, it
+does not grant single-sided redemption at that amount. Different chains, collateral, notionals and series
+create a family of separate claims sharing a settlement index; they are not interchangeable tokens.
+Solvency in collateral units assumes ordinary ERC-20 behaviour. An arbitrary-token vault created by the
+permissionless factory carries no equal-safety promise. Collateral price and issuer risks remain.
 
 - `docs/ARCHITECTURE.md` — every decision that has been made, and why
-- `indexer/` — follows BSC, computes the index, serves it (a cache, not an authority)
-- `apps/terminal/` — the trading terminal (paper account today, wallet later)
+- `indexer/` — follows Bitcoin headers; retains the old BSC source as a comparison mode (a cache, not an authority)
+- `apps/terminal/` — index display, paper simulation and testnet wallet
 - `contracts/` — deployed testnet index + paired YANG/YIN vault
 - `docs/THREAT_MODEL.md` — trust boundaries, attack paths, and mainnet blockers
 - `docs/AUDIT_NOTES.md` — internal findings and remediation status
@@ -16,8 +34,8 @@ WUJI is an asset correlated with nothing. Its price is written by BNB Chain bloc
 ## Run
 
 ```bash
-node indexer/index.mjs                    # mainnet index → http://localhost:8787
-./scripts/testnet.sh                      # testnet index (:8788) + keeper
+node indexer/index.mjs                    # legacy BSC index → http://localhost:8787
+# Bitcoin testnet startup and deployment instructions are below.
 cd contracts && ~/.foundry/bin/forge test # unit / fuzz / invariant suites
 ```
 
@@ -30,7 +48,8 @@ cross-checks, series solvency, wallet balances, paired minting, and paired redem
 
 ## Production status
 
-Testnet prototype only. Fixed-block checkpoint settlement removes the known caller timing option.
+Testnet prototype only. Fixed Bitcoin-height checkpoint settlement removes the known caller timing option.
+One series spans 4320 Bitcoin heights (about 30 days on average, not a fixed calendar deadline).
 Do not deploy to mainnet until an independent contract review and the remaining checklist are complete.
 
 ## Bitcoin source (2026-09-20)
@@ -56,7 +75,7 @@ It stays at 100 until the genesis height has six descendants. Averages are not b
 The old BSC deployments are archived in `contracts/deployments/bsc-testnet-legacy.json`.
 On the Bitcoin branch, use `scripts/bitcoin-testnet.sh`; do not run the old BSC startup script against the new manifest.
 
-### Reward-enabled Bitcoin testnet (T1)
+### Existing reward testnet — comparison version, economics superseded
 
 The latest `contracts/deployments/bsc-testnet.json` uses an immutable fee router: 50% to
 relayer/folder lifetime points and 50% to the DEAD address. The previous Bitcoin deployment is
@@ -71,4 +90,9 @@ VERIFICATION_OUTPUT=contracts/deployments/rewards-verification.json node scripts
 The keeper routes ordinary ERC-20 vault fees automatically when a router balance is at least two
 smallest units. Workers call `RelayerRewards.claim(token)` to withdraw; a long unclaimed work history
 may require repeated calls (128 new point lots per default call). Rewards are not guaranteed gas reimbursement.
-See [T1 review](docs/tasks/T1_REPORT.md) for the accounting and finality rules.
+See [T1 review](docs/tasks/T1_REPORT.md) for this deployed version's accounting and finality rules.
+
+The [current plan](docs/tasks/NEXT.md) replaces burning and lifetime points with a 100% operations reserve
+and one-off bounties per finalized height. That rework is **not implemented or deployed** yet. The additional
+[T2 deployment](contracts/deployments/t2-interrupted-deployment.json) was confirmed on testnet but left unused
+after this decision; the active manifest and port 8790 still refer to the existing comparison version.

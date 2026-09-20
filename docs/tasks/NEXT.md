@@ -4,11 +4,14 @@ Read `AGENTS.md` and `docs/ARCHITECTURE.md` first. Work top to bottom; each task
 The bar for every task: `forge test` green, invariants untouched, nothing gains an owner.
 
 The goal these serve: **the disappearance test** — if the authors vanish, the protocol keeps running.
-Today the contracts pass it; the keeper, fees, indexer and front-end do not.
+There is no privileged contract operator, but economic liveness and one-sided exit after a deep reorg remain
+unresolved. The keeper, fees, indexer and front-end have not passed the full disappearance drill.
 
 ---
 
-## T0 · Claims correction (docs + terminal wording) — do this first, one PR, no contract changes
+## T0 · Claims correction (docs + terminal wording) — implemented, awaiting review
+
+Delivery and verification: [T0_REPORT.md](T0_REPORT.md). No contract or financial-test changes in this task.
 
 Source: `docs/reviews/2026-09-20-adversarial.md` (read it in full). Apply every "动作" marked as documentation:
 - Positioning: WUJI is **a verifiable pure-randomness settlement market and public benchmark**, not a zero-beta hedge,
@@ -39,12 +42,13 @@ Header rewards are intentionally credited at six-deep folding, rather than immed
   claim() of old work against new fees.
 - Per-asset accounting; anyone may `fund(token, amount)` the reserve (the deployer will pre-fund at launch — that is
   a donation, not a privilege).
+- Update WujiVault NatSpec to the four-concept terminology without changing payoff rules; T0 deliberately leaves Solidity source untouched.
 - Add the economic model to ARCHITECTURE §4: gas per finalised height (measure), bounty per height at a given reserve
   balance, and the primary-market volume needed to sustain it on BSC and on Ethereum at stated gas prices.
 
 Problem: relaying headers and folding costs gas; today one machine does it for free. Nobody else has a reason to.
 
-Build:
+Original build brief (historical; superseded by the rework requirements above):
 - `FeeRouter` (immutable): becomes every vault's `treasury`. On receipt of any ERC-20 fee it splits by a constant
   ratio, e.g. `REWARD_BPS = 5000` to `RelayerRewards`, the remainder to `0x000…dEaD` (burn). Pull-based: anyone may
   call `route(token)` to forward the router's balance; vaults keep paying the router with plain `safeTransfer`.
@@ -115,12 +119,12 @@ account name).
 ## T6 · Whitepaper
 
 `docs/WHITEPAPER.md`, ≤ 6 pages, in this order: (1) 无极生太极，太极生两仪 — what it is in one paragraph;
-(2) the path: Bitcoin PoW, byteSum, UNIT, why re-hash, expected vol; (3) the pair: fixed-base transfer rule, why it is
-the only rule that keeps the pair whole, bounded claims, series; (4) collateral vaults and the factory; (5) settlement
+(2) the path: Bitcoin PoW, byteSum, UNIT, why re-hash, expected vol; (3) the pair: absolute-position clamped settlement shares, expiry payoffs versus market prices, bounded claims and series; (4) collateral vaults and the factory; (5) settlement
 on deterministic heights; (6) what can go wrong: miner bias cost, deep reorgs, relay checkpoint trust, data-source
 liveness, collateral risk (USDT freeze vs WBNB); (7) the "never" list: no token, no governance, no admin, no upgrade,
 no pause, no foundation; (8) how to verify (T4). Numbers must come from the code and tests, not prose. Bilingual is
-welcome: Chinese primary, English full translation.
+welcome: Chinese primary, English full translation. Include the preregistered benchmark method and related work
+outlined in WUJI_FOUNDATIONS §§9–10; do not inherit other beacon protocols’ security proofs.
 
 ## T7 · Rolling vault — REDESIGN before building (review item #9)
 
@@ -145,8 +149,8 @@ deliberately (who gains at which state) and choose X accordingly. Write-up in TH
   testnet; record whether independent participants take over profitably and whether a one-sided holder can exit.
 - THREAT_MODEL rewritten around **attacker private cost** (pool cost-shifting, brief withholding, existing forks) and
   a stated **value-at-risk cap**: with s = 0.5 %/block, a feasible withholding strategy profits once net one-sided
-  exposure A > ≈ 501 · c_b (c_b = attacker's private cost per discarded block). Publish the cap; keep early exposure
-  far below it (review items #5, #6, #16).
+  exposure A > ≈ 501 · c_b in its simplified model (c_b = attacker's private cost per discarded block). Publish
+  assumptions and a conservative exposure policy; this is not a proven safe TVL cap (review items #5, #6, #16).
 - Alerts: relay lag > 3 Bitcoin blocks, index backlog, keeper errors, `liabilities > balance` (should be impossible —
   alert anyway), settlement overdue.
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.

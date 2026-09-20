@@ -1,98 +1,123 @@
 # WUJI threat model
 
-Status: testnet prototype. This document describes the current contracts, not a claim that they
-are ready to custody production funds.
+Status: Bitcoin-source testnet prototype, updated after the 2026-09-20 adversarial review. The source
+contains T2 storage packing; port 8790 still runs the earlier T1 comparison deployment. Operations-reserve
+bounties (T1 rework), complete header timestamp checks/catch-up gate (T2b), and frozen-state exit (T9)
+are pending. None is an implemented protection. Legacy BSC Gap/EIP-2935 rules do not apply to Bitcoin mode.
 
-## Security objective
+## Objective and assumptions
 
-For every series, one fully backed pair represents exactly one `NOTIONAL` of collateral. At all
-times the vault balance must cover the sum of all open and settled claims. No privileged account
-may change the index, mint claims, withdraw collateral, pause users, or upgrade the contracts.
+Under ordinary ERC-20 behaviour, the vault balance covers all open and settled series liabilities,
+and one YANG/YIN pair has a gross collateral payoff of exactly NOTIONAL. Fees and integer rounding
+are separate. This is a conditional solvency property, not a price or return guarantee. It assumes
+honest balance reporting, correct transfers and no external reduction/rebasing of the vault balance.
+Minting checks the received balance delta; that does not make a malicious or upgradeable token safe.
+No privileged account can change parameters, withdraw backing, pause users or upgrade the contracts.
+
+`S`, instantaneous share `clamp(½+½ΔS)`, expiry payoff and executable market price are different objects.
+The share is an absolute-position allocation, not a lending-collateral price feed. Off-chain floating
+point values only display results; contract integers determine claims. A family of claims may share the
+index while differing by chain, collateral, notional, series, liquidity or frozen state. A symbol alone
+is not an asset identifier; publish chain ID, collateral address, notional, series, side and token/vault addresses.
 
 ## Trust boundaries
 
-- **BNB Chain consensus and block production:** block hashes are the sole index input. Validators
-  cannot choose arbitrary hashes, but block hashes are not an unbiased randomness beacon and a
-  proposer may have limited withholding/reordering influence.
-- **EIP-2935 history contract:** hashes older than 256 blocks depend on the canonical history
-  contract at `0x0000F90827F1C53a10cb7A02335B175320002935`.
-- **Collateral:** solvency is denominated in units of the configured ERC-20. Depeg, issuer freeze,
-  blacklist, proxy upgrade, or chain bridge failure remain collateral risks.
-- **Keeper:** the keeper has no authority; it only calls public functions. Its key can waste its
-  own gas. Loss of all keepers can cause deterministic zero-increment gaps.
-- **Indexer and UI:** caches only. They may lie or fail without changing contract state. Users must
-  be able to compare their result with public RPC data.
-- **DEX pools:** secondary prices depend on liquidity and can diverge from claim value. Pair
-  mint/redeem constrains the sum of YANG and YIN, but does not guarantee either side trades at its
-  displayed claim value before settlement.
+- **Bitcoin checkpoint and SPV:** deployment trusts a header, height, epoch-start timestamp and work baseline.
+  Compare them with independent Bitcoin sources. An incorrect epoch timestamp can distort the first retarget.
+  Testnet chainwork is normalized to the checkpoint's own work; the omitted common prefix cancels in fork comparisons.
+- **Header validation:** PoW, links, branch-local retargets and cumulative-work selection are enforced.
+  Transactions and full block validity are not checked. MTP, future-time limits and a caught-up relay gate are
+  still missing; six local descendants can exist on a stale view. Target-derived work cannot simply be invented,
+  but that is not proof of Bitcoin Core equivalence. T2b must address the timestamp/catch-up omissions.
+- **Settlement chain:** execution and finality depend on the chain hosting each vault. Identical Bitcoin input
+  does not make tokens on different chains interchangeable or guarantee synchronized availability.
+- **Collateral:** issuer freezes, blacklisting, proxy upgrades, rebasing, dishonest balances and transfer fees can
+  break availability or accounting assumptions. Collateral units do not insure dollar purchasing power or BNB
+  exposure. The factory is permissionless and offers no equal-safety promise for arbitrary-token vaults.
+- **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
+  height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
+  local Core/Esplora. HTTP success is not proof of Bitcoin consensus.
+- **Indexer/UI and markets:** caches can lie without changing contract state. Match `S_wad` at the same height
+  and verify its header proof. Displayed settlement shares and simulated order books are not executable quotes;
+  before expiry even an idealized price depends on the remaining payoff distribution.
 
-## Mainnet blockers
+## Miner influence and private attack cost
 
-### Settlement checkpoint — implemented, pending independent review
+A miner can compute the increment after finding a valid header, then withhold/discard it. Rehashing removes
+raw PoW zero-bit bias; it does not prevent selective publication or establish perfect independence. Model
+the attacker's private marginal cost, not a universal full-network block reward: pool arrangements, shifted
+costs, fees, hash share, external positions and short-lived concealment can change the economics.
 
-Series use deterministic block-number boundaries derived from immutable deployment parameters.
-`WujiIndex` stores S when each boundary is folded, and `WujiVault` reads only that value. Calling
-`settle()` later cannot change the payoff. Missing boundary hashes follow the existing frozen-gap rule,
-so the checkpoint remains recoverable. This remediation has unit and invariant coverage but still
-requires an independent review against the release commit.
+A simplified one-block selection model in the review gives a profitability condition
+`A · s > sqrt(2π) · c_b`, where A is the model's effective one-sided exposure, s is per-block S standard
+deviation and c_b is the attacker's private cost per discarded block. At s = 0.005, its threshold is
+about `501 · c_b`; assuming c_b = $200,000 gives about $100 million. These are **hypothetical model inputs**,
+not observed mining costs or a proven safe TVL limit. Gross vault collateral need not equal A, especially
+near payoff boundaries or with external leverage. Smaller exposure does not exclude other attacks.
 
-### Independent review — unresolved
+Early deployment exposure should be conservatively constrained and the cost assumptions published, but
+there is currently no contract-enforced exposure cap. Do not advertise the toy threshold as guaranteed safety.
 
-The contracts have internal unit, fuzz, and invariant coverage, but no independent audit or formal
-verification. At least one reviewer who did not author the contracts must review source, deployment
-parameters, compiler settings, and the final deployed bytecode.
+## Public information window
 
-## Defences implemented
+Once a Bitcoin header is public, its WUJI increment is known even before it is relayed, reaches six-deep
+status, or is folded on a settlement chain. A market participant can act on that information while another
+participant relies on stale UI/contract state. Six confirmations address reorg risk, not information equality.
+The protocol currently does not prevent trading on this public-information delay. Market makers still face
+adverse selection, inventory risk and collateral risk; a deterministic index does not remove them.
 
-- No owner, proxy, pause, governance, or arbitrary withdrawal path.
-- `ReentrancyGuard` and `SafeERC20` protect vault entry points and token calls.
-- Minting measures the vault balance delta and rejects fee-on-transfer collateral.
-- Settlement reads a predetermined checkpoint. If that boundary is more than one bounded tick away,
-  callers advance the index separately; the index need not catch up to a later chain head.
-- Missing hashes outside the 8191-block history window contribute exactly zero and emit `Gap`.
-- Mint fees round up; payouts and redemption fees round down in the vault's favour.
-- Deployment requires an explicit chain id, treasury, and production collateral. Mock collateral is
-  available only behind an explicit test flag.
+## Fixed-height settlement and deep reorgs
 
-## Failure modes that remain by design
+Series boundaries are `GENESIS_HEIGHT + k·4320 − 1`. Each is approximately 30 days apart on average, not
+a calendar deadline. Settlement reads only the recorded boundary S, so a later caller cannot select a later S.
+This removes the settlement-call timing option, not miner influence or the information window.
 
-- A gap changes the realized path by freezing missing increments at zero.
-- At `yangShare` 0 or 1, one side has no settled claim; the payoff is bounded rather than an
-  unbounded replica of `100 * exp(S)`.
-- `liabilities()` grows linearly with the number of series and is intended as a view/monitoring call.
-- Treasury is immutable and receives protocol fees. Compromise cannot drain vault collateral, but
-  the recipient and its control policy must be disclosed.
-- Tokens that rebase, blacklist the vault, return dishonest balances, or otherwise violate ordinary
-  ERC-20 semantics are unsupported even if deployment succeeds.
+Six descendants are a probabilistic margin. If a heavier branch replaces a folded height, `fold` reverts
+with `deep Bitcoin reorg`, including when called without pending work. No zero increment is substituted and
+previous payments cannot be undone. Full pairs can still be redeemed, but an unsettled one-sided holder
+has no guaranteed protocol exit. A market buyer is not an assured recovery mechanism. T9 must define and
+analyse an immutable frozen-state exit before mainnet; it does not exist today. Different deployments can
+halt at different heights. Deep fork rewrites can also exceed transaction gas limits.
 
-## Monitoring signals
+## Defences and evidence
 
-Alert on `Gap`, keeper transaction failures, `pending() > 256`, a mined settlement block without settlement, vault
-balance below `liabilities()`, unexpected collateral implementation changes, and any mismatch between
-the indexer's `S_wad` and `WujiIndex.S()`.
+- No owner, upgrade, pause, governance or arbitrary withdrawal path.
+- Reentrancy guards, SafeERC20, received-balance checks on mint, collateral-favouring integer rounding.
+- Deterministic checkpoint payoffs and full-pair redemption; no guarantee of single-sided early redemption.
+- Original vault invariant assertions retained with 64 runs × 60 calls and fail_on_revert enabled. Economic
+  tests use explicitly synthetic feeders; they do not test mining security. Production PoW uses 2028 real
+  headers spanning one retarget; synthetic branch tests have a test-only easy-target subclass.
+- T2 measured batch gas is about 68k/header; smaller batches, initialization, retargets and fork rewrites can
+  cost more. Include folding, rewards, transaction/calldata and settlement costs in liveness economics.
+- Independent review of the exact release source, parameters and deployed bytecode is still required.
 
-## Bitcoin source migration · 2026-09-20
+## Fees and operational liveness
 
-- **Checkpoint trust:** header, height and epoch-start timestamp must be compared against independent Bitcoin sources. A fake epoch timestamp can distort the first retarget. Chainwork is normalized to the checkpoint block's own work; the omitted common prefix cancels in every fork comparison. It is not the absolute chainwork reported by Core.
-- **Miner bias:** after finding a header a miner can compute R and discard an unfavorable block. The expected opportunity cost depends on rewards, fees, hash share and external payoff; it is not a universal fixed one-block-reward lower bound. Rehashing removes raw PoW bit-pattern bias; it does not prove perfect randomness or economic independence.
-- **SPV boundary:** work, parent linkage, mainnet retarget rules and cumulative-work fork selection are enforced. Transactions, block validity, MTP and future-time constraints are not. A header-only fork may be invalid to Bitcoin full nodes. Timestamp manipulation can affect subsequent target and work per block, but cannot manufacture the cumulative target-derived work needed to win. There is no promise of full consensus equivalence.
-- **Deep reorg:** six blocks is a probabilistic safety margin. If a heavier branch replaces a folded height, fold reverts even when no new heights are pending. Already executed payouts cannot be undone. No owner recovery/upgrade is introduced; deployment and application recovery require explicit new design.
-- **Availability:** public API failure or dishonest data can stall or mislead the off-chain view. The relay independently checks PoW and difficulty. Local Core/Esplora endpoints are supported; use independent sources to compare checkpoints and live results. Never treat an HTTP success as proof of Bitcoin consensus.
-- **Gas/liveness:** reorg rewiring is proportional to changed branch depth; extremely deep branches can exceed a transaction gas budget. The current storage design exceeds the 60k/header target. These limits must be resolved or explicitly accepted before mainnet.
-- **Test boundary:** synthetic feeder headers in economic invariants do not validate mining. Production relay tests use 2028 real headers and invalid mutations; branch-choice unit tests use an easy-PoW subclass that is not deployed.
+The current comparison deployment uses the superseded 50% lifetime-point / 50% DEAD design. Sending ERC-20
+collateral to DEAD does not necessarily reduce totalSupply. Credits accrue to the original submitter and
+folder only on finalized heights; duplicate/transient orphan headers cannot mint extra credits. Already-paid
+rewards cannot be reversed after a deep reorg. Points persist and dilute new workers' share of future fees.
 
-## T1 fee router and relayer rewards
+Its token-specific accumulators and bounded claim lots isolate accounting; credit calls no token code.
+Distribution occurs at sync, with precision dust reserved. Unsupported token behaviour may block its own
+routing/claims. CREATE nonce prediction binds immutable addresses and must be checked during deployment.
+These are facts about the existing version, not an endorsement of lifetime-point economics.
 
-- Fee destination: immutable 50% lifetime relayer points / 50% DEAD address. Sending a token to DEAD does not imply totalSupply burning.
-- Relay credits are deferred until the index folds the six-deep canonical height. Transient orphan headers earn no points. The original submitter receives the point even when another account extends its branch or folds it. Known/duplicate headers cannot overwrite attribution. Front-running a new valid header is accepted competition, not double payment.
-- An already-paid height is never paid again. A deep reorg prevents index folding, but cannot reverse previously claimed rewards, matching the existing settlement limitation.
-- Work weights are fixed at one point per submitted finalized header and one per folded height, independent of actual gas price/cost. Lifetime points dilute new workers and do not guarantee economical liveness. Empty fee pools pay nothing; no subsidy or guaranteed yield exists.
-- Funding allocation occurs at sync, not at ERC-20 transfer time. Anyone can trigger sync. Fees arriving before any work are allocated on a later sync with positive points. This timing is explicit and not an oracle for transaction-level fee timing.
-- Per-token accumulators and per-worker lots prevent new work from taking previously synchronized rewards. Bounded claim catch-up prevents a long work history from requiring one unbounded transaction. Precision dust remains reserved; no rescue key exists.
-- No credit path calls arbitrary ERC-20 code. Tokens which rebase, charge transfer fees, lie about balances, blacklist recipients or revert remain unsupported; their failure can block their own routing/claims, not other tokens or header credit. Fee router/reward token entrypoints have reentrancy guards.
-- CREATE nonce prediction is security-critical: deployment assertions and post-deploy address checks must bind rewards.relay/index and relay/index.rewards. No binding may be changed after deployment.
+The approved task queue replaces this with 100% fees in an immutable operations reserve and one-off,
+per-finalized-height bounties to the folder. Permissionless funding is a donation, not control. The redesign,
+per-token accounting, gas/fee-volume model and deployment remain pending. Empty reserves, low primary-market
+volume and front-running can still make work uneconomic; no implementation can promise profitable operation
+without explicit resource assumptions. T8 requires independent keepers and a 48-hour author-shutdown drill.
+
+## Monitoring
+
+Watch relay lag, stale best-header time, index backlog, keeper errors, overdue checkpoint settlement,
+reorg reverts, collateral balance below liabilities, collateral implementation changes, and same-height
+index/contract mismatches. Float displays with tolerance are not exact solvency evidence: use raw token
+units for monitors. `liabilities()` iterates all series and is intended for off-chain monitoring.
 
 ## T2 compact representation
+
 
 Work remains bounded to uint128 and height to uint32, checked in wider arithmetic before narrowing.
 Node, epoch and worker IDs are checked before exhaustion; no wraparound or record alias is permitted.

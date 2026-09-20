@@ -5,12 +5,13 @@ product and `AGENTS.md` for repo conventions before starting. Ask nothing that t
 
 ## Decision
 
-WUJI's price path is defined by **Bitcoin block hashes**, not by the block hashes of the chain the
-contracts live on. Reasons, in order: nobody can predict a Bitcoin block hash (miners included);
-biasing one costs a discarded block (~a full block reward); an 80-byte header is self-proving (PoW), so
-submission is permissionless and needs no bonds, oracles or committees; and the same path is computable
-on every chain, so there is **one WUJI**, settled in many places. The frozen-gap rule disappears:
-Bitcoin headers are never lost, a late submission only delays, it never changes S.
+WUJI's settlement index is defined by **Bitcoin block hashes**, independently of the chain hosting its
+contracts. An 80-byte header lets a relay check PoW and links without a privileged submitter; it does not
+prove full block validity. Miners learn a valid hash when they find it and can selectively publish it at a
+private cost that depends on their circumstances. A shared settlement index supports a family of separate
+claims across chains, not fungibility or synchronized finality. Late submission delays availability without
+skipping Bitcoin heights or changing their increments. This wording incorporates the 2026-09-20 review;
+the path parameters below are unchanged. T2b in NEXT supersedes the original permission to omit timestamp checks.
 
 ## Path definition (normative)
 
@@ -20,11 +21,13 @@ for each Bitcoin height h ≥ GENESIS_HEIGHT (main chain, ≥ CONFIRMATIONS deep
     delta_h    = byteSum(R_h) − 4080                     // byteSum = sum of the 32 bytes, identical to WujiIndex.byteSum today
     U_h        = U_{h−1} + delta_h                       // exact integer, U_{GENESIS−1} = 0
     S_h        = U_h · UNIT                              // UNIT = 1.2e-5  (contract: 1.2e13 wad)
-    price_h    = 100 · e^{S_h}                           // off-chain only
+    display_h  = 100 · e^{S_h}                           // off-chain index display, not a token market price
 ```
 
-- Re-hashing is required: raw Bitcoin hashes carry ~76 leading zero bits (the PoW), so their byteSum is biased.
-- UNIT: 144 blocks/day, byteSum sd ≈ 418.04 → σ_block ≈ 0.50 %, ≈ 6 %/day. Same daily vol as today.
+- Re-hashing is required: PoW restricts raw hashes to a target-dependent numerical interval, biasing their byteSum.
+  See WUJI_FOUNDATIONS §8; leading-zero counts depend on difficulty.
+- UNIT: assuming 144 blocks/day and ideal independent uniform re-hashed bytes, byteSum sd ≈ 418.04 →
+  σ_block ≈ 0.50 %, ≈ 6 %/day. byteSum has finite discrete support; these are model estimates, not fixed daily volatility.
 - Byte order: use the header hash exactly as produced by `sha256d(header)` (32 bytes, the order in which the
   EVM contract will compute it). The indexer must use the same order — write a test with a known block
   (e.g. height 800000) asserting the same `R_h` in Solidity and JS. Document the order in the contract NatSpec.
@@ -57,9 +60,9 @@ for each Bitcoin height h ≥ GENESIS_HEIGHT (main chain, ≥ CONFIRMATIONS deep
   `HISTORY` contract, no EIP-2935.
 - Keeps: `UNIT`, `MEAN`, `byteSum`, `increment(bytes32 R)`, `S`, `lastHeight`, `GENESIS_HEIGHT`,
   `CHECKPOINT_INTERVAL`, `nextCheckpointHeight`, `checkpointS(height)`, `checkpointed(height)`.
-- Reorg rule: only heights ≥ 6 deep are folded, so the fold never has to unwind. If the relay's main chain changes
+- Reorg rule: only heights ≥ 6 deep are folded. If the relay's main chain changes
   below the folded height (a >6-block reorg), `fold` MUST revert with a clear message rather than continue; this is
-  a documented, practically-never event.
+  a documented failure mode, not an impossible event. Prior payments cannot be undone; T9 must define frozen-state exit.
 
 ### `WujiVault.sol`, `WujiVaultFactory.sol`, `SeriesToken.sol`
 
