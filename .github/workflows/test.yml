@@ -8,9 +8,16 @@ jobs:
         with:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.3
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.0
       - run: forge test --root contracts
       - run: forge build --root contracts --sizes
-      - run: node --test indexer/bitcoin.test.mjs indexer/bitcoin-index.test.mjs indexer/gap-sync.test.mjs
+      - run: node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs
+      - run: node scripts/test-bytecode.mjs
+      - run: docker compose config --quiet
+      - run: docker build -t wuji-node:local .
+      - run: docker run --rm --entrypoint /usr/local/bin/cast wuji-node:local --version
+      - run: node scripts/test-container.mjs

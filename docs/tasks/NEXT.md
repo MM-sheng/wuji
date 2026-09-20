@@ -111,6 +111,12 @@ account name).
 
 ## T4 · Anyone can verify, anyone can run
 
+Implemented on `codex/independent-verification`: [T4_REPORT.md](T4_REPORT.md). Independent two-source
+reconstruction, read-only credential mounts, reproducible runtime checks and offline CI integration are delivered.
+112 Solidity tests and 58 Node tests passed, with invariants unchanged. Sepolia's seven runtimes match the fresh
+reproducible build. Live two-source reconstruction remains incomplete because public Bitcoin APIs returned 429;
+no successful live reconstruction is claimed. T5 is the next implementation task; retry T4's live check when sources are available.
+
 - `scripts/wuji-verify.mjs`: one command, no dependencies, that (a) fetches the headers from `GENESIS_HEIGHT` to the
   contract's `lastHeight` from two independent Bitcoin sources, (b) recomputes U/S exactly as the contract, (c) reads
   the contract's `S` and `checkpointS` values, (d) prints PASS/FAIL per checkpoint. This is the artefact a stranger runs

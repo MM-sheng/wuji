@@ -195,3 +195,95 @@ The additional [T2 deployment](contracts/deployments/t2-interrupted-deployment.j
 but left unused after the economic redesign. The first reserve deployment attempt was interrupted by a shared
 wallet nonce and is archived in `reserve-interrupted-deployment.json`; the confirmed reserve-v2 manifest
 identifies that T1 release. The timestamp-checking v3 release uses its own manifest and fresh immutable addresses.
+
+## Verify the index yourself
+
+From a reviewed checkout, with **Node 18+ only** (no npm install, indexer, wallet or signing):
+
+```bash
+node scripts/wuji-verify.mjs contracts/deployments/sepolia-weth-v3.json
+# Or the same index on BSC testnet:
+node scripts/wuji-verify.mjs contracts/deployments/bsc-testnet-timestamps-v3.json
+```
+
+The verifier pins all contract reads to one EVM block, independently implements the raw-digest hash formula,
+compares raw headers from two Esplora sources, follows their linkage from the relay anchor and checks the six
+linked descendants of `lastHeight`. It recomputes integer U/S and checks **both `checkpointed` and `checkpointS`**
+at every due boundary, printing `PASS` or `FAIL` for each. It rechecks source/EVM views before a final PASS.
+An empty index prints WAIT (exit 2); any mismatch, missing checkpoint or unavailable source exits 1.
+Before height 972145 these deployments have no due checkpoints: an empty checkpoint list is not evidence of settlement.
+
+Defaults are mempool.space and Blockstream. `READ_RPC` selects your settlement RPC;
+`VERIFY_BITCOIN_SOURCES=url1,url2` selects two Esplora base URLs. Choose separate operators, ideally including
+your own full-node-backed instance: different hostnames alone cannot prove operator independence.
+`VERIFY_OUTPUT=/path/result.json` saves the result, including failure. Sources are never silently substituted.
+Public API quotas can stop a run; retries are bounded and honor Retry-After. Blockstream requests are spaced at
+least six seconds apart to respect its advertised hourly cap, so a long replay can take hours. An HTTP 429 is
+an incomplete verification, not an index mismatch and not a PASS. A self-hosted source avoids shared public quotas.
+
+This verifies arithmetic/header agreement under the selected RPC/source responses and trusted relay anchor.
+It does not reimplement Bitcoin consensus or prove global synchronization, miner unbiasedness, economic returns
+or contract safety. See [T4 report](docs/tasks/T4_REPORT.md) for the successful offline cases and live limitations.
+
+## Run your own indexer / keeper in five minutes
+
+Requires Docker with Compose. From this checkout (initialize its submodules for contract builds):
+
+```bash
+cp .env.docker.example .env.docker
+# Edit public RPC / manifest / port preferences if needed.
+docker compose --env-file .env.docker up -d --build indexer
+docker compose --env-file .env.docker logs -f indexer
+```
+
+Open **http://localhost:8794**. The default is the Sepolia/WETH v3 deployment; choose
+`contracts/deployments/bsc-testnet-timestamps-v3.json` and the matching RPC for BSC testnet.
+The named data volume survives restarts. “Five minutes” covers startup, not a guaranteed history-sync time.
+HTTP health only indicates that the server responds: check `/head` for `err`, `behind` and `chain.reconciliation`.
+The container uses Node and Foundry images pinned by digest, runs as uid 1000, and has a read-only root filesystem.
+For a custom manifest, mount its public JSON file and set `MANIFEST` to its path inside the container.
+
+To relay/fold as an independent operator, first prepare and fund **your own encrypted testnet account**.
+Set `KEYSTORE_ACCOUNT`, `KEYSTORE_FILE` and `PASSWORD_FILE` in `.env.docker` to its name and absolute host paths.
+Only paths go in this file; never a private key or password. The example deliberately ships no signing credentials.
+Do not share the deployer's wallet or run two keepers with the same account: their transaction nonces can conflict.
+On Linux the container's uid 1000 needs read access to the two files; use ownership or a narrowly scoped ACL,
+not world-readable password permissions. The bind mounts are read-only and missing files fail startup.
+
+```bash
+docker compose --env-file .env.docker --profile keeper up -d keeper
+docker compose --env-file .env.docker logs -f keeper
+# Stop your own stack; omit --volumes to retain the index cache.
+docker compose --env-file .env.docker --profile keeper down
+```
+
+Without the explicit `keeper` service/profile, Compose starts only the indexer. Signing is through encrypted
+Foundry keystores and the chain guard still runs before transactions. BSC defaults to 0.1 gwei legacy fees;
+Sepolia uses automatic fee selection. These examples accept the two current testnet manifests only. Keeper
+transactions spend test gas; reserve rewards do not guarantee reimbursement. See [Docker's profile semantics](https://docs.docker.com/compose/how-tos/profiles/).
+
+## Reproduce deployed bytecode
+
+With Foundry **1.8.3**, Node 18+, and the pinned submodules:
+
+```bash
+git submodule update --init --recursive
+bash scripts/verify-bytecode.sh contracts/deployments/sepolia-weth-v3.json
+# CI-equivalent offline integration checks:
+node scripts/test-bytecode.mjs
+docker build -t wuji-node:local .
+node scripts/test-container.mjs
+```
+
+`verify-bytecode.sh` creates fresh build/cache directories and compiles solc **0.8.28**, optimizer 200,
+Prague, via-IR off and IPFS/CBOR metadata on. Foundry expands scoped remappings with the checkout path;
+that path was embedded in v3 metadata. `build-reproducible.mjs` therefore recompiles the fresh Standard JSON
+with the release's literal `contracts/remappings-v3.json` contexts. It normalizes compiler **input**, then compares
+unaltered compiler output including metadata. The historical path in that file is a metadata string; no directory
+at that path is required. The CI test builds in two different directories to enforce this property.
+
+Only compiler-declared immutable slots are masked. **Immutable values and constructor bindings are a separate
+check**, implemented by `scripts/verify-bitcoin-deployment.mjs`; equality of masked code is not a security audit.
+`READ_RPC` overrides the read endpoint and `BYTECODE_OUTPUT` saves the result. `SOLC` may select a native compiler
+path; its exact version is checked. These scripts target the current v3 source; old releases require their own checkout.
+The workflow runs all existing financial tests plus independent-verifier, real local deployment and container checks.

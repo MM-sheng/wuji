@@ -1,0 +1,12 @@
+{
+  "status": "FAIL",
+  "checkedAt": "2026-09-20T23:23:38.109Z",
+  "reason": "Bitcoin source https://mempool.emzy.de/api: HTTP 429",
+  "sources": [
+    "https://mempool.space/api",
+    "https://mempool.emzy.de/api"
+  ],
+  "chainId": 11155111,
+  "index": "0x66e5d15c4c62e81084126c5429e10208b69cc65e",
+  "scope": "Recorded incomplete live attempt; no successful reconstruction or checkpoint comparison is claimed."
+}

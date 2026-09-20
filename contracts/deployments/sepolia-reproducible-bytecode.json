@@ -1,0 +1,74 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-09-20T23:28:52.684Z",
+  "chainId": 11155111,
+  "evmBlock": 11747279,
+  "evmBlockHash": "0xcd2503ad26d7e927f1dee729d62dd367b410f817aa0bd7ad3cf6e84995456c10",
+  "compiler": "0.8.28+commit.7893614a",
+  "verified": [
+    {
+      "name": "BitcoinRelay",
+      "address": "0xdf1cf7734eda917976e88ea88899c4f3e5ad6170",
+      "status": "PASS",
+      "bytes": 6894,
+      "immutableSlots": 5,
+      "actualSha256": "5da718172aa59835c21c231e1b579f3de70f54983f2e5fdb87b36819230d0725",
+      "maskedSha256": "ff6b3896b2b3cecdaf3d35cd6e1955d7545827f8242da1e2bd5ddc956892819b"
+    },
+    {
+      "name": "WujiIndex",
+      "address": "0x66e5d15c4c62e81084126c5429e10208b69cc65e",
+      "status": "PASS",
+      "bytes": 4547,
+      "immutableSlots": 14,
+      "actualSha256": "e624b21dd8cb13dd6ece22c7c39821933855bf21a0ca111758dded77211df410",
+      "maskedSha256": "afb44c5cfad35665cb925026e5efdd3ba7d6d522197ba468227145eb6bf507a0"
+    },
+    {
+      "name": "SeriesTokenDeployer",
+      "address": "0xdc88c7abeffd16061649d6870f7537913b0fa9b4",
+      "status": "PASS",
+      "bytes": 3515,
+      "immutableSlots": 0,
+      "actualSha256": "1e66944a9d2d0d5c4684dfa388c94e0fe8d06ba9152368805ad11aa076bb5a49",
+      "maskedSha256": "1e66944a9d2d0d5c4684dfa388c94e0fe8d06ba9152368805ad11aa076bb5a49"
+    },
+    {
+      "name": "WujiVaultFactory",
+      "address": "0x089ef351bea011a73f0832455d93277363ae052d",
+      "status": "PASS",
+      "bytes": 15282,
+      "immutableSlots": 6,
+      "actualSha256": "0637b26ab2b06836046380dc810dd784cb18da38b2599d8dbda0bf25e1534206",
+      "maskedSha256": "8eba64917a6c074ce4323826b24b9e2a2d7ccfc62ad0b0779edd0a923810fd0b"
+    },
+    {
+      "name": "RelayerRewards",
+      "address": "0x1c2a6f16fa9e481c712abe6dfa22215e833b64ae",
+      "status": "PASS",
+      "bytes": 4191,
+      "immutableSlots": 3,
+      "actualSha256": "1911703c13747e73f3823e1a4633f6484e605a3f681ba925a6f9ebf9d1b9c171",
+      "maskedSha256": "b111dc960ec3f29c0d91542df7ec94705c1677226d965d9aa4084659926cea4d"
+    },
+    {
+      "name": "FeeRouter",
+      "address": "0xcd1d0e1d3f46067b6185c1719a2bffeecd2ef493",
+      "status": "PASS",
+      "bytes": 1115,
+      "immutableSlots": 4,
+      "actualSha256": "1013dbc25ddd0f30b92d94c7f4ee927c29e4bdb601d206ce62eecf77d241bd09",
+      "maskedSha256": "08e1eab965f5ef58c80e5ad0e6a4ddd6f7646152048a7328a8d0fbb80783bea7"
+    },
+    {
+      "name": "WujiVault",
+      "address": "0x8783FcE1D731242B8Af3C42f8680B9A7B6F1BF7D",
+      "status": "PASS",
+      "bytes": 9509,
+      "immutableSlots": 35,
+      "actualSha256": "6bb29da70f4bbb62c0dedcba577f5a2f5764a65cc62471015903a29576d938e4",
+      "maskedSha256": "65740c43bea1d503d4b4813849fc14a25e8815801a407a6b83107d39696f0844"
+    }
+  ],
+  "scope": "Fresh build runtime equality, including metadata, with only compiler-declared immutable slots masked. Does not verify immutable values, external collateral code, contract state or safety. Use the deployment binding checks separately."
+}

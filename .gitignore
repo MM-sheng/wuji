@@ -9,3 +9,7 @@ contracts/.env
 contracts/.keystore-password
 contracts/.env.sepolia
 contracts/.keystore-password-sepolia
+
+# Local container operator paths and credentials
+.env.docker
+operator/

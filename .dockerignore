@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!indexer
+!indexer/*.mjs
+!apps
+!apps/terminal
+!apps/terminal/index.html
+!contracts
+!contracts/deployments
+!contracts/deployments/*-v3.json
+!scripts
+!scripts/container-entrypoint.mjs

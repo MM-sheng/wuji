@@ -1,0 +1,49 @@
+name: wuji
+x-runtime: &runtime
+  build: .
+  image: wuji-node:local
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: [/tmp]
+  restart: unless-stopped
+  environment: &public-env
+    MANIFEST: ${MANIFEST:-contracts/deployments/sepolia-weth-v3.json}
+    RPC: ${RPC:-}
+    BITCOIN_API: ${BITCOIN_API:-https://mempool.space/api,https://blockstream.info/api}
+    BITCOIN_API_KIND: ${BITCOIN_API_KIND:-esplora}
+services:
+  indexer:
+    <<: *runtime
+    command: [indexer]
+    ports: ["127.0.0.1:${WUJI_PORT:-8794}:8789"]
+    volumes: ["index-data:/data"]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8789/head').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+  keeper:
+    <<: *runtime
+    profiles: [keeper]
+    command: [keeper]
+    environment:
+      <<: *public-env
+      KEYSTORE_ACCOUNT: ${KEYSTORE_ACCOUNT:-wuji-operator}
+      PASSWORD_FILE: /run/secrets/keeper-password
+      INTERVAL: ${KEEPER_INTERVAL:-45}
+    volumes:
+      - type: bind
+        source: ${KEYSTORE_FILE:-./operator/keystore.json}
+        target: /home/node/.foundry/keystores/${KEYSTORE_ACCOUNT:-wuji-operator}
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${PASSWORD_FILE:-./operator/password}
+        target: /run/secrets/keeper-password
+        read_only: true
+        bind: {create_host_path: false}
+volumes:
+  index-data:
