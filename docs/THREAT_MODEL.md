@@ -70,3 +70,13 @@ parameters, compiler settings, and the final deployed bytecode.
 Alert on `Gap`, keeper transaction failures, `pending() > 256`, a mined settlement block without settlement, vault
 balance below `liabilities()`, unexpected collateral implementation changes, and any mismatch between
 the indexer's `S_wad` and `WujiIndex.S()`.
+
+## Bitcoin source migration · 2026-09-20
+
+- **Checkpoint trust:** header, height and epoch-start timestamp must be compared against independent Bitcoin sources. A fake epoch timestamp can distort the first retarget. Chainwork is normalized to the checkpoint block's own work; the omitted common prefix cancels in every fork comparison. It is not the absolute chainwork reported by Core.
+- **Miner bias:** after finding a header a miner can compute R and discard an unfavorable block. The expected opportunity cost depends on rewards, fees, hash share and external payoff; it is not a universal fixed one-block-reward lower bound. Rehashing removes raw PoW bit-pattern bias; it does not prove perfect randomness or economic independence.
+- **SPV boundary:** work, parent linkage, mainnet retarget rules and cumulative-work fork selection are enforced. Transactions, block validity, MTP and future-time constraints are not. A header-only fork may be invalid to Bitcoin full nodes. Timestamp manipulation can affect subsequent target and work per block, but cannot manufacture the cumulative target-derived work needed to win. There is no promise of full consensus equivalence.
+- **Deep reorg:** six blocks is a probabilistic safety margin. If a heavier branch replaces a folded height, fold reverts even when no new heights are pending. Already executed payouts cannot be undone. No owner recovery/upgrade is introduced; deployment and application recovery require explicit new design.
+- **Availability:** public API failure or dishonest data can stall or mislead the off-chain view. The relay independently checks PoW and difficulty. Local Core/Esplora endpoints are supported; use independent sources to compare checkpoints and live results. Never treat an HTTP success as proof of Bitcoin consensus.
+- **Gas/liveness:** reorg rewiring is proportional to changed branch depth; extremely deep branches can exceed a transaction gas budget. The current storage design exceeds the 60k/header target. These limits must be resolved or explicitly accepted before mainnet.
+- **Test boundary:** synthetic feeder headers in economic invariants do not validate mining. Production relay tests use 2028 real headers and invalid mutations; branch-choice unit tests use an easy-PoW subclass that is not deployed.

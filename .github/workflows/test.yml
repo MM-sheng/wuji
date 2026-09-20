@@ -1,0 +1,16 @@
+name: Test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: forge test --root contracts
+      - run: forge build --root contracts --sizes
+      - run: node --test indexer/bitcoin.test.mjs indexer/bitcoin-index.test.mjs indexer/gap-sync.test.mjs

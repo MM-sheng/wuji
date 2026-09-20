@@ -44,3 +44,13 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 - [ ] Publish contract addresses, genesis block, proof procedure, risk disclosure, and status page.
 - [ ] Prepare an incident communication plan; immutable contracts cannot be paused or upgraded.
 - [ ] Cap initial exposure outside the immutable contracts and increase it only after observation.
+
+## Bitcoin source gate
+
+- [ ] Independently audit BitcoinRelay, especially raw/display byte order, compact target signs/overflow, branch-local epoch time and 2016-height retargets.
+- [ ] Compare checkpoint header/hash/height and epoch-start timestamp with two independent Bitcoin nodes. Record normalized versus absolute chainwork convention explicitly.
+- [ ] Verify GENESIS_HEIGHT, 6 confirmations, UNIT=1.2e13 and interval=4320 in deployed bytecode/state.
+- [ ] Run complete forge unit/fuzz/invariant suite and Node fixtures/HTTP integration. Keep the original five financial invariants and fail_on_revert enabled.
+- [ ] Resolve or explicitly accept >60k/header gas, deep-reorg rewiring cost and omitted MTP/future-time checks. Do not call this a full Bitcoin node.
+- [ ] Observe real relay submissions, six-confirmation fold and a full 4320-height settlement period. No mainnet deployment before independent review.
+- [ ] Operate an always-on keystore-signed relayer and an independent data source; no private keys in argv/logs/git.

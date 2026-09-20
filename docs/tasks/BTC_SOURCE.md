@@ -127,3 +127,8 @@ for each Bitcoin height h ≥ GENESIS_HEIGHT (main chain, ≥ CONFIRMATIONS deep
 - Whether `fold` is called automatically at the end of `submit` (cheaper for relayers) or kept separate.
 - Fixture height range for tests.
 - Whether the relay stores full headers or only hashes + the fields needed for retarget validation.
+
+## Implementation review entry
+
+The Bitcoin branch's implementation and testnet evidence are documented in
+[`../BTC_SOURCE_REPORT.md`](../BTC_SOURCE_REPORT.md), including unmet gas target, pending live confirmations and PR remote requirement. Normative acceptance criteria above remain unchanged.
