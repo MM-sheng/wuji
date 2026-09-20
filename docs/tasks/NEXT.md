@@ -31,7 +31,8 @@ Source: `docs/reviews/2026-09-20-adversarial.md` (read it in full). Apply every 
 
 Current rework: [T1_RESERVE_REPORT.md](T1_RESERVE_REPORT.md), branch `codex/operations-reserve`.
 One-off reserve bounties and atomic submit/fold are implemented; 92 Solidity tests and 4 Node tests passed.
-Deployment verification is recorded in the report. Independent review remains pending.
+The new :8791 deployment passed eight mock mint/redeem/route transactions, live 15-height bounty/claim replay,
+bytecode/binding verification and exact-height index reconciliation; receipts are in the report. Independent review remains pending.
 The earlier [T1_REPORT.md](T1_REPORT.md) describes the superseded lifetime-points testnet.
 
 **Rework required after the 2026-09-20 review (items #12, #13, #21) before merge:**

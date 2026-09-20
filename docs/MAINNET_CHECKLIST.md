@@ -7,7 +7,7 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 
 - [x] Replace timestamp/call-time settlement with a predetermined, recoverable settlement point.
 - [x] Update `ARCHITECTURE.md` to match the final settlement rule.
-- [ ] Implement and publicly disclose the immutable operations reserve and one-off bounty rule (T1 rework).
+- [x] Implement and disclose the immutable operations reserve and one-off bounty rule ([T1 report](tasks/T1_RESERVE_REPORT.md)); independent release review remains open below.
 - [ ] Freeze the collateral address, decimals, `NOTIONAL`, fee, series length, and genesis rule.
 - [ ] Document Bitcoin miner private-cost bias, the public-information window and deep-reorg failure for users.
 
@@ -58,6 +58,8 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 ## Operations-reserve release (T1 rework)
 
 The earlier lifetime-points/DEAD contracts remain a testnet comparison. They do not satisfy this release gate.
+Testnet implementation evidence: [T1 reserve report](tasks/T1_RESERVE_REPORT.md), source `e6ec55e`.
+The release audit and production-parameter checks below remain separate from successful mock-token exercises.
 
 - [ ] Audit exact reserve/router release, authentication and immutable address bindings.
 - [ ] Verify 100% fee routing, token isolation, donation accounting and one-off finalized-height bounties.

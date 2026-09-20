@@ -1,0 +1,190 @@
+{
+  "chainId": 97,
+  "source": "bitcoin",
+  "rpc": "https://bsc-testnet-rpc.publicnode.com",
+  "explorer": "https://testnet.bscscan.com",
+  "deployedAt": "2026-09-20T14:43:43.967Z",
+  "genesisHeight": 967826,
+  "checkpointInterval": 4320,
+  "confirmations": 6,
+  "unitWad": "12000000000000",
+  "checkpoint": {
+    "genesisHeight": 967826,
+    "checkpointHeight": 967825,
+    "checkpointHeader": "00e002209464fca963f09ddc196e6eb6844cfa2fed64a4dd14b101000000000000000000fdd9cf69e83eb416d967e49f154e615184e4bb96cdd1fa3780e2eedd2e85e6a14ecfaf6ac51e02175137652d",
+    "checkpointHash": "00000000000000000000d67cbca716ef045392720cefb43e8287994ae216c06b",
+    "epochStartHeight": 967680,
+    "epochStartTime": 1789801745,
+    "checkpointChainWork": "570195989278543477056646",
+    "workConvention": "normalized to the checkpoint own work; common pre-checkpoint work is omitted for every branch",
+    "confirmations": 6,
+    "checkpointInterval": 4320,
+    "verifiedSources": [
+      "https://mempool.space/api",
+      "https://blockstream.info/api"
+    ]
+  },
+  "treasury": "0x380ddd76c66b5451ce8102fbd8d7fb283bcf6218",
+  "BitcoinRelay": "0xfd288d1c510fc0a0e91baf738c0cfd267f3371dc",
+  "WujiIndex": "0x3fe7fe9213749a348078448d8f42d9614c3a67ec",
+  "SeriesTokenDeployer": "0x662583d0f378189eecf00c9c0c9b6d3886678c69",
+  "WujiVaultFactory": "0xf5a0f192ca3f8379cec810865cd8702eb45d1819",
+  "MockUSDT": "0x2d075538f153da61f4b53a5529cd51022d1835f1",
+  "MockWBNB": "0x1b0ca47efd1b663ea62af215cc3b75a4dc25db2b",
+  "vaults": {},
+  "transactions": [
+    {
+      "hash": null,
+      "name": "RelayerRewards",
+      "operation": "CREATE",
+      "address": "0xda2fa9d37555d0f552a5830d0c3441ad05cd6c8c",
+      "status": "not-broadcast",
+      "block": null,
+      "gasUsed": null
+    },
+    {
+      "hash": "0x45c2661b2181f5b3883292bcaabf95e226ea6629ce58109fb5ab85d22c5f9297",
+      "name": "BitcoinRelay",
+      "operation": "CREATE",
+      "address": "0xfd288d1c510fc0a0e91baf738c0cfd267f3371dc",
+      "status": "0x1",
+      "block": 132152056,
+      "gasUsed": 1570451
+    },
+    {
+      "hash": "0x3ab6b348a981e823f3b09a3d975e2827359663fc374ac8d8580687c9789b3971",
+      "name": "WujiIndex",
+      "operation": "CREATE",
+      "address": "0x3fe7fe9213749a348078448d8f42d9614c3a67ec",
+      "status": "0x0",
+      "block": 132152056,
+      "gasUsed": 226120
+    },
+    {
+      "hash": "0xc6268dce70bd764c03306f05f0a60bac8b9dd96e59083c923406a822e01d76f5",
+      "name": "FeeRouter",
+      "operation": "CREATE",
+      "address": "0x380ddd76c66b5451ce8102fbd8d7fb283bcf6218",
+      "status": "0x0",
+      "block": 132152056,
+      "gasUsed": 98807
+    },
+    {
+      "hash": "0x8b7a5b4bf7e09459cdbb89dda0a646a0970924b9f9d8c271c9c9383ea4e45af0",
+      "name": "SeriesTokenDeployer",
+      "operation": "CREATE",
+      "address": "0x662583d0f378189eecf00c9c0c9b6d3886678c69",
+      "status": "0x1",
+      "block": 132152056,
+      "gasUsed": 811758
+    },
+    {
+      "hash": "0xc52f05d14c0efa56f2ed12ee76420a4a3c0298096c86b64b25c6e4d811dd374c",
+      "name": "WujiVaultFactory",
+      "operation": "CREATE",
+      "address": "0xf5a0f192ca3f8379cec810865cd8702eb45d1819",
+      "status": "0x0",
+      "block": 132152058,
+      "gasUsed": 610010
+    },
+    {
+      "hash": "0xb7678963b246f05d8c0760612586a99e403edd5119f237c28c63a01140a9ae0b",
+      "name": "MockUSDT",
+      "operation": "CREATE",
+      "address": "0x2d075538f153da61f4b53a5529cd51022d1835f1",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 507924
+    },
+    {
+      "hash": "0x0ef9447610e660005fbd8a0e70a8c957abe7e3a48a620a043827f2ba1c795c60",
+      "name": "MockUSDT",
+      "operation": "mint(address,uint256)",
+      "address": "0x2d075538f153da61f4b53a5529cd51022d1835f1",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 68427
+    },
+    {
+      "hash": "0x8346ec7b4e38376deca497fdce75e586e8cad7e67b44ed24b59eb6f0a5cf0a46",
+      "name": "MockWBNB",
+      "operation": "CREATE",
+      "address": "0x1b0ca47efd1b663ea62af215cc3b75a4dc25db2b",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 507944
+    },
+    {
+      "hash": "0xbf29a3861c0c6452693f7ef8deb5f52845cacdb94fa26ce579ce4b3fe9798f82",
+      "name": "MockWBNB",
+      "operation": "mint(address,uint256)",
+      "address": "0x1b0ca47efd1b663ea62af215cc3b75a4dc25db2b",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 68439
+    },
+    {
+      "hash": "0xc2a9451cb33bcb1d0af11ca7a51f58636279c2afa6dae49d38641792f363962c",
+      "name": "WujiVaultFactory",
+      "operation": "create(address,uint256)",
+      "address": "0xf5a0f192ca3f8379cec810865cd8702eb45d1819",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 22610
+    },
+    {
+      "hash": "0xdc0c92815891ff303e12d8cb9e837c0699896c47596248bae0185412a5e0895c",
+      "name": "WujiVaultFactory",
+      "operation": "create(address,uint256)",
+      "address": "0xf5a0f192ca3f8379cec810865cd8702eb45d1819",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 22580
+    },
+    {
+      "hash": "0x5c0cc249db7c5691dc1126cf68c2d08fb2ca659651515ccabb8be5ed72d5fb9d",
+      "name": "MockUSDT",
+      "operation": "approve(address,uint256)",
+      "address": "0x2d075538f153da61f4b53a5529cd51022d1835f1",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 46390
+    },
+    {
+      "hash": "0x8a79a15c90ae22f1ac4f1800a973fa51e38521101afb322fff8f43667324d5a2",
+      "name": "RelayerRewards",
+      "operation": "fund(address,uint256)",
+      "address": "0xda2fa9d37555d0f552a5830d0c3441ad05cd6c8c",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 22640
+    },
+    {
+      "hash": "0x0fb0f3d3a6315ec6cd5115854b3ceecb53183d52b883fe6d40756cc4449c1ff2",
+      "name": "MockWBNB",
+      "operation": "approve(address,uint256)",
+      "address": "0x1b0ca47efd1b663ea62af215cc3b75a4dc25db2b",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 46378
+    },
+    {
+      "hash": "0x15d9b2aa64cf4cbebe7270636646766c3845e5af8e4d0e0b808faeefae6c8d91",
+      "name": "RelayerRewards",
+      "operation": "fund(address,uint256)",
+      "address": "0xda2fa9d37555d0f552a5830d0c3441ad05cd6c8c",
+      "status": "0x1",
+      "block": 132152058,
+      "gasUsed": 22610
+    }
+  ],
+  "RelayerRewards": "0xda2fa9d37555d0f552a5830d0c3441ad05cd6c8c",
+  "FeeRouter": "0x380ddd76c66b5451ce8102fbd8d7fb283bcf6218",
+  "rewardBps": 10000,
+  "version": "bitcoin-reserve-v2",
+  "sourceCommit": "e6ec55e65c0a693016ebbd311a5778dfae8ec1ab",
+  "status": "superseded-incomplete",
+  "bountyDivisor": 10000,
+  "rewardTokens": [],
+  "note": "A comparison keeper consumed deployer nonce 360 before broadcast. The reserve was not created; dependent creations reverted and successful calls to absent code did not establish a usable protocol. Preserved for traceability; do not use these addresses. Replacement: bsc-testnet-reserve-v2.json."
+}

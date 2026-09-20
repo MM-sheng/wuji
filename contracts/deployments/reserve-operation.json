@@ -1,0 +1,158 @@
+{
+  "verifiedAt": "2026-09-20T15:02:46.898Z",
+  "manifest": "contracts/deployments/bsc-testnet-reserve-v2.json",
+  "sourceCommit": "e6ec55e65c0a693016ebbd311a5778dfae8ec1ab",
+  "evmBlock": 132154724,
+  "events": [
+    {
+      "kind": "Funded",
+      "token": "0x1801812bf94d3b057ece7ec518632453b00f2f7b",
+      "worker": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "amount": "100000000000000000000000",
+      "hash": "0xbf5dbbb1b9f9251b4b05d32e44a6222a9737b89fc29c8866e0e929f4e3de4afe",
+      "block": 132152566
+    },
+    {
+      "kind": "Funded",
+      "token": "0x77402347411f922e950827283001dc24d684aea1",
+      "worker": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "amount": "100000000000000000000",
+      "hash": "0x6574c8a474000f6d8bbfca559a83522aaf002476473b6a9248b5076716f20730",
+      "block": 132152566
+    },
+    {
+      "kind": "Funded",
+      "token": "0x1801812bf94d3b057ece7ec518632453b00f2f7b",
+      "worker": "0xa5c0c2261f1ca176329bf215c45f423f19cc38a9",
+      "amount": "100000000000000000",
+      "hash": "0x68197446fb2a8ca34d89ce334e183652211469cee49d4e772ff68162058e6b5e",
+      "block": 132153238
+    },
+    {
+      "kind": "Funded",
+      "token": "0x77402347411f922e950827283001dc24d684aea1",
+      "worker": "0xa5c0c2261f1ca176329bf215c45f423f19cc38a9",
+      "amount": "1000000000000000",
+      "hash": "0x0a2da760032354f10a55e0c751bd365682cb9792a75224cbf8731e82f777828e",
+      "block": 132153887
+    },
+    {
+      "kind": "Bounty",
+      "token": "0x1801812bf94d3b057ece7ec518632453b00f2f7b",
+      "worker": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "amount": "149895195381398488848",
+      "from": "967826",
+      "to": "967840",
+      "hash": "0xf1afc4d2ab4fba5318529b031809befb91b4aa3edb6f50f60ac97a2cf5ce06f9",
+      "block": 132154467
+    },
+    {
+      "kind": "Bounty",
+      "token": "0x77402347411f922e950827283001dc24d684aea1",
+      "worker": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "amount": "149896544436807859",
+      "from": "967826",
+      "to": "967840",
+      "hash": "0xf1afc4d2ab4fba5318529b031809befb91b4aa3edb6f50f60ac97a2cf5ce06f9",
+      "block": 132154467
+    },
+    {
+      "kind": "Claimed",
+      "token": "0x1801812bf94d3b057ece7ec518632453b00f2f7b",
+      "worker": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "amount": "149895195381398488848",
+      "hash": "0xc1b96b60744f8d0646483da017b27067b806ef49896d724cc5847770e33859dc",
+      "block": 132154582
+    },
+    {
+      "kind": "Claimed",
+      "token": "0x77402347411f922e950827283001dc24d684aea1",
+      "worker": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "amount": "149896544436807859",
+      "hash": "0xdc9dd5ad062af25f33687ff85da67712f1e20985e59e2fc56feafe86182a04a3",
+      "block": 132154642
+    }
+  ],
+  "transactions": [
+    {
+      "hash": "0xbf5dbbb1b9f9251b4b05d32e44a6222a9737b89fc29c8866e0e929f4e3de4afe",
+      "status": "0x1",
+      "block": 132152566,
+      "gasUsed": 86999,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "hash": "0x6574c8a474000f6d8bbfca559a83522aaf002476473b6a9248b5076716f20730",
+      "status": "0x1",
+      "block": 132152566,
+      "gasUsed": 86987,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "hash": "0x68197446fb2a8ca34d89ce334e183652211469cee49d4e772ff68162058e6b5e",
+      "status": "0x1",
+      "block": 132153238,
+      "gasUsed": 75440,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "hash": "0x0a2da760032354f10a55e0c751bd365682cb9792a75224cbf8731e82f777828e",
+      "status": "0x1",
+      "block": 132153887,
+      "gasUsed": 75440,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "hash": "0xf1afc4d2ab4fba5318529b031809befb91b4aa3edb6f50f60ac97a2cf5ce06f9",
+      "status": "0x1",
+      "block": 132154467,
+      "gasUsed": 1715524,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "hash": "0xc1b96b60744f8d0646483da017b27067b806ef49896d724cc5847770e33859dc",
+      "status": "0x1",
+      "block": 132154582,
+      "gasUsed": 47667,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "hash": "0xdc9dd5ad062af25f33687ff85da67712f1e20985e59e2fc56feafe86182a04a3",
+      "status": "0x1",
+      "block": 132154642,
+      "gasUsed": 47667,
+      "effectiveGasPrice": "100000000"
+    }
+  ],
+  "assets": {
+    "0x1801812bf94d3b057ece7ec518632453b00f2f7b": {
+      "reserve": "99850204804618601511152",
+      "allocated": "0",
+      "funded": "100000100000000000000000",
+      "paid": "149895195381398488848",
+      "workers": {
+        "0x6657289562f870677325124f3acbdebb0ea80b95": "0"
+      },
+      "heights": "15"
+    },
+    "0x77402347411f922e950827283001dc24d684aea1": {
+      "reserve": "99851103455563192141",
+      "allocated": "0",
+      "funded": "100001000000000000000",
+      "paid": "149896544436807859",
+      "workers": {
+        "0x6657289562f870677325124f3acbdebb0ea80b95": "0"
+      },
+      "heights": "15"
+    }
+  },
+  "reconciliation": {
+    "evmBlock": 132154707,
+    "height": 967840,
+    "U": 1654,
+    "S_wad": "19848000000000000",
+    "lastHash": "0x37d61d981dbcf02cdbf4e09c7e84cd5a5f7a0602ce4d01000000000000000000",
+    "matched": true,
+    "method": "Recomputed every cached raw header, then read contract state at the indexer observation block; this is not the two-source independent verifier planned in T4."
+  }
+}

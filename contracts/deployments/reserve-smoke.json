@@ -1,0 +1,137 @@
+{
+  "manifest": "contracts/deployments/bsc-testnet-reserve-v2.json",
+  "sourceCommit": "e6ec55e65c0a693016ebbd311a5778dfae8ec1ab",
+  "chainId": 97,
+  "worker": "0x6657289562f870677325124f3ACbdebB0ea80B95",
+  "startedAt": "2026-09-20T14:48:15.036Z",
+  "status": "passed",
+  "transactions": [
+    {
+      "name": "USDT approve",
+      "hash": "0x41c51f69d1b04d89c94d96fe1433f7ffad012b099d4d4f81ffb88cb502e100ab",
+      "status": "0x1",
+      "block": 132153111,
+      "gasUsed": 46366,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "USDT mint one pair",
+      "hash": "0xd9ff6e93efbb2d100aa23101e8b67f850185345a02306854df727d7a4a05e2b3",
+      "status": "0x1",
+      "block": 132153131,
+      "gasUsed": 203075,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "USDT redeem one pair",
+      "hash": "0x6002119782424f43721144be12102e486e761d03285edb3ad1ccdec5d66a0b48",
+      "status": "0x1",
+      "block": 132153218,
+      "gasUsed": 73231,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "USDT route all fees",
+      "hash": "0x68197446fb2a8ca34d89ce334e183652211469cee49d4e772ff68162058e6b5e",
+      "status": "0x1",
+      "block": 132153238,
+      "gasUsed": 75440,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "WBNB approve",
+      "hash": "0x98696ce65e8158c1df7b0d64b142ebd5adfd2d91d28e832e08252931023a44fa",
+      "status": "0x1",
+      "block": 132153756,
+      "gasUsed": 46378,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "WBNB mint one pair",
+      "hash": "0x8b01655e95aa136e1a15651b0f585902418b92f25d830eba877e9579da5f24c6",
+      "status": "0x1",
+      "block": 132153781,
+      "gasUsed": 203075,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "WBNB redeem one pair",
+      "hash": "0xa387a55a280a9de3e356a18708a594ac210bb73145c6bf9c572cb5a8809d0c6e",
+      "status": "0x1",
+      "block": 132153840,
+      "gasUsed": 73231,
+      "effectiveGasPrice": "100000000"
+    },
+    {
+      "name": "WBNB route all fees",
+      "hash": "0x0a2da760032354f10a55e0c751bd365682cb9792a75224cbf8731e82f777828e",
+      "status": "0x1",
+      "block": 132153887,
+      "gasUsed": 75440,
+      "effectiveGasPrice": "100000000"
+    }
+  ],
+  "assets": {
+    "USDT": {
+      "token": "0x1801812Bf94d3b057eCE7EC518632453B00f2f7b",
+      "vault": "0xB7A67397e5eB6b59A6ab7a756c08798454c84Fe2",
+      "notional": "100000000000000000000",
+      "feePerOperation": "50000000000000000",
+      "before": {
+        "height": "967825",
+        "reserve": "100000000000000000000000",
+        "allocated": "0",
+        "claimable": "0",
+        "routerBalance": "0",
+        "reserveBalance": "100000000000000000000000",
+        "deadBalance": "0",
+        "walletBalance": "900000000000000000000000",
+        "vaultBalance": "0",
+        "liabilities": "0"
+      },
+      "after": {
+        "height": "967825",
+        "reserve": "100000100000000000000000",
+        "allocated": "0",
+        "claimable": "0",
+        "routerBalance": "0",
+        "reserveBalance": "100000100000000000000000",
+        "deadBalance": "0",
+        "walletBalance": "899999900000000000000000",
+        "vaultBalance": "0",
+        "liabilities": "0"
+      }
+    },
+    "WBNB": {
+      "token": "0x77402347411f922E950827283001dc24D684aEA1",
+      "vault": "0x930f298107ABF321a57Ae03D5011f805A4b5B53D",
+      "notional": "1000000000000000000",
+      "feePerOperation": "500000000000000",
+      "before": {
+        "height": "967825",
+        "reserve": "100000000000000000000",
+        "allocated": "0",
+        "claimable": "0",
+        "routerBalance": "0",
+        "reserveBalance": "100000000000000000000",
+        "deadBalance": "0",
+        "walletBalance": "9900000000000000000000",
+        "vaultBalance": "0",
+        "liabilities": "0"
+      },
+      "after": {
+        "height": "967825",
+        "reserve": "100001000000000000000",
+        "allocated": "0",
+        "claimable": "0",
+        "routerBalance": "0",
+        "reserveBalance": "100001000000000000000",
+        "deadBalance": "0",
+        "walletBalance": "9899999000000000000000",
+        "vaultBalance": "0",
+        "liabilities": "0"
+      }
+    }
+  },
+  "completedAt": "2026-09-20T14:57:51.159Z"
+}

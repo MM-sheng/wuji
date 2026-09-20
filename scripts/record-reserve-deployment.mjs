@@ -13,8 +13,9 @@ for(const t of broadcast.transactions.filter(t=>t.transactionType==='CREATE'))j[
 j.treasury=j.FeeRouter;j.transactions=broadcast.transactions.map(t=>({hash:t.hash,name:t.contractName,operation:t.function||'CREATE',address:t.contractAddress}));
 j.vaults={};j.rewardTokens=[];
 fs.writeFileSync(output,JSON.stringify(j,null,2)+'\n');
-const receipts=await Promise.all(broadcast.transactions.map(t=>rpc('eth_getTransactionReceipt',[t.hash])));
+const receipts=await Promise.all(broadcast.transactions.map(t=>t.hash?rpc('eth_getTransactionReceipt',[t.hash]):null));
 for(let i=0;i<receipts.length;++i){const r=receipts[i];j.transactions[i]={...j.transactions[i],status:r?.status||'pending',block:r?Number(BigInt(r.blockNumber)):null,gasUsed:r?Number(BigInt(r.gasUsed)):null};}
+j.status=receipts.every(r=>r?.status==='0x1')?'receipts-confirmed':'incomplete';
 fs.writeFileSync(output,JSON.stringify(j,null,2)+'\n');
 assert.ok(receipts.every(r=>r?.status==='0x1'),'not all deployment receipts confirmed');
 const cast=process.env.CAST||path.join(os.homedir(),'.foundry/bin/cast');

@@ -39,7 +39,8 @@ node indexer/index.mjs                    # legacy BSC index → http://localhos
 cd contracts && ~/.foundry/bin/forge test # unit / fuzz / invariant suites
 ```
 
-Testnet deployment: `contracts/deployments/bsc-testnet.json`.
+Current reserve testnet deployment: `contracts/deployments/bsc-testnet-reserve-v2.json`.
+`bsc-testnet.json` is retained as the historical lifetime-points comparison manifest.
 
 API: `/head` · `/seconds?from&to` · `/blocks?from&to` · `/blockAt?ts` · `/proof/:block`
 
@@ -64,8 +65,11 @@ cd contracts && forge test
 
 Prepare a fresh independently compared checkpoint with `node scripts/prepare-bitcoin-checkpoint.mjs`.
 Deploy with `ENV_FILE=/absolute/path/to/contracts/.env bash contracts/scripts/deploy-testnet.sh` after tests.
-Start the new stack with the same ENV_FILE and `bash scripts/bitcoin-testnet.sh` (port 8789).
+Use the explicit manifest/port command below to start the reserve stack (port 8791).
 The env contains only the Foundry account name, password-file path, deployer and RPC; never add a private key.
+Deployment requires exclusive use of the deployer's transaction nonce: pause keepers sharing that account,
+wait for in-flight transactions to confirm, and resume them afterwards. The deploy script rejects known active
+local comparison keepers before reading credentials; it cannot detect signers on other machines.
 
 For a local Bitcoin source: set `BITCOIN_API=http://127.0.0.1:8332` and
 `BITCOIN_API_KIND=bitcoind-rest` (Core REST enabled), or point BITCOIN_API at a local Esplora API.
@@ -75,16 +79,37 @@ It stays at 100 until the genesis height has six descendants. Averages are not b
 The old BSC deployments are archived in `contracts/deployments/bsc-testnet-legacy.json`.
 On the Bitcoin branch, use `scripts/bitcoin-testnet.sh`; do not run the old BSC startup script against the new manifest.
 
-### Existing reward testnet — comparison version, economics superseded
+### Operations reserve testnet — current implementation
 
-The latest `contracts/deployments/bsc-testnet.json` uses an immutable fee router: 50% to
+The immutable router sends 100% of each vault's fees into the operations reserve. Each newly folded Bitcoin
+height allocates floor(available reserve / 10000) per selected token, sequentially across a batch. The folder
+can claim that fixed amount; past work never gains a share of later fees or donations. There is no burn or
+lifetime-points scheme in this deployment. Funded mock balances have no economic value.
+
+```bash
+MANIFEST=contracts/deployments/bsc-testnet-reserve-v2.json PORT=8791 PROCESS_PREFIX=wuji-reserve DATA_DIR="$PWD/indexer/data/reserve-v2" bash scripts/bitcoin-testnet.sh
+MANIFEST=contracts/deployments/bsc-testnet-reserve-v2.json VERIFICATION_OUTPUT=contracts/deployments/reserve-verification.json node scripts/verify-bitcoin-deployment.mjs
+node scripts/verify-reserve-operation.mjs
+```
+
+Reserve manifests enable atomic submit/fold and the listed `rewardTokens`. `REWARD_TOKENS` may select up to eight
+assets; fees are collected and fixed bounties claimed every 144 folded heights by default. Override the cadence
+with `ROUTE_EVERY_HEIGHTS` / `CLAIM_EVERY_HEIGHTS`. These are keeper preferences; permissionless contract calls
+remain available. Plain folds or omitted assets forgo their bounty, and no reward covers gas by guarantee.
+
+See [T1 reserve report](docs/tasks/T1_RESERVE_REPORT.md) for 92 Solidity tests, four Node tests, deployed bytecode
+checks, mock mint/redeem/route receipts and live bounty evidence. Independent review, T2b header checks and T9
+frozen-state exits remain pending. Native ETH collateral, CREATE2 genesis and the ZK relay are later work.
+
+### Earlier reward testnet — comparison version, economics superseded
+
+The historical `contracts/deployments/bsc-testnet-rewards-v1.json` uses an immutable fee router: 50% to
 relayer/folder lifetime points and 50% to the DEAD address. The previous Bitcoin deployment is
 preserved in `contracts/deployments/bsc-testnet-bitcoin-v1.json` for the original series observation.
 Run alongside the old terminal without sharing its cache:
 
 ```bash
-PORT=8790 PROCESS_PREFIX=wuji-rewards DATA_DIR="$PWD/indexer/data/rewards" bash scripts/bitcoin-testnet.sh
-VERIFICATION_OUTPUT=contracts/deployments/rewards-verification.json node scripts/verify-bitcoin-deployment.mjs
+MANIFEST=contracts/deployments/bsc-testnet-rewards-v1.json PORT=8790 PROCESS_PREFIX=wuji-rewards DATA_DIR="$PWD/indexer/data/rewards" bash scripts/bitcoin-testnet.sh
 ```
 
 The keeper routes ordinary ERC-20 vault fees automatically when a router balance is at least two
@@ -92,7 +117,8 @@ smallest units. Workers call `RelayerRewards.claim(token)` to withdraw; a long u
 may require repeated calls (128 new point lots per default call). Rewards are not guaranteed gas reimbursement.
 See [T1 review](docs/tasks/T1_REPORT.md) for this deployed version's accounting and finality rules.
 
-The [current plan](docs/tasks/NEXT.md) replaces burning and lifetime points with a 100% operations reserve
-and one-off bounties per finalized height. That rework is **not implemented or deployed** yet. The additional
-[T2 deployment](contracts/deployments/t2-interrupted-deployment.json) was confirmed on testnet but left unused
-after this decision; the active manifest and port 8790 still refer to the existing comparison version.
+Historical bytecode verification must use that release's build artifacts, not the current reserve build.
+The additional [T2 deployment](contracts/deployments/t2-interrupted-deployment.json) was confirmed on testnet
+but left unused after the economic redesign. The first reserve deployment attempt was interrupted by a shared
+wallet nonce and is archived in `reserve-interrupted-deployment.json`; only the confirmed reserve-v2 manifest
+above identifies the current release.
