@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BitcoinAPI, step } from './bitcoin.mjs';
 import { network, assertChain } from './networks.mjs';
+import { rpcRequest } from './evm-rpc.mjs';
 const api=new BitcoinAPI();
 const genesis=Number(process.env.GENESIS_HEIGHT), port=Number(process.env.PORT||8789);
 if(!Number.isSafeInteger(genesis)||genesis<1) throw Error('GENESIS_HEIGHT required');
@@ -18,7 +19,7 @@ const RPC=(process.env.RPC||'https://bsc-testnet-rpc.publicnode.com').split(',')
 const CONTRACT=process.env.CONTRACT, FACTORY=process.env.FACTORY;
 const CHAIN_ID=Number(process.env.CHAIN_ID||97);
 const NETWORK=network(CHAIN_ID);
-async function rpc(method,params){const r=await(await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();if(r.error)throw Error(r.error.message);return r.result;}
+const rpc=(method,params)=>rpcRequest(RPC,method,params);
 const call=async(to,data,block='latest')=>rpc('eth_call',[{to,data},block]);
 const toInt=h=>{const v=BigInt(h);return v>=1n<<255n?v-(1n<<256n):v;};
 const SEL={"S": "0x4be1c796", "lastHeight": "0x25159aa9", "yangShare": "0xdbc1faef", "currentId": "0xe00dd161", "series": "0xdc22cb6a", "asset": "0x38d52e0f", "liabilities": "0xb4add307", "balanceOf": "0x70a08231"};

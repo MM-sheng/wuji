@@ -131,7 +131,7 @@ remain available. Plain folds or omitted assets forgo their bounty, and no rewar
 
 See [T1 reserve report](docs/tasks/T1_RESERVE_REPORT.md) for 92 Solidity tests, four Node tests, deployed bytecode
 checks, mock mint/redeem/route receipts and live bounty evidence. T2b header checks are delivered separately above. Independent review and T9
-frozen-state exits remain pending. Native ETH collateral, CREATE2 genesis and the ZK relay are later work.
+frozen-state exits remain pending. Direct native-ETH vaults (T3 uses WETH), CREATE2 genesis and the ZK relay are later work.
 
 ### Earlier reward testnet — comparison version, economics superseded
 
@@ -160,7 +160,7 @@ Use a separate encrypted Foundry account. `contracts/.env.sepolia` contains only
 into a command or a log. The deployment wrapper simulates by default; `--broadcast` submits to Sepolia only.
 
 ```bash
-node --test indexer/bitcoin*.test.mjs indexer/networks.test.mjs scripts/compare-chains.test.mjs apps/terminal/wallet.test.mjs
+node --test indexer/bitcoin*.test.mjs indexer/networks.test.mjs indexer/evm-rpc.test.mjs scripts/compare-chains.test.mjs apps/terminal/wallet.test.mjs
 bash contracts/scripts/deploy-sepolia.sh
 bash contracts/scripts/deploy-sepolia.sh --broadcast
 # After successful broadcast, set DEPLOYMENT_COMMIT to the full reviewed source commit:

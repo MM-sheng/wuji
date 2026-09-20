@@ -1,8 +1,9 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';import os from 'node:os';import path from 'node:path';
+import {rpcRequest} from '../indexer/evm-rpc.mjs';
 import {BitcoinAPI,step} from '../indexer/bitcoin.mjs';
 const j=JSON.parse(fs.readFileSync(process.env.MANIFEST||'contracts/deployments/bsc-testnet.json'));
 const reserveMode=['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version);
-async function rpc(method,params){const r=await(await fetch(j.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();if(r.error)throw Error(r.error.message);return r.result;}
+const rpc=(method,params)=>rpcRequest(j.rpc,method,params);
 assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),j.chainId);
 const verified=[];
 for(const [name,address] of [...['BitcoinRelay','WujiIndex','SeriesTokenDeployer','WujiVaultFactory','RelayerRewards','FeeRouter'].filter(n=>j[n]).map(n=>[n,j[n]]),...Object.values(j.vaults).map(v=>['WujiVault',v.address])]){

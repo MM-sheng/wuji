@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
 import {sha256} from '../indexer/bitcoin.mjs';
 import {assertChain} from '../indexer/networks.mjs';
+import {rpcRequest} from '../indexer/evm-rpc.mjs';
 export const SELECTORS={S:'0x4be1c796',lastHeight:'0x25159aa9',lastHash:'0x3fa21806',genesis:'0x207c8a4c',confirmations:'0x0438b0a4',interval:'0xead68f82',unit:'0x9d8e2177',relay:'0xb59589d1',checkpointHeight:'0xa71b1dec',checkpointHash:'0x445c79f1',chainWork:'0xc113b9c3',headerAt:'0xec1867e3',fresh:'0x8647058f'};
 const ZERO='0x'+'0'.repeat(64);
 const word=n=>BigInt(n).toString(16).padStart(64,'0');
@@ -17,11 +18,7 @@ export async function compareChains(manifests,{fetcher=fetch,maxBacktrack=4320}=
  assert.notEqual(manifests[0].chainId,manifests[1].chainId,'use two different settlement chains');
  const views=await Promise.all(manifests.map(async j=>{
   assert.equal(j.status,'confirmed','deployment not confirmed');
-  const rpc=async(method,params)=>{
-   const response=await fetcher(j.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(20000)});
-   if(!response.ok)throw Error(`RPC HTTP ${response.status}`);
-   const r=await response.json();if(r.error)throw Error(r.error.message);return r.result;
-  };
+  const rpc=(method,params)=>rpcRequest(j.rpc,method,params,{fetcher,timeoutMs:20000});
   assertChain(await rpc('eth_chainId',[]),j.chainId);
   const block=await rpc('eth_getBlockByNumber',['latest',false]);assert.ok(block?.hash,'missing observation block');
   const call=async(to,name,arg='')=>{
