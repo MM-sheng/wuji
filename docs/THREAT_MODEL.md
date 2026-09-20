@@ -1,9 +1,10 @@
 # WUJI threat model
 
 Status: Bitcoin-source testnet prototype, updated after the 2026-09-20 adversarial review. The source
-contains T2 storage packing; port 8790 still runs the earlier T1 comparison deployment. Operations-reserve
-bounties (T1 rework) are implemented in the current source; the old :8790 deployment remains a comparison.
-Complete timestamp checks/catch-up gate (T2b) and frozen-state exit (T9) are still pending. Legacy BSC Gap/EIP-2935 rules do not apply to Bitcoin mode.
+contains T2 storage packing, T1 operations-reserve bounties and T2b header-time checks / bounded tip-age gating.
+Ports 8790 and 8791 retain their earlier immutable comparison deployments. T2b evidence is in
+[tasks/T2B_REPORT.md](tasks/T2B_REPORT.md); independent review and frozen-state exit (T9) remain pending.
+Legacy BSC Gap/EIP-2935 rules do not apply to Bitcoin mode.
 
 ## Objective and assumptions
 
@@ -25,10 +26,13 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
 - **Bitcoin checkpoint and SPV:** deployment trusts a header, height, epoch-start timestamp and work baseline.
   Compare them with independent Bitcoin sources. An incorrect epoch timestamp can distort the first retarget.
   Testnet chainwork is normalized to the checkpoint's own work; the omitted common prefix cancels in fork comparisons.
-- **Header validation:** PoW, links, branch-local retargets and cumulative-work selection are enforced.
-  Transactions and full block validity are not checked. MTP, future-time limits and a caught-up relay gate are
-  still missing; six local descendants can exist on a stale view. Target-derived work cannot simply be invented,
-  but that is not proof of Bitcoin Core equivalence. T2b must address the timestamp/catch-up omissions.
+- **Header validation:** PoW, links, branch-local retargets, cumulative-work selection, MTP11, the two-hour
+  future limit and mainnet buried minimum-version rules are enforced. The future bound uses the host EVM
+  clock, not Core's local NodeClock. Timestamp acceptance is therefore not clock-source equivalence.
+  Transactions, scripts, merkle/body consistency, transaction-triggered softfork rules and full block validity
+  are not checked. These omissions cannot bypass the checked hash target or manufacture cumulative work
+  without the corresponding PoW; they can still admit a costly higher-work header chain invalid to full nodes.
+  Header acceptance must not be described as complete Bitcoin consensus verification.
 - **Settlement chain:** execution and finality depend on the chain hosting each vault. Identical Bitcoin input
   does not make tokens on different chains interchangeable or guarantee synchronized availability.
 - **Collateral:** issuer freezes, blacklisting, proxy upgrades, rebasing, dishonest balances and transfer fees can
@@ -85,9 +89,10 @@ halt at different heights. Deep fork rewrites can also exceed transaction gas li
 - Reentrancy guards, SafeERC20, received-balance checks on mint, collateral-favouring integer rounding.
 - Deterministic checkpoint payoffs and full-pair redemption; no guarantee of single-sided early redemption.
 - Original vault invariant assertions retained with 64 runs × 60 calls and fail_on_revert enabled. Economic
-  tests use explicitly synthetic feeders; they do not test mining security. Production PoW uses 2028 real
-  headers spanning one retarget; synthetic branch tests have a test-only easy-target subclass.
-- T2 measured batch gas is about 68k/header; smaller batches, initialization, retargets and fork rewrites can
+  tests use explicitly synthetic feeders; they do not test mining security. Production PoW uses 6060 real
+  headers with four retargets and 345 Core-derived timestamp vectors; synthetic branch tests have a test-only
+  easy-target subclass. The original fixture and financial invariant assertions are unchanged.
+- T2b measured steady/new-worker batch gas is about 86.6k/91.6k per header; smaller batches, initialization, retargets and fork rewrites can
   cost more. Include folding, rewards, transaction/calldata and settlement costs in liveness economics.
 - Independent review of the exact release source, parameters and deployed bytecode is still required.
 
@@ -150,3 +155,30 @@ Header submission makes no untrusted callbacks, so committing the cached best ti
 Synthetic easy-target tests alone store full parents separately because their hashes violate the mainnet bound.
 The production deployment has no such alternate storage path. Gas targets apply to measured batches, not arbitrary
 fork rewrites, first-worker setup, or single-header transactions. Independent review must include the compact encoding.
+
+## T2b bootstrap and freshness boundary
+
+The constructor receives the eleven raw headers immediately before the trusted checkpoint. Their complete
+hash linkage must terminate at the checkpoint's committed parent hash; this authenticates the timestamps
+under the existing checkpoint trust and hash assumptions. The constructor checks the checkpoint's own MTP
+and future bound. It does not independently revalidate ancestor PoW, bodies or the chain before that window.
+The pre-existing checkpoint/height/epoch-start/work trust is not removed. Forks below the checkpoint are unsupported.
+
+Every new header must have time strictly greater than its own parent's MTP, not the current canonical tip's
+median. The sorting window is always eleven timestamps; initialization fills missing predecessors from the
+authenticated history. Equal-to-median fails; exactly host clock + 7200 seconds succeeds. Mainnet version
+floors are 2 at height 227931, 3 at 363725 and 4 at 388381, compared as signed int32 values.
+The fixed source and the limits of the Core-derived differential harness are documented in the T2b report.
+
+With pending heights, all fold entrances (including fold(0)) require the best tip's advertised time to be
+within [host clock - 10800, host clock + 7200]. An empty backlog permits no-op folds and bootstrap vault creation.
+The deep-reorg check runs first even on an empty backlog. A stale rejection changes no index, checkpoints or
+reward allocations. Atomic submit/fold rolls back all headers too; standalone submit remains usable to catch up.
+The keeper simulates with its actual caller address and falls back to standalone submission on this rejection.
+
+This is an age bound, not a proof of synchronization to the global highest-work chain. An adversary may relay
+an incomplete but sufficiently recent branch. Since a header may be up to two hours in the future, its time
+can remain inside the three-hour age bound for about five hours after publication, with host/node clock
+variation adding further uncertainty. A natural three-hour Bitcoin block gap can also stop folding; a valid
+new tip restores it without a key. This gate does not remove public-information delay, force a miner to publish,
+or fix the permanent index halt after a reorg of folded history. T9 remains separate required work.

@@ -17,11 +17,14 @@ const RPC0 = RPC.split(',')[0];
 const cast = (...a) => execFileSync(CAST, [...a, '--rpc-url', RPC0], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const PWFILE = path.isAbsolute(PASSWORD_FILE) ? PASSWORD_FILE : path.join(process.cwd(), 'contracts', PASSWORD_FILE);
 const send = (to, sig, gas, ...args) => cast('send', to, sig, ...args, '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), '--json');
+let cachedWorker;
+const workerAddress=()=>cachedWorker ||= execFileSync(CAST,['wallet','address','--account',KEYSTORE_ACCOUNT,'--password-file',PWFILE],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const redact = s => { const lines = String(s).replace(/0x[0-9a-fA-F]{64}/g, '0x…').split('\n').map(l => l.trim()).filter(Boolean); return lines.find(l => /^Error|insufficient|revert|nonce|underpriced|timeout/i.test(l)) || lines.find(l => !/^Command failed/.test(l)) || 'cast send failed'; };
 const num = s => Number(BigInt(s.split(' ')[0]));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 const reserveMode=process.env.REWARD_MODEL==='operations-reserve';
+const timestampRules=process.env.RELAY_TIMESTAMPS==='1';
 const REWARDS=process.env.REWARDS;
 const rewardTokens=[...new Set((process.env.REWARD_TOKENS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean))].sort();
 if(reserveMode&&(!REWARDS||rewardTokens.length>8||rewardTokens.some(t=>!/^0x[0-9a-f]{40}$/.test(t)||/^0x0{40}$/.test(t))))throw Error('reserve mode needs REWARDS and up to eight valid REWARD_TOKENS');
@@ -54,7 +57,7 @@ async function routeFees(assets){
 function claimBounties(last){
  if(!reserveMode||last-lastClaimHeight<claimInterval)return;
  lastClaimHeight=last; // Failed tokens are retried on a later interval, not on every poll.
- const worker=execFileSync(CAST,['wallet','address','--account',KEYSTORE_ACCOUNT,'--password-file',PWFILE],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+ const worker=workerAddress();
  for(const token of rewardTokens){
   try{
    const amount=BigInt(cast('call',REWARDS,'claimable(address,address)(uint256)',token,worker).split(' ')[0]);
@@ -97,9 +100,15 @@ async function once(){
   let foldHealthy=true;
   if(reserveMode){
    try{cast('call',CONTRACT,'fold(uint256)(uint64)','0');}
-   catch(e){if(String(e.stderr||e.message).includes('deep Bitcoin reorg'))foldHealthy=false;else throw e;}
+   catch(e){if(/deep Bitcoin reorg|relay stale/.test(String(e.stderr||e.message)))foldHealthy=false;else throw e;}
   }
   atomic=reserveMode&&common===best&&foldHealthy;
+  if(atomic&&timestampRules){
+   // A batch from an empty old checkpoint may still end far in the past. Simulate before paying for
+   // an atomic call that would roll all accepted headers back at the freshness gate.
+   try{cast('call',CONTRACT,'submitAndFold(bytes,uint256,address[])(uint64)','0x'+headers.join(''),'16','['+rewardTokens.join(',')+']','--from',workerAddress());}
+   catch(e){if(String(e.stderr||e.message).includes('relay stale'))atomic=false;else throw e;}
+  }
   const r=JSON.parse(atomic
    ?send(CONTRACT,'submitAndFold(bytes,uint256,address[])',8_000_000,'0x'+headers.join(''),'16','['+rewardTokens.join(',')+']')
    :send(RELAY,'submit(bytes)',5_000_000,'0x'+headers.join('')));
@@ -107,7 +116,11 @@ async function once(){
   log(`${atomic?'submit + fold':'submit'} Bitcoin ${common+1}..${end} ${r.transactionHash}`);
  }
  // Detect deep reorgs even if pending() is zero, before any settlement transactions.
- cast('call',CONTRACT,'fold(uint256)(uint64)','0');
+ try{cast('call',CONTRACT,'fold(uint256)(uint64)','0');}
+ catch(e){
+  if(timestampRules&&String(e.stderr||e.message).includes('relay stale')){log('catching up: relay tip is stale; headers retained, fold deferred');return;}
+  throw e;
+ }
  const pending=num(cast('call',CONTRACT,'pending()(uint256)'));
  // Fund BEFORE new work: old allocations can never claim these new fees.
  if(pending&&!atomic){

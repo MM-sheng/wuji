@@ -2,6 +2,9 @@
 pragma solidity ^0.8.24;
 /// Test-only header feeder. Does not validate PoW; production relay has separate real-header tests.
 contract MockBitcoinRelay {
+    // Economic fixtures intentionally model a fresh source; production timestamp rules have separate tests.
+    function bestHash() external view returns(bytes32) { return headerAt[bestHeight]; }
+    function timestampOf(bytes32) external view returns(uint32) { return uint32(block.timestamp); }
     uint64 public bestHeight = 999;
     uint64 public checkpointHeight = 999;
     mapping(uint64 => bytes32) public headerAt;

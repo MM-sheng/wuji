@@ -44,6 +44,13 @@ async function pollChain(){
   const expected=lastHeight===genesis-1?'0':row?(BigInt(row.U)*12000000000000n).toString():undefined;
   const S_wad=toInt(s).toString();const expectedHash=lastHeight===genesis-1?'0x'+'0'.repeat(64):row?'0x'+row.internalHash:undefined;const agree=expected===S_wad&&expectedHash===lastHash;
   const c={contract:CONTRACT,lastHeight,lastBlock:lastHeight,lastHash,indexerHash:expectedHash,S_wad,indexer_S_wad:expected,agree,reconciliation:expected===undefined?'index-behind':agree?'matched':'mismatch',S:Number(toInt(s))/1e18,price:100*Math.exp(Number(toInt(s))/1e18),observedAt:parseInt(at,16)};
+  if(process.env.RELAY_TIMESTAMPS==='1'){
+   const [address,fresh,maxAge]=await Promise.all([call(CONTRACT,'0xb59589d1',at),call(CONTRACT,'0x8647058f',at),call(CONTRACT,'0xf0273767',at)]);
+   const relayAddress='0x'+address.slice(-40);
+   const [hash,height]=await Promise.all([call(relayAddress,'0xf6b36551',at),call(relayAddress,'0x8cef3d2a',at)]);
+   const time=await call(relayAddress,'0x76fa0b8a'+hash.slice(2),at);
+   c.relay={address:relayAddress,fresh:BigInt(fresh)===1n,maxAge:Number(BigInt(maxAge)),height:Number(BigInt(height)),timestamp:Number(BigInt(time))};
+  }
   if(FACTORY){const count=Number(BigInt(await call(FACTORY,'0x06661abd')));c.vaults=[];for(let i=0;i<count;i++){const v='0x'+(await call(FACTORY,'0x8c64ea4a'+i.toString(16).padStart(64,'0'))).slice(26);c.vaults.push(await readVault(v));}c.vault=c.vaults[0];}
   chain=c;
  }catch(e){chain={contract:CONTRACT,err:e.message};}

@@ -700,6 +700,7 @@
       <div class="kv"><span>Contract S (wad)</span><b>${c.S_wad}</b></div>
       <div class="kv"><span>Indexer S @ same block</span><b>${c.indexer_S_wad??'—'}</b></div>
       <div class="kv"><span>Agreement</span><b class="${agree?'ok':'bad'}">${agreement}</b></div>
+      ${c.relay?`<div class="kv"><span>中继时间状态</span><b class="${c.relay.fresh?'ok':'bad'}">${c.relay.fresh?'允许计入确认块':'中继过时 · 暂缓计入'}</b></div><div class="kv"><span>Relay Bitcoin height</span><b>#${c.relay.height.toLocaleString()}</b></div>`:''}
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Contract last Bitcoin height':'Contract last block'}</span><b>#${c.lastBlock.toLocaleString()}</b></div>
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Index Bitcoin height':'Index head block'}</span><b>#${HEAD.block.toLocaleString()} · contract ${(HEAD.block-c.lastBlock).toLocaleString()} behind</b></div>
       ${HEAD.source==='bitcoin'?'':`<div class="kv"><span>Frozen blocks</span><b>${c.frozenBlocks}</b></div>`}

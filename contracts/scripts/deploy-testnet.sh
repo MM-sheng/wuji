@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # CREATE predictions require exclusive use of the deployer's nonce during simulation and broadcast.
 # These local comparison keepers share contracts/.env. A stopped process is safe to resume after deployment.
-for pidfile in /tmp/wuji-keeper.pid /tmp/wuji-bitcoin-keeper.pid /tmp/wuji-rewards-keeper.pid /tmp/wuji-reserve-keeper.pid; do
+for pidfile in /tmp/wuji-keeper.pid /tmp/wuji-bitcoin-keeper.pid /tmp/wuji-rewards-keeper.pid /tmp/wuji-reserve-keeper.pid /tmp/wuji-timestamps-keeper.pid; do
   if [[ -f "$pidfile" ]]; then
     keeper_pid=$(cat "$pidfile")
     if [[ "$keeper_pid" =~ ^[0-9]+$ ]] && kill -0 "$keeper_pid" 2>/dev/null; then

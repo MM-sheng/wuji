@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 import {BitcoinRelayTest, EasyRelay} from "./BitcoinRelay.t.sol";
+import {BitcoinRelayPackedBaseline} from "./reference/BitcoinRelayPackedBaseline.sol";
 import {BitcoinRelay} from "../src/BitcoinRelay.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {RelayerRewards} from "../src/RelayerRewards.sol";
@@ -13,7 +14,7 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
     function one(address token) internal pure returns(address[] memory list){list=new address[](1);list[0]=token;}
     function wired() internal returns(RelayerRewards rewards,EasyRelay r,WujiIndex idx) {
         uint64 nonce=vm.getNonce(address(this));rewards=new RelayerRewards(vm.computeCreateAddress(address(this),nonce+2),1001);
-        r=new EasyRelay(cp);idx=new WujiIndex(r,1001,4320,rewards);
+        r=new EasyRelay(cp,ancestors);idx=new WujiIndex(r,1001,4320,rewards);
         assertEq(rewards.index(),address(idx));assertEq(rewards.lastHeight(),idx.lastHeight());
     }
     function test_onlyFinalizedFolderGetsOneOffBounty() public {
@@ -27,7 +28,7 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
         assertEq(rewards.claimable(address(token),ALICE),0);assertEq(rewards.claimable(address(token),BOB),0);
         vm.prank(FOLDER);assertEq(idx.fold(16,one(address(token))),0);
         vm.prank(FOLDER);assertEq(rewards.claim(address(token)),expected);
-        bytes memory duplicate=next(r,root,200);vm.prank(ALICE);r.submit(duplicate);
+        bytes memory duplicate=next(r,root,200);vm.prank(ALICE);submitAtTime(r,duplicate);
         assertEq(r.submitter(r.headerAt(1001)),BOB);assertEq(rewards.claimable(address(token),FOLDER),0);
         vm.startPrank(ALICE);extend(r,root,12,300);vm.stopPrank();
         vm.expectRevert("deep Bitcoin reorg");idx.fold(16,one(address(token)));
@@ -43,8 +44,8 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
     }
     function test_rewardFailureRollsBackIndexAndCheckpoints() public {
         uint64 nonce=vm.getNonce(address(this));RelayerRewards rewards=new RelayerRewards(vm.computeCreateAddress(address(this),nonce+2),798336);
-        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
-        WujiIndex idx=new WujiIndex(r,798336,12,rewards);r.submit(slice(headers,0,24*80));
+        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,ancestors);
+        WujiIndex idx=new WujiIndex(r,798336,12,rewards);submitAtTime(r,slice(headers,0,24*80));
         address[] memory bad=new address[](2);bad[0]=address(1);bad[1]=address(1);
         vm.expectRevert("tokens not sorted unique");idx.fold(16,bad);
         assertEq(idx.lastHeight(),798335);assertEq(idx.S(),0);assertEq(idx.lastHash(),bytes32(0));
@@ -58,13 +59,13 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
     }
     function test_realHeadersRewardGasAndVaultFeeRoute() public {
         uint64 nonce=vm.getNonce(address(this));RelayerRewards rewards=new RelayerRewards(vm.computeCreateAddress(address(this),nonce+2),798336);
-        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
+        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,ancestors);
         WujiIndex idx=new WujiIndex(r,798336,12,rewards);FeeRouter router=new FeeRouter(rewards);MockUSDT token=new MockUSDT();
         WujiVault vault=new WujiVault(token,idx,100e18,address(router),new SeriesTokenDeployer());
         token.mint(address(this),1000e18);token.approve(address(vault),type(uint256).max);vault.mint(1e18);
         uint256 fee=token.balanceOf(address(router));router.route(address(token));assertEq(rewards.reserve(address(token)),fee);
         assertEq(token.balanceOf(address(router)),0);assertEq(token.balanceOf(0x000000000000000000000000000000000000dEaD),0);
-        bytes memory batch=slice(headers,0,24*80);uint256 g=gasleft();vm.prank(ALICE);r.submit(batch);
+        bytes memory batch=slice(headers,0,24*80);warpHeaders(batch);uint256 g=gasleft();vm.prank(ALICE);r.submit(batch);
         emit log_named_uint("reserve relay first batch gas/header",(g-gasleft())/24);
         uint256 expected=rewards.quote(address(token),16);address[] memory list=one(address(token));
         g=gasleft();vm.prank(FOLDER);idx.fold(16,list);emit log_named_uint("reserve fold one token gas/height",(g-gasleft())/16);
@@ -74,21 +75,27 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
         idx.fold(16);vault.settle();assertEq(vault.currentId(),1);assertGe(token.balanceOf(address(vault)),vault.liabilities());
     }
     function test_rewardBatchGasBudget() public {
-        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
-        vm.prank(ALICE);r.submit(slice(headers,0,80));bytes memory batch=slice(headers,80,24*80);
-        uint256 g=gasleft();vm.prank(ALICE);r.submit(batch);uint256 perHeader=(g-gasleft())/24;
-        emit log_named_uint("steady reserve gas/header",perHeader);assertLe(perHeader,70_000);
-        batch=slice(headers,25*80,24*80);g=gasleft();vm.prank(BOB);r.submit(batch);perHeader=(g-gasleft())/24;
-        emit log_named_uint("new worker reserve gas/header",perHeader);assertLe(perHeader,70_000);
+        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,ancestors);
+        vm.prank(ALICE);submitAtTime(r,slice(headers,0,80));bytes memory batch=slice(headers,80,24*80);
+        warpHeaders(batch);uint256 g=gasleft();vm.prank(ALICE);r.submit(batch);uint256 perHeader=(g-gasleft())/24;
+        emit log_named_uint("steady timestamp relay gas/header",perHeader);assertLe(perHeader,100_000);
+        batch=slice(headers,25*80,24*80);warpHeaders(batch);g=gasleft();vm.prank(BOB);r.submit(batch);perHeader=(g-gasleft())/24;
+        emit log_named_uint("new worker timestamp relay gas/header",perHeader);assertLe(perHeader,100_000);
         assertEq(r.submitter(r.headerAt(798336)),ALICE);assertEq(r.submitter(r.headerAt(798361)),BOB);
+    }
+    function test_frozenPackingKeepsOriginal70kBudget() public {
+        BitcoinRelayPackedBaseline old=new BitcoinRelayPackedBaseline(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
+        vm.prank(ALICE);old.submit(slice(headers,0,80));bytes memory batch=slice(headers,80,24*80);
+        uint256 g=gasleft();vm.prank(ALICE);old.submit(batch);assertLe((g-gasleft())/24,70_000);
+        batch=slice(headers,25*80,24*80);g=gasleft();vm.prank(BOB);old.submit(batch);assertLe((g-gasleft())/24,70_000);
     }
     function test_twoTokenFoldGas() public {
         uint64 nonce=vm.getNonce(address(this));RelayerRewards rewards=new RelayerRewards(vm.computeCreateAddress(address(this),nonce+2),798336);
-        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
+        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,ancestors);
         WujiIndex idx=new WujiIndex(r,798336,4320,rewards);MockUSDT a=new MockUSDT();MockUSDT b=new MockUSDT();
         a.mint(address(rewards),1e24);b.mint(address(rewards),1e22);rewards.sync(address(a));rewards.sync(address(b));
         address[] memory list=new address[](2);(list[0],list[1])=address(a)<address(b)?(address(a),address(b)):(address(b),address(a));
-        r.submit(slice(headers,0,48*80));uint256 g=gasleft();vm.prank(FOLDER);idx.fold(16,list);
+        submitAtTime(r,slice(headers,0,48*80));uint256 g=gasleft();vm.prank(FOLDER);idx.fold(16,list);
         emit log_named_uint("reserve fold two tokens gas/height",(g-gasleft())/16);
         assertGt(rewards.claimable(address(a),FOLDER),0);assertGt(rewards.claimable(address(b),FOLDER),0);
     }
@@ -113,23 +120,23 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
     }
     function test_atomicGasSingleAndBatch() public {
         uint64 nonce=vm.getNonce(address(this));RelayerRewards rewards=new RelayerRewards(vm.computeCreateAddress(address(this),nonce+2),798336);
-        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30);
+        BitcoinRelay r=new BitcoinRelay(cp,798335,uint32(vm.parseJsonUint(meta,".epochStartTime")),1e30,ancestors);
         WujiIndex idx=new WujiIndex(r,798336,4320,rewards);MockUSDT a=new MockUSDT();MockUSDT b=new MockUSDT();
         a.mint(address(rewards),1e24);b.mint(address(rewards),1e22);rewards.sync(address(a));rewards.sync(address(b));
         address[] memory list=new address[](2);(list[0],list[1])=address(a)<address(b)?(address(a),address(b)):(address(b),address(a));
-        r.submit(slice(headers,0,6*80));bytes memory h=slice(headers,6*80,80);
-        uint256 g=gasleft();vm.prank(FOLDER);idx.submitAndFold(h,16,list);
+        submitAtTime(r,slice(headers,0,6*80));bytes memory h=slice(headers,6*80,80);
+        warpHeaders(h);uint256 g=gasleft();vm.prank(FOLDER);idx.submitAndFold(h,16,list);
         emit log_named_uint("atomic first one-height two-token execution gas",g-gasleft());
-        h=slice(headers,7*80,80);g=gasleft();vm.prank(FOLDER);idx.submitAndFold(h,16,list);
+        h=slice(headers,7*80,80);warpHeaders(h);g=gasleft();vm.prank(FOLDER);idx.submitAndFold(h,16,list);
         emit log_named_uint("atomic repeat one-height two-token execution gas",g-gasleft());
-        h=slice(headers,8*80,16*80);g=gasleft();vm.prank(FOLDER);idx.submitAndFold(h,16,list);
+        h=slice(headers,8*80,16*80);warpHeaders(h);g=gasleft();vm.prank(FOLDER);idx.submitAndFold(h,16,list);
         emit log_named_uint("atomic batch16 two-token execution gas/height",(g-gasleft())/16);
     }
     function test_alternatingWorkersKeepAttributionAndDuplicatesDoNotSteal() public {
         (RelayerRewards rewards,EasyRelay r,WujiIndex idx)=wired();MockUSDT token=new MockUSDT();token.mint(address(rewards),1_000_000);rewards.sync(address(token));
         bytes memory first;
-        for(uint256 i;i<20;++i){bytes memory h=next(r,r.bestHash(),10000+i);if(i==0)first=h;vm.prank(i%2==0?ALICE:BOB);r.submit(h);}
-        vm.prank(BOB);r.submit(first);
+        for(uint256 i;i<20;++i){bytes memory h=next(r,r.bestHash(),10000+i);if(i==0)first=h;vm.prank(i%2==0?ALICE:BOB);submitAtTime(r,h);}
+        vm.prank(BOB);submitAtTime(r,first);
         for(uint64 h=1001;h<=1020;++h)assertEq(r.submitter(r.headerAt(h)),h%2==1?ALICE:BOB);
         assertEq(r.submitter(bytes32(uint256(123))),address(0));assertEq(r.submitter(r.checkpointHash()),address(0));
         uint256 expected=rewards.quote(address(token),14);vm.prank(FOLDER);idx.fold(16,one(address(token)));

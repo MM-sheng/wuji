@@ -8,6 +8,8 @@ contract WujiIndex {
     int256 public constant MEAN = 4080;
     uint64 public constant CONFIRMATIONS = 6;
     uint256 public constant DEFAULT_MAX = 256;
+    // Bounds the advertised tip's age, not proof that no higher-work Bitcoin tip exists elsewhere.
+    uint256 public constant MAX_RELAY_AGE = 3 hours;
     BitcoinRelay public immutable relay;
     RelayerRewards public immutable rewards;
     uint64 public immutable GENESIS_HEIGHT;
@@ -37,6 +39,10 @@ contract WujiIndex {
     function pending() public view returns (uint256) {
         uint64 f = finalizedHeight(); return f > lastHeight ? f - lastHeight : 0;
     }
+    function relayFresh() public view returns (bool) {
+        uint256 time = relay.timestampOf(relay.bestHash());
+        return block.timestamp <= time + MAX_RELAY_AGE && time <= block.timestamp + 2 hours;
+    }
     function fold() external returns (uint64) { return fold(DEFAULT_MAX); }
     /// @notice Atomically relay and fold so the transaction completing both can earn the bounty.
     /// @dev Standalone submit/fold remain available, including when a deep reorg prevents folding.
@@ -52,7 +58,10 @@ contract WujiIndex {
         require(rewardTokens.length <= 8, "token limit");
         require(rewardTokens.length == 0 || max <= DEFAULT_MAX, "height limit");
         require(lastHash == bytes32(0) || relay.headerAt(lastHeight) == lastHash, "deep Bitcoin reorg");
-        uint256 count = pending(); if (count > max) count = max;
+        uint256 count = pending();
+        // Empty deployments can create their vaults before catch-up. A stale nonempty backlog cannot advance.
+        if(count>0) require(relayFresh(), "relay stale");
+        if (count > max) count = max;
         if (count == 0) return 0;
         uint64 from = lastHeight + 1; uint64 to = lastHeight + uint64(count);
         int256 value = S;

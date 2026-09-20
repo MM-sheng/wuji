@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 /// @notice Mainnet Bitcoin SPV relay. Raw SHA256d hashes use digest order, not explorer order.
-/// @dev Branch-local difficulty and median time. The host chain clock replaces Bitcoin Core's node clock.
-///      The trusted checkpoint commits to its ancestors; block bodies and transaction rules are not checked.
-contract BitcoinRelay {
+/// @dev Exact work is reconstructed from branch-local difficulty epochs. No MTP/block-body checks.
+// Frozen pre-T2b packed relay, source e6ec55e. Test-only gas/behaviour baseline.
+contract BitcoinRelayPackedBaseline {
     uint256 public constant POW_LIMIT = 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
-    uint256 public constant MAX_FUTURE_BLOCK_TIME = 2 hours;
-    uint32[11] internal checkpointTimes;
     // Valid mainnet hashes fit 224 bits in numeric PoW order. The remaining 32 bits identify metadata.
     mapping(bytes32 => uint256) internal links;
     // Two immutable 128-bit records per slot: height, timestamp, epoch ID, worker ID (32 bits each).
@@ -25,7 +23,7 @@ contract BitcoinRelay {
     bytes32 public immutable checkpointHash;
     struct Info { uint32 height; uint32 time; uint32 epoch; uint32 worker; }
     event Header(bytes32 indexed hash, uint64 indexed height, uint256 work);
-    constructor(bytes memory header, uint64 height, uint32 epochTime, uint256 work, bytes memory ancestors) {
+    constructor(bytes memory header, uint64 height, uint32 epochTime, uint256 work) {
         require(header.length == 80, "header length");
         bytes32 hash = sha256(abi.encodePacked(sha256(header)));
         uint32 bits = read32(header,72); uint32 time = read32(header,68);
@@ -35,24 +33,6 @@ contract BitcoinRelay {
         if (height % 2016 == 0) require(epochTime == time, "epoch time");
         require(height <= type(uint32).max, "height overflow");
         require(work <= type(uint128).max, "work overflow");
-        require(height >= 11 && ancestors.length == 11*80, "checkpoint history length");
-        bytes32 previous;
-        uint32[11] memory times;
-        for(uint256 i; i<11; ++i) {
-            bytes memory ancestor = new bytes(80);
-            for(uint256 k; k<80; ++k) ancestor[k] = ancestors[i*80+k];
-            bytes32 parent;
-            assembly ("memory-safe") { parent := mload(add(ancestor,36)) }
-            if(i>0) require(parent == previous, "checkpoint history linkage");
-            previous = sha256(abi.encodePacked(sha256(ancestor)));
-            times[i] = read32(ancestor,68); checkpointTimes[i] = times[i];
-        }
-        bytes32 checkpointParent;
-        assembly ("memory-safe") { checkpointParent := mload(add(header,36)) }
-        require(checkpointParent == previous, "checkpoint history linkage");
-        require(time > _median(times), "time-too-old");
-        require(uint256(time) <= block.timestamp + MAX_FUTURE_BLOCK_TIME, "time-too-new");
-        _checkVersion(int32(read32(header,0)),height);
         checkpointHeight = height; checkpointHash = hash;
         epochs[++epochCount] = Epoch(uint128(work),uint32(height),epochTime,bits,uint128(workOf(target)));
         _insert(hash,bytes32(0),Info(uint32(height),time,epochCount,0));
@@ -127,9 +107,6 @@ contract BitcoinRelay {
         uint32 bits = read32(h,72); uint32 time = read32(h,68);
         bool boundary = height % 2016 == 0;
         require(bits == (boundary ? retarget(e.bits,e.firstTime,p.time) : e.bits), "difficulty");
-        require(time > medianTimePast(parent), "time-too-old");
-        require(uint256(time) <= block.timestamp + MAX_FUTURE_BLOCK_TIME, "time-too-new");
-        _checkVersion(int32(read32(h,0)),height);
         uint256 target = targetOf(bits);
         require(uint256(reverse(hash)) <= target, "PoW");
         uint256 blockWork = workOf(target);
@@ -149,45 +126,6 @@ contract BitcoinRelay {
     function heightOf(bytes32 hash) external view returns(uint64) { require(links[hash] != 0,"unknown header"); return _info(hash).height; }
     function chainWork(bytes32 hash) public view returns(uint256) { if(links[hash] == 0)return 0;Info memory n=_info(hash);return _work(n,epochs[n.epoch]); }
     function timestampOf(bytes32 hash) external view returns(uint32) { return _info(hash).time; }
-    function _checkVersion(int32 version,uint64 height) internal pure {
-        // Mainnet buried deployments in Bitcoin Core v30.0 (signed nVersion).
-        require(!((height>=227931 && version<2) || (height>=363725 && version<3) || (height>=388381 && version<4)),"bad-version");
-    }
-    /// @notice Median of this header and its ten predecessors on its own branch, including bootstrap history.
-    function medianTimePast(bytes32 hash) public view returns(uint32) {
-        require(links[hash] != 0, "unknown header");
-        uint32[11] memory times;
-        uint256 count;
-        while(count<11) {
-            // Chronological order is usually nearly sorted, but sorting remains correct for backward timestamps.
-            times[10-count] = _info(hash).time; ++count;
-            if(hash == checkpointHash) {
-                for(uint256 i=11;count<11;) { times[10-count] = checkpointTimes[--i]; ++count; }
-                break;
-            }
-            hash = _parent(hash);
-        }
-        return _median(times);
-    }
-    function _median(uint32[11] memory times) internal pure returns(uint32 result) {
-        // Fixed-size insertion sort. Every load/store stays within these eleven allocated words.
-        // uint32 inputs are already decoded; unsigned comparisons match Core's nonnegative header timestamps.
-        assembly ("memory-safe") {
-            let end := add(times,352)
-            for { let p := add(times,32) } lt(p,end) { p := add(p,32) } {
-                let value := mload(p)
-                let cursor := p
-                for {} gt(cursor,times) {} {
-                    let previous := mload(sub(cursor,32))
-                    if iszero(gt(previous,value)) { break }
-                    mstore(cursor,previous)
-                    cursor := sub(cursor,32)
-                }
-                mstore(cursor,value)
-            }
-            result := mload(add(times,160))
-        }
-    }
     function targetOf(uint32 bits) public pure virtual returns(uint256 target) {
         uint256 size = bits >> 24; uint256 word = bits & 0x007fffff;
         require(word != 0 && bits & 0x00800000 == 0,"target sign/zero");
@@ -209,7 +147,7 @@ contract BitcoinRelay {
     }
     function workOf(uint256 target) public pure returns(uint256) { return ~target/(target+1)+1; }
     function read32(bytes memory h,uint256 at) internal pure returns(uint32) {
-        // Internal callers validated an 80-byte header and use offsets 0, 68 or 72.
+        // Internal callers validated an 80-byte header and use offsets 68 or 72.
         assembly ("memory-safe") {
             let v := mload(add(add(h,32),at))
             at := or(or(byte(0,v),shl(8,byte(1,v))),or(shl(16,byte(2,v)),shl(24,byte(3,v))))

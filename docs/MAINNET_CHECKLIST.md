@@ -18,7 +18,7 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 - [ ] `forge fmt --check`, `forge build --sizes`, `forge lint`, and `forge test -vvv` pass.
 - [ ] Run extended invariants with at least 1,000 runs and 100 depth on the release commit.
 - [ ] Run a static analyzer such as Slither and triage every result.
-- [ ] Reproduce Bitcoin raw-hash/R/S fixtures, at least 3 real retargets and Core-derived timestamp vectors (T2b).
+- [x] Reproduce Bitcoin raw-hash/R/S fixtures: 6060 headers, four retargets, 345 Core-derived timestamp vectors ([T2b report](tasks/T2B_REPORT.md)); independent release review is separate.
 - [ ] Review rounding at minimum units and maximum intended TVL.
 - [ ] Verify no secret or `.env` file is tracked and the Git worktree is clean.
 
@@ -51,7 +51,7 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 - [ ] Compare checkpoint header/hash/height and epoch-start timestamp with two independent Bitcoin nodes. Record normalized versus absolute chainwork convention explicitly.
 - [ ] Verify GENESIS_HEIGHT, 6 confirmations, UNIT=1.2e13 and interval=4320 in deployed bytecode/state.
 - [ ] Run complete forge unit/fuzz/invariant suite and Node fixtures/HTTP integration. Keep the original five financial invariants and fail_on_revert enabled.
-- [ ] Implement MTP/future-time checks and the catch-up gate (T2b); measure their integrated gas and fork-rewiring cost. Do not call this a full Bitcoin node.
+- [x] Implement MTP/future-time checks and bounded tip-age gating (T2b), with integrated and synthetic shallow-fork gas measurements ([report](tasks/T2B_REPORT.md)). This is not a full Bitcoin node or a proof of global synchronization; worst-case deep-fork liveness still requires review.
 - [ ] Observe real relay submissions, six-confirmation fold and a full 4320-height settlement period. No mainnet deployment before independent review.
 - [ ] Operate an always-on keystore-signed relayer and an independent data source; no private keys in argv/logs/git.
 

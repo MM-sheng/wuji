@@ -82,6 +82,10 @@ byte-for-byte.
 
 ## T2b · Relay: complete header validation and a catch-up gate (review item #4)
 
+Implemented on `codex/bitcoin-timestamps`; delivery and evidence: [T2B_REPORT.md](T2B_REPORT.md).
+MTP11, future two-hour bound, mainnet version floors and the three-hour advertised-tip-age gate are in source.
+The age gate does not prove global synchronization. Independent review remains open.
+
 - Implement median-time-past (11-block median; store or walk ancestors — measure gas) and the 2-hour future-time
   limit exactly as Bitcoin Core. Document any remaining omission and why it cannot create work.
 - `WujiIndex.fold` must refuse while the relay is still catching up: e.g. require the relay's best-header timestamp

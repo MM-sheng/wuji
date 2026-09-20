@@ -39,7 +39,8 @@ node indexer/index.mjs                    # legacy BSC index → http://localhos
 cd contracts && ~/.foundry/bin/forge test # unit / fuzz / invariant suites
 ```
 
-Current reserve testnet deployment: `contracts/deployments/bsc-testnet-reserve-v2.json`.
+Current timestamp-checking testnet manifest: `contracts/deployments/bsc-testnet-timestamps-v3.json` (port 8792).
+The earlier reserve manifest remains `contracts/deployments/bsc-testnet-reserve-v2.json` (port 8791).
 `bsc-testnet.json` is retained as the historical lifetime-points comparison manifest.
 
 API: `/head` · `/seconds?from&to` · `/blocks?from&to` · `/blockAt?ts` · `/proof/:block`
@@ -59,13 +60,13 @@ The Bitcoin implementation is isolated from the legacy BSC comparison stack. Rea
 [the architecture](docs/ARCHITECTURE.md) and [acceptance report](docs/BTC_SOURCE_REPORT.md).
 
 ```
-node --test indexer/bitcoin.test.mjs indexer/bitcoin-index.test.mjs
+node --test indexer/bitcoin.test.mjs indexer/bitcoin-index.test.mjs indexer/bitcoin-time.test.mjs indexer/bitcoin-keeper.test.mjs
 cd contracts && forge test
 ```
 
 Prepare a fresh independently compared checkpoint with `node scripts/prepare-bitcoin-checkpoint.mjs`.
 Deploy with `ENV_FILE=/absolute/path/to/contracts/.env bash contracts/scripts/deploy-testnet.sh` after tests.
-Use the explicit manifest/port command below to start the reserve stack (port 8791).
+Use the explicit manifest/port command below to start the timestamp-checking stack (port 8792).
 The env contains only the Foundry account name, password-file path, deployer and RPC; never add a private key.
 Deployment requires exclusive use of the deployer's transaction nonce: pause keepers sharing that account,
 wait for in-flight transactions to confirm, and resume them afterwards. The deploy script rejects known active
@@ -79,7 +80,31 @@ It stays at 100 until the genesis height has six descendants. Averages are not b
 The old BSC deployments are archived in `contracts/deployments/bsc-testnet-legacy.json`.
 On the Bitcoin branch, use `scripts/bitcoin-testnet.sh`; do not run the old BSC startup script against the new manifest.
 
-### Operations reserve testnet — current implementation
+### Timestamp-checking testnet — current implementation
+
+MTP uses each parent branch's eleven-header window, authenticated back to the existing checkpoint. Headers
+must be no more than two hours ahead of the host chain clock and obey mainnet minimum-version rules.
+With pending heights, folds require the best tip's advertised time to be at most three hours old. This bounds
+age; it does not prove the relay is globally caught up. Standalone relaying remains available while stale,
+and folding resumes when the best tip meets the rule. The terminal displays this gate alongside reconciliation.
+
+```bash
+MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json PORT=8792 PROCESS_PREFIX=wuji-timestamps DATA_DIR="$PWD/indexer/data/timestamps-v3" bash scripts/bitcoin-testnet.sh
+MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json VERIFICATION_OUTPUT=contracts/deployments/timestamps-verification.json node scripts/verify-bitcoin-deployment.mjs
+MANIFEST=contracts/deployments/bsc-testnet-timestamps-v3.json INDEXER_URL=http://localhost:8792 OPERATION_OUTPUT=contracts/deployments/timestamps-operation.json node scripts/verify-reserve-operation.mjs
+```
+
+The v3 manifest enables `RELAY_TIMESTAMPS=1` for the keeper and indexer automatically. When launching those
+processes directly, set it explicitly. Keeper simulation uses the actual worker address; an old bootstrap
+that cannot yet pass the fold gate progresses through standalone header submissions.
+See [T2b report](docs/tasks/T2B_REPORT.md) for Core provenance, limitations, validation and live evidence.
+
+The existing testnet genesis remains 967826. `scripts/extend-checkpoint-history.mjs` authenticates the eleven
+ancestors to the already recorded checkpoint instead of choosing another genesis. A fresh deployment
+checkpoint can be prepared with `scripts/prepare-bitcoin-checkpoint.mjs`; set `GENESIS_HEIGHT` to preserve an
+existing path. Neither procedure establishes full-node validity from scratch.
+
+### Operations reserve — also retained at port 8791
 
 The immutable router sends 100% of each vault's fees into the operations reserve. Each newly folded Bitcoin
 height allocates floor(available reserve / 10000) per selected token, sequentially across a batch. The folder
@@ -98,7 +123,7 @@ with `ROUTE_EVERY_HEIGHTS` / `CLAIM_EVERY_HEIGHTS`. These are keeper preferences
 remain available. Plain folds or omitted assets forgo their bounty, and no reward covers gas by guarantee.
 
 See [T1 reserve report](docs/tasks/T1_RESERVE_REPORT.md) for 92 Solidity tests, four Node tests, deployed bytecode
-checks, mock mint/redeem/route receipts and live bounty evidence. Independent review, T2b header checks and T9
+checks, mock mint/redeem/route receipts and live bounty evidence. T2b header checks are delivered separately above. Independent review and T9
 frozen-state exits remain pending. Native ETH collateral, CREATE2 genesis and the ZK relay are later work.
 
 ### Earlier reward testnet — comparison version, economics superseded
@@ -120,5 +145,5 @@ See [T1 review](docs/tasks/T1_REPORT.md) for this deployed version's accounting 
 Historical bytecode verification must use that release's build artifacts, not the current reserve build.
 The additional [T2 deployment](contracts/deployments/t2-interrupted-deployment.json) was confirmed on testnet
 but left unused after the economic redesign. The first reserve deployment attempt was interrupted by a shared
-wallet nonce and is archived in `reserve-interrupted-deployment.json`; only the confirmed reserve-v2 manifest
-above identifies the current release.
+wallet nonce and is archived in `reserve-interrupted-deployment.json`; the confirmed reserve-v2 manifest
+identifies that T1 release. The timestamp-checking v3 release uses its own manifest and fresh immutable addresses.
