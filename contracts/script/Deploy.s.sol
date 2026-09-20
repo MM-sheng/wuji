@@ -45,6 +45,10 @@ contract Deploy is Script {
             console.log("MockWBNB:", address(wbnb));
             _create(factory, address(usdt), 100e18);
             _create(factory, address(wbnb), 1e18);
+            // Test-only reserve donations use mock tokens; production funding is always explicit.
+            RelayerRewards rewards = FeeRouter(treasury).rewards();
+            usdt.approve(address(rewards), 100_000e18); rewards.fund(address(usdt), 100_000e18);
+            wbnb.approve(address(rewards), 100e18); rewards.fund(address(wbnb), 100e18);
         } else {
             string[] memory items = vm.split(spec, ",");
             for (uint256 i = 0; i < items.length; i++) {

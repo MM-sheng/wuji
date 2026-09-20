@@ -38,6 +38,12 @@ contract WujiIndex {
         uint64 f = finalizedHeight(); return f > lastHeight ? f - lastHeight : 0;
     }
     function fold() external returns (uint64) { return fold(DEFAULT_MAX); }
+    /// @notice Atomically relay and fold so the transaction completing both can earn the bounty.
+    /// @dev Standalone submit/fold remain available, including when a deep reorg prevents folding.
+    function submitAndFold(bytes calldata headers, uint256 max, address[] memory rewardTokens) external returns (uint64) {
+        relay.submit(headers);
+        return fold(max, rewardTokens);
+    }
     /// @notice Fold without a bounty. These heights cannot earn rewards retroactively.
     function fold(uint256 max) public returns (uint64) { return fold(max, new address[](0)); }
     /// @notice Fold and allocate one-off bounties in a sorted, unique list of at most eight tokens.

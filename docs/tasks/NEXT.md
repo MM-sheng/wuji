@@ -29,8 +29,10 @@ Source: `docs/reviews/2026-09-20-adversarial.md` (read it in full). Apply every 
 
 ## T1 · Protocol pays its own keepers — `RelayerRewards` + `FeeRouter` (highest priority, changes contracts, must land before audit)
 
-Implementation and testnet verification: [T1_REPORT.md](T1_REPORT.md), branch `codex/relayer-rewards`.
-Header rewards are intentionally credited at six-deep folding, rather than immediately at submission, to exclude transient orphan branches. Review/merge and independent audit remain pending.
+Current rework: [T1_RESERVE_REPORT.md](T1_RESERVE_REPORT.md), branch `codex/operations-reserve`.
+One-off reserve bounties and atomic submit/fold are implemented; 92 Solidity tests and 4 Node tests passed.
+Deployment verification is recorded in the report. Independent review remains pending.
+The earlier [T1_REPORT.md](T1_REPORT.md) describes the superseded lifetime-points testnet.
 
 **Rework required after the 2026-09-20 review (items #12, #13, #21) before merge:**
 - **No burn.** 100 % of fees go to an immutable **operations reserve** that can only be paid out as keeper bounties.

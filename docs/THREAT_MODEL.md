@@ -2,8 +2,8 @@
 
 Status: Bitcoin-source testnet prototype, updated after the 2026-09-20 adversarial review. The source
 contains T2 storage packing; port 8790 still runs the earlier T1 comparison deployment. Operations-reserve
-bounties (T1 rework), complete header timestamp checks/catch-up gate (T2b), and frozen-state exit (T9)
-are pending. None is an implemented protection. Legacy BSC Gap/EIP-2935 rules do not apply to Bitcoin mode.
+bounties (T1 rework) are implemented in the current source; the old :8790 deployment remains a comparison.
+Complete timestamp checks/catch-up gate (T2b) and frozen-state exit (T9) are still pending. Legacy BSC Gap/EIP-2935 rules do not apply to Bitcoin mode.
 
 ## Objective and assumptions
 
@@ -93,21 +93,37 @@ halt at different heights. Deep fork rewrites can also exceed transaction gas li
 
 ## Fees and operational liveness
 
-The current comparison deployment uses the superseded 50% lifetime-point / 50% DEAD design. Sending ERC-20
-collateral to DEAD does not necessarily reduce totalSupply. Credits accrue to the original submitter and
-folder only on finalized heights; duplicate/transient orphan headers cannot mint extra credits. Already-paid
-rewards cannot be reversed after a deep reorg. Points persist and dilute new workers' share of future fees.
+Current source routes 100% of fees into an immutable operations reserve. Only the immutable index can
+allocate bounties for the next contiguous range of folded heights. Per selected token and per height it
+reserves floor(available reserve / 10000). Allocated but unpaid claims are excluded from available reserves.
+There are no lifetime points, historical fee shares or burns. Funding and syncing a direct donation can
+only benefit future fold calls; delayed withdrawals receive their previously fixed amount.
 
-Its token-specific accumulators and bounded claim lots isolate accounting; credit calls no token code.
-Distribution occurs at sync, with precision dust reserved. Unsupported token behaviour may block its own
-routing/claims. CREATE nonce prediction binds immutable addresses and must be checked during deployment.
-These are facts about the existing version, not an endorsement of lifetime-point economics.
+The caller must select up to eight sorted unique tokens and at most 256 rewarded heights. This is bounded
+operator choice, not protocol token curation. Unselected tokens, empty pools and no-reward fold calls create
+no later rights. The sequential floor calculation makes batch splitting neutral. Below 10000 base units,
+the bounty is zero even with nonzero funds. Unit/fuzz/stateful tests check conservation and no future-fee claims.
 
-The approved task queue replaces this with 100% fees in an immutable operations reserve and one-off,
-per-finalized-height bounties to the folder. Permissionless funding is a donation, not control. The redesign,
-per-token accounting, gas/fee-volume model and deployment remain pending. Empty reserves, low primary-market
-volume and front-running can still make work uneconomic; no implementation can promise profitable operation
-without explicit resource assumptions. T8 requires independent keepers and a 48-hour author-shutdown drill.
+Allocation touches no ERC-20 code. Fund/sync/claim use reentrancy guards and accounting checks; an unsupported
+token's failure affects its own funding/withdrawal, not other assets or index folding. Negative rebases,
+issuer controls and dishonest balances remain unsupported. Claim checks are not a general token audit.
+
+The optional atomic submitAndFold call credits its external caller. It removes the gap between the caller's
+header submission and fold, but another party can copy/front-run the whole transaction and pay for the work.
+A standalone header submitter can still lose the folding bounty to someone else. Anyone may deliberately
+fold without rewards, which advances the index and consumes those opportunities without paying them. This
+costs the caller gas and does not remove reserve funds, but cannot be excluded as economic griefing.
+
+The keeper uses an explicitly configured token list, normally takes the atomic path, and by default attempts
+fee collection and claims only every 144 folded heights. This limits gas spent on tiny transfers. Separate
+submit/fold remain available for fork recovery; an atomic call that fails folding also reverts its submissions.
+Independent relaying can continue after a deep reorg, but the frozen index still needs the T9 design.
+
+The economic model in ARCHITECTURE §4 includes single-height and batch measurements. Nonzero reserves do not
+promise profitable operation: without income they decay, and fees, token prices, routing, competition and
+server costs matter. The old lifetime-points/DEAD deployments are immutable historical comparisons, not the
+new mechanism. CREATE address binding and deployed bytecode must be checked for each new deployment. The
+future native-ETH/CREATE2/ZK target is separate work, not a property delivered by this ERC-20 reserve.
 
 ## Monitoring
 

@@ -21,6 +21,49 @@ const redact = s => { const lines = String(s).replace(/0x[0-9a-fA-F]{64}/g, '0xâ
 const num = s => Number(BigInt(s.split(' ')[0]));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
+const reserveMode=process.env.REWARD_MODEL==='operations-reserve';
+const REWARDS=process.env.REWARDS;
+const rewardTokens=[...new Set((process.env.REWARD_TOKENS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean))].sort();
+if(reserveMode&&(!REWARDS||rewardTokens.length>8||rewardTokens.some(t=>!/^0x[0-9a-f]{40}$/.test(t)||/^0x0{40}$/.test(t))))throw Error('reserve mode needs REWARDS and up to eight valid REWARD_TOKENS');
+const claimInterval=Number(process.env.CLAIM_EVERY_HEIGHTS||144);
+if(!Number.isSafeInteger(claimInterval)||claimInterval<1)throw Error('CLAIM_EVERY_HEIGHTS must be positive');
+let lastClaimHeight=0;
+const routeInterval=Number(process.env.ROUTE_EVERY_HEIGHTS||144);
+if(!Number.isSafeInteger(routeInterval)||routeInterval<1)throw Error('ROUTE_EVERY_HEIGHTS must be positive');
+let lastRouteHeight=0;
+const succeeded=r=>r.status==='0x1'||r.status===1;
+async function routeFees(assets){
+ for(const asset of assets){
+  try {
+   if(process.env.FEE_ROUTER){
+    const balance=BigInt(cast('call',asset,'balanceOf(address)(uint256)',process.env.FEE_ROUTER).split(' ')[0]);
+    if(balance>=(reserveMode?1n:2n)){
+     const r=JSON.parse(send(process.env.FEE_ROUTER,'route(address)',700_000,asset));
+     if(!succeeded(r))throw Error('route reverted');log('route',asset,r.transactionHash);
+    }
+   }
+   if(reserveMode){
+    const balance=BigInt(cast('call',asset,'balanceOf(address)(uint256)',REWARDS).split(' ')[0]);
+    const unused=BigInt(cast('call',REWARDS,'reserve(address)(uint256)',asset).split(' ')[0]);
+    const allocated=BigInt(cast('call',REWARDS,'allocated(address)(uint256)',asset).split(' ')[0]);
+    if(balance>unused+allocated){const r=JSON.parse(send(REWARDS,'sync(address)',200_000,asset));if(!succeeded(r))throw Error('sync reverted');log('sync donation',asset,r.transactionHash);}
+   }
+  }catch(e){log('fee route:',redact(e.stderr||e.message));}
+ }
+}
+function claimBounties(last){
+ if(!reserveMode||last-lastClaimHeight<claimInterval)return;
+ lastClaimHeight=last; // Failed tokens are retried on a later interval, not on every poll.
+ const worker=execFileSync(CAST,['wallet','address','--account',KEYSTORE_ACCOUNT,'--password-file',PWFILE],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+ for(const token of rewardTokens){
+  try{
+   const amount=BigInt(cast('call',REWARDS,'claimable(address,address)(uint256)',token,worker).split(' ')[0]);
+   if(amount===0n)continue;
+   const r=JSON.parse(send(REWARDS,'claim(address)',300_000,token));if(!succeeded(r))throw Error('claim reverted');
+   log('claim fixed bounty',token,amount.toString(),r.transactionHash);
+  }catch(e){log('bounty claim:',redact(e.stderr||e.message));}
+ }
+}
 const api=new BitcoinAPI();
 const RELAY=process.env.RELAY;
 if(!RELAY)throw Error('RELAY required');
@@ -43,31 +86,47 @@ async function once(){
   common=lo;
  }
  const end=Math.min(tip,common+24);
+ let atomic=false;
+ if(reserveMode){
+  const folded=num(cast('call',CONTRACT,'lastHeight()(uint64)'));
+  if(folded-lastRouteHeight>=routeInterval){lastRouteHeight=folded;await routeFees(rewardTokens);}
+ }
  if(end>common){
   const headers=[];
   for(let h=common+1;h<=end;h++){const b=await api.at(h);if(step(b.header).hash!==b.hash)throw Error('Bitcoin source hash mismatch');headers.push(b.header);}
-  const r=JSON.parse(send(RELAY,'submit(bytes)',5_000_000,'0x'+headers.join('')));
+  let foldHealthy=true;
+  if(reserveMode){
+   try{cast('call',CONTRACT,'fold(uint256)(uint64)','0');}
+   catch(e){if(String(e.stderr||e.message).includes('deep Bitcoin reorg'))foldHealthy=false;else throw e;}
+  }
+  atomic=reserveMode&&common===best&&foldHealthy;
+  const r=JSON.parse(atomic
+   ?send(CONTRACT,'submitAndFold(bytes,uint256,address[])',8_000_000,'0x'+headers.join(''),'16','['+rewardTokens.join(',')+']')
+   :send(RELAY,'submit(bytes)',5_000_000,'0x'+headers.join('')));
   if(r.status!=='0x1'&&r.status!==1)throw Error('relay transaction reverted');
-  log(`submit Bitcoin ${common+1}..${end} ${r.transactionHash}`);
+  log(`${atomic?'submit + fold':'submit'} Bitcoin ${common+1}..${end} ${r.transactionHash}`);
  }
  // Detect deep reorgs even if pending() is zero, before any settlement transactions.
  cast('call',CONTRACT,'fold(uint256)(uint64)','0');
  const pending=num(cast('call',CONTRACT,'pending()(uint256)'));
- if(pending){const count=Math.min(pending,16);const r=JSON.parse(send(CONTRACT,'fold(uint256)',6_000_000,String(count)));if(r.status!=='0x1'&&r.status!==1)throw Error('fold reverted');log('fold',count,r.transactionHash);}
- // Optional immutable fee router. Token failures must not block header relay/folding.
- if(process.env.FEE_ROUTER){
+ // Fund BEFORE new work: old allocations can never claim these new fees.
+ if(pending&&!atomic){
+  const count=Math.min(pending,16);
+  const r=JSON.parse(reserveMode
+   ?send(CONTRACT,'fold(uint256,address[])',6_000_000,String(count),'['+rewardTokens.join(',')+']')
+   :send(CONTRACT,'fold(uint256)',6_000_000,String(count)));
+  if(!succeeded(r))throw Error('fold reverted');log('fold',count,r.transactionHash);
+ }
+ // Legacy comparison manifests retain their original routing flow.
+ if(!reserveMode&&process.env.FEE_ROUTER){
   const assets=new Set();
   for(const v of FACTORY?listVaults():VAULT?[VAULT]:[]) {
-   try { assets.add(cast('call',v,'asset()(address)')); } catch(e) { log('fee asset:',redact(e.message)); }
+   try{assets.add(cast('call',v,'asset()(address)'));}catch(e){log('fee asset:',redact(e.message));}
   }
-  for(const asset of assets) {
-   try {
-    const balance=BigInt(cast('call',asset,'balanceOf(address)(uint256)',process.env.FEE_ROUTER).split(' ')[0]);
-    if(balance>=2n){const r=JSON.parse(send(process.env.FEE_ROUTER,'route(address)',700_000,asset));if(r.status!=='0x1'&&r.status!==1)throw Error('route reverted');log('route',asset,r.transactionHash);}
-   } catch(e) { log('fee route:',redact(e.stderr||e.message)); }
-  }
+  await routeFees(assets);
  }
  const last=num(cast('call',CONTRACT,'lastHeight()(uint64)'));
+ claimBounties(last);
  for(const v of FACTORY?listVaults():VAULT?[VAULT]:[]){
   const boundary=num(cast('call',v,'currentSettlementHeight()(uint64)'));
   if(last>=boundary){const r=JSON.parse(send(v,'settle()',3_500_000));if(r.status!=='0x1'&&r.status!==1)throw Error('settle reverted');log('settle',v,boundary,r.transactionHash);}
@@ -80,5 +139,5 @@ function listVaults() {                                    // re-read the factor
   const list = []; for (let i = 0; i < n; i++) list.push(cast('call', FACTORY, 'vaults(uint256)(address)', String(i)));
   vaultCache = { at: Date.now(), list }; log(`factory has ${n} vault(s)`); return list;
 }
-log(`keeper on ${CONTRACT}${FACTORY ? ' + factory ' + FACTORY : VAULT ? ' + vault ' + VAULT : ''} every ${INTERVAL}s`);
+log(`keeper ${reserveMode?'operations reserve':'legacy'} on ${CONTRACT}${FACTORY ? ' + factory ' + FACTORY : VAULT ? ' + vault ' + VAULT : ''} every ${INTERVAL}s`);
 for (;;) { try { await once(); } catch (e) { log('error:', redact([e.stderr, e.stdout, e.message].filter(Boolean).join('\n'))); } await new Promise(r => setTimeout(r, INTERVAL * 1000)); }

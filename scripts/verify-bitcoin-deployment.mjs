@@ -20,8 +20,15 @@ assert.equal(Number(BigInt(await read(j.WujiIndex,'CHECKPOINT_INTERVAL()'))),432
 assert.equal(BigInt(await read(j.WujiIndex,'UNIT()')),12000000000000n);
 if(j.RelayerRewards){
  const addressOf=async(a,s)=>'0x'+(await read(a,s)).slice(-40);
- for(const [a,s,expected] of [[j.RelayerRewards,'relay()',j.BitcoinRelay],[j.RelayerRewards,'index()',j.WujiIndex],[j.BitcoinRelay,'rewards()',j.RelayerRewards],[j.WujiIndex,'rewards()',j.RelayerRewards],[j.FeeRouter,'rewards()',j.RelayerRewards],[j.WujiVaultFactory,'treasury()',j.FeeRouter],...Object.values(j.vaults).map(v=>[v.address,'treasury()',j.FeeRouter])])assert.equal((await addressOf(a,s)).toLowerCase(),expected.toLowerCase(),s);
- assert.equal(BigInt(await read(j.FeeRouter,'REWARD_BPS()')),5000n);
+ const bindings=[[j.RelayerRewards,'index()',j.WujiIndex],[j.WujiIndex,'rewards()',j.RelayerRewards],[j.FeeRouter,'rewards()',j.RelayerRewards],[j.WujiVaultFactory,'treasury()',j.FeeRouter],...Object.values(j.vaults).map(v=>[v.address,'treasury()',j.FeeRouter])];
+ if(j.version!=='bitcoin-reserve-v2')bindings.push([j.RelayerRewards,'relay()',j.BitcoinRelay],[j.BitcoinRelay,'rewards()',j.RelayerRewards]);
+ for(const [a,s,expected] of bindings)assert.equal((await addressOf(a,s)).toLowerCase(),expected.toLowerCase(),s);
+ assert.equal(BigInt(await read(j.FeeRouter,'REWARD_BPS()')),j.version==='bitcoin-reserve-v2'?10000n:5000n);
+ if(j.version==='bitcoin-reserve-v2'){
+  assert.equal(BigInt(await read(j.RelayerRewards,'BOUNTY_DIVISOR()')),10000n);
+  assert.equal(BigInt(await read(j.RelayerRewards,'GENESIS_HEIGHT()')),BigInt(j.genesisHeight));
+  assert.equal(await read(j.RelayerRewards,'lastHeight()'),await read(j.WujiIndex,'lastHeight()'));
+ }
 }
 const height=Number(BigInt(await read(j.BitcoinRelay,'bestHeight()'))),hash=await read(j.BitcoinRelay,'bestHash()');
 const api=new BitcoinAPI(),source=await api.at(height);assert.equal(hash.slice(2),step(source.header).internalHash);

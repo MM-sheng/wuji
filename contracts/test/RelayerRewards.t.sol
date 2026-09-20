@@ -5,13 +5,15 @@ import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {FeeRouter} from "../src/FeeRouter.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 contract AdversarialRewardToken is MockUSDT {
-    bool public blocked; bool public surcharge;
+    bool public blocked; bool public surcharge; bool public recipientFee;
     address public callback; bytes public payload; bool public callbackSucceeded;
     function configure(bool block_,bool tax_,address target,bytes memory data) external {blocked=block_;surcharge=tax_;callback=target;payload=data;}
+    function setRecipientFee() external {recipientFee=true;}
     function _update(address from,address to,uint256 value) internal override {
         require(!blocked,"token blocked");super._update(from,to,value);
         if(from!=address(0)&&to!=address(0)) {
             if(surcharge)super._update(from,address(0),1);
+            if(recipientFee)super._update(to,address(0),1);
             if(callback!=address(0))(callbackSucceeded,)=callback.call(payload);
         }
     }
@@ -58,13 +60,17 @@ contract RelayerRewardsTest is Test {
         rewards.fund(address(token),1_000_000);vm.stopPrank();work(ALICE,1,one(address(token)));
         assertEq(claim(BOB),0);assertEq(claim(ALICE),100);
     }
+    function expectBadWork(bytes memory reason,uint64 count,address[] memory list) internal {
+        uint64 from=rewards.lastHeight()+1;
+        vm.expectRevert(reason);vm.prank(INDEX);rewards.credit(ALICE,from,from+count-1,list);
+    }
     function test_tokenAndHeightBoundsAndDuplicatesRevertAtomically() public {
         address[] memory list=new address[](2);list[0]=address(token);list[1]=address(token);
-        vm.expectRevert("tokens not sorted unique");work(ALICE,1,list);assertEq(rewards.lastHeight(),999);
-        list[0]=address(2);list[1]=address(1);vm.expectRevert("tokens not sorted unique");work(ALICE,1,list);
-        vm.expectRevert("tokens not sorted unique");work(ALICE,1,one(address(0)));
-        vm.expectRevert("token limit");work(ALICE,1,new address[](9));
-        vm.expectRevert("height limit");work(ALICE,257,one(address(token)));
+        expectBadWork("tokens not sorted unique",1,list);assertEq(rewards.lastHeight(),999);
+        list[0]=address(2);list[1]=address(1);expectBadWork("tokens not sorted unique",1,list);
+        expectBadWork("tokens not sorted unique",1,one(address(0)));
+        expectBadWork("token limit",1,new address[](9));
+        expectBadWork("height limit",257,one(address(token)));
         vm.expectRevert("height limit");rewards.quote(address(token),257);assertEq(rewards.lastHeight(),999);
     }
     function test_tinyReservePaysZeroAndPreservesEveryUnit() public {
@@ -99,6 +105,14 @@ contract RelayerRewardsTest is Test {
         fund(1_000_000);work(ALICE,1,one(address(token)));vm.prank(address(rewards));token.transfer(BOB,1);
         vm.expectRevert("unsupported balance decrease");rewards.sync(address(token));
         vm.expectRevert("unsupported balance decrease");claim(ALICE);assertEq(rewards.claimable(address(token),ALICE),100);
+    }
+    function test_transferFeeFundingAndRoutingRevertWithoutBookingPhantomReserve() public {
+        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(this),1_000_000);bad.approve(address(rewards),1_000_000);bad.setRecipientFee();
+        vm.expectRevert("unsupported collateral");rewards.fund(address(bad),1_000_000);
+        assertEq(rewards.reserve(address(bad)),0);assertEq(bad.balanceOf(address(this)),1_000_000);
+        bad.mint(address(router),1_000_000);vm.expectRevert("unsupported collateral");router.route(address(bad));
+        assertEq(bad.balanceOf(address(router)),1_000_000);assertEq(bad.allowance(address(router),address(rewards)),0);
+        assertEq(rewards.reserve(address(bad)),0);
     }
     function testFuzz_batchSplittingPaysExactlyTheSame(uint128 amount,uint8 n) public {
         uint64 count=uint64(n)+1;fund(amount);uint256 quote=rewards.quote(address(token),count);uint256 snap=vm.snapshotState();
