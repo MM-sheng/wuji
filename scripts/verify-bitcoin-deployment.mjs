@@ -1,9 +1,9 @@
 import fs from 'node:fs';import assert from 'node:assert/strict';import {execFileSync} from 'node:child_process';import os from 'node:os';import path from 'node:path';
 import {BitcoinAPI,step} from '../indexer/bitcoin.mjs';
 const j=JSON.parse(fs.readFileSync(process.env.MANIFEST||'contracts/deployments/bsc-testnet.json'));
-const reserveMode=['bitcoin-reserve-v2','bitcoin-timestamps-v3'].includes(j.version);
+const reserveMode=['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version);
 async function rpc(method,params){const r=await(await fetch(j.rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();if(r.error)throw Error(r.error.message);return r.result;}
-assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),97);
+assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),j.chainId);
 const verified=[];
 for(const [name,address] of [...['BitcoinRelay','WujiIndex','SeriesTokenDeployer','WujiVaultFactory','RelayerRewards','FeeRouter'].filter(n=>j[n]).map(n=>[n,j[n]]),...Object.values(j.vaults).map(v=>['WujiVault',v.address])]){
  const artifact=JSON.parse(fs.readFileSync(`contracts/out/${name==='SeriesTokenDeployer'?'SeriesToken':name}.sol/${name}.json`));
@@ -19,6 +19,19 @@ assert.equal(Number(BigInt(await read(j.WujiIndex,'GENESIS_HEIGHT()'))),j.genesi
 assert.equal(Number(BigInt(await read(j.WujiIndex,'CONFIRMATIONS()'))),6);
 assert.equal(Number(BigInt(await read(j.WujiIndex,'CHECKPOINT_INTERVAL()'))),4320);
 assert.equal(BigInt(await read(j.WujiIndex,'UNIT()')),12000000000000n);
+const bound=async(a,s,expected)=>assert.equal(('0x'+(await read(a,s)).slice(-40)).toLowerCase(),expected.toLowerCase(),s+' binding');
+await bound(j.WujiIndex,'relay()',j.BitcoinRelay);
+await bound(j.WujiVaultFactory,'index()',j.WujiIndex);
+await bound(j.WujiVaultFactory,'tokens()',j.SeriesTokenDeployer);
+for(const v of Object.values(j.vaults)){
+ await bound(v.address,'index()',j.WujiIndex);await bound(v.address,'asset()',v.asset);await bound(v.address,'tokens()',j.SeriesTokenDeployer);
+ assert.equal(BigInt(await read(v.address,'NOTIONAL()')),BigInt(v.notional));
+ assert.equal(BigInt(await read(v.address,'FEE_BPS()')),5n);
+}
+if(j.version==='bitcoin-sepolia-v3'){
+ assert.equal(j.chainId,11155111);assert.equal(j.vaults.WETH.asset.toLowerCase(),'0xfff9976782d46cc05630d1f6ebab18b2324d6b14');
+ assert.equal(BigInt(await read(j.vaults.WETH.asset,'decimals()')),18n);
+}
 if(j.RelayerRewards){
  const addressOf=async(a,s)=>'0x'+(await read(a,s)).slice(-40);
  const bindings=[[j.RelayerRewards,'index()',j.WujiIndex],[j.WujiIndex,'rewards()',j.RelayerRewards],[j.FeeRouter,'rewards()',j.RelayerRewards],[j.WujiVaultFactory,'treasury()',j.FeeRouter],...Object.values(j.vaults).map(v=>[v.address,'treasury()',j.FeeRouter])];
@@ -34,7 +47,7 @@ if(j.RelayerRewards){
 const height=Number(BigInt(await read(j.BitcoinRelay,'bestHeight()'))),hash=await read(j.BitcoinRelay,'bestHash()');
 const api=new BitcoinAPI(),source=await api.at(height);assert.equal(hash.slice(2),step(source.header).internalHash);
 let timestamps;
-if(j.version==='bitcoin-timestamps-v3'){
+if(['bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version)){
  assert.equal(BigInt(await read(j.BitcoinRelay,'MAX_FUTURE_BLOCK_TIME()')),7200n);
  assert.equal(BigInt(await read(j.WujiIndex,'MAX_RELAY_AGE()')),10800n);
  assert.equal(('0x'+(await read(j.WujiIndex,'relay()')).slice(-40)).toLowerCase(),j.BitcoinRelay.toLowerCase());

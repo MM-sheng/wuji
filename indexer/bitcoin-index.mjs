@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BitcoinAPI, step } from './bitcoin.mjs';
+import { network, assertChain } from './networks.mjs';
 const api=new BitcoinAPI();
 const genesis=Number(process.env.GENESIS_HEIGHT), port=Number(process.env.PORT||8789);
 if(!Number.isSafeInteger(genesis)||genesis<1) throw Error('GENESIS_HEIGHT required');
@@ -16,27 +17,30 @@ const hex=n=>'0x'+n.toString(16);
 const RPC=(process.env.RPC||'https://bsc-testnet-rpc.publicnode.com').split(',')[0];
 const CONTRACT=process.env.CONTRACT, FACTORY=process.env.FACTORY;
 const CHAIN_ID=Number(process.env.CHAIN_ID||97);
+const NETWORK=network(CHAIN_ID);
 async function rpc(method,params){const r=await(await fetch(RPC,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();if(r.error)throw Error(r.error.message);return r.result;}
 const call=async(to,data,block='latest')=>rpc('eth_call',[{to,data},block]);
 const toInt=h=>{const v=BigInt(h);return v>=1n<<255n?v-(1n<<256n):v;};
 const SEL={"S": "0x4be1c796", "lastHeight": "0x25159aa9", "yangShare": "0xdbc1faef", "currentId": "0xe00dd161", "series": "0xdc22cb6a", "asset": "0x38d52e0f", "liabilities": "0xb4add307", "balanceOf": "0x70a08231"};
-async function readVault(V) {
+async function readVault(V,at) {
   const c = {};
-  const [ys, cid, asset, liab] = await Promise.all([call(V, SEL.yangShare), call(V, SEL.currentId), call(V, SEL.asset), call(V, SEL.liabilities)]);
+  const read=(to,data)=>call(to,data,at);
+  const [ys, cid, asset, liab] = await Promise.all([read(V, SEL.yangShare), read(V, SEL.currentId), read(V, SEL.asset), read(V, SEL.liabilities)]);
   const id = Number(BigInt(cid)); const assetAddr = '0x' + asset.slice(26);
-  const [sr, bal] = await Promise.all([call(V, SEL.series + id.toString(16).padStart(64, '0')), call(assetAddr, SEL.balanceOf + V.slice(2).toLowerCase().padStart(64, '0'))]);
+  const [sr, bal] = await Promise.all([read(V, SEL.series + id.toString(16).padStart(64, '0')), read(assetAddr, SEL.balanceOf + V.slice(2).toLowerCase().padStart(64, '0'))]);
   const w = k => '0x' + sr.slice(2 + 64 * k, 2 + 64 * (k + 1));
   c.v = { address: V, asset: assetAddr, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), startHeight: Number(BigInt(w(3))), settlementHeight: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18,
-    balance: Number(BigInt(bal)) / 1e18, liabilities: Number(BigInt(liab)) / 1e18, chainId: CHAIN_ID, explorer: CHAIN_ID === 97 ? 'https://testnet.bscscan.com' : 'https://bscscan.com' };
-  const sym = await call(V, '0xbf911794').catch(() => null);                                          // collateralSymbol()
+    balance: Number(BigInt(bal)) / 1e18, liabilities: Number(BigInt(liab)) / 1e18, chainId: CHAIN_ID, networkName: NETWORK.name, explorer: NETWORK.explorer };
+  const sym = await read(V, '0xbf911794').catch(() => null);                                          // collateralSymbol()
   if (sym) { try { const off = Number(BigInt('0x' + sym.slice(2, 66))), len = Number(BigInt('0x' + sym.slice(2 + off * 2, 2 + off * 2 + 64))); c.v.symbol = Buffer.from(sym.slice(2 + off * 2 + 64, 2 + off * 2 + 64 + len * 2), 'hex').toString(); } catch (e) {} }
-  const notional = await call(V, '0x858dccb3');
+  const notional = await read(V, '0x858dccb3');
   c.v.notional = Number(BigInt(notional)) / 1e18;
   return c.v;
 }
 async function pollChain(){
  if(!CONTRACT)return;
  try{
+  assertChain(await rpc('eth_chainId',[]),CHAIN_ID);
   const at=await rpc('eth_blockNumber',[]);
   const [s,last,genesisOnchain,lastHash]=await Promise.all([call(CONTRACT,SEL.S,at),call(CONTRACT,SEL.lastHeight,at),call(CONTRACT,'0x207c8a4c',at),call(CONTRACT,'0x3fa21806',at)]);
   if(Number(BigInt(genesisOnchain))!==genesis)throw Error('Bitcoin genesis configuration mismatch');
@@ -51,7 +55,7 @@ async function pollChain(){
    const time=await call(relayAddress,'0x76fa0b8a'+hash.slice(2),at);
    c.relay={address:relayAddress,fresh:BigInt(fresh)===1n,maxAge:Number(BigInt(maxAge)),height:Number(BigInt(height)),timestamp:Number(BigInt(time))};
   }
-  if(FACTORY){const count=Number(BigInt(await call(FACTORY,'0x06661abd')));c.vaults=[];for(let i=0;i<count;i++){const v='0x'+(await call(FACTORY,'0x8c64ea4a'+i.toString(16).padStart(64,'0'))).slice(26);c.vaults.push(await readVault(v));}c.vault=c.vaults[0];}
+  if(FACTORY){const count=Number(BigInt(await call(FACTORY,'0x06661abd',at)));c.vaults=[];for(let i=0;i<count;i++){const v='0x'+(await call(FACTORY,'0x8c64ea4a'+i.toString(16).padStart(64,'0'),at)).slice(26);c.vaults.push(await readVault(v,at));}c.vault=c.vaults[0];}
   chain=c;
  }catch(e){chain={contract:CONTRACT,err:e.message};}
 }

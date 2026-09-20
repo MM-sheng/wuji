@@ -40,6 +40,7 @@ cd contracts && ~/.foundry/bin/forge test # unit / fuzz / invariant suites
 ```
 
 Current timestamp-checking testnet manifest: `contracts/deployments/bsc-testnet-timestamps-v3.json` (port 8792).
+Sepolia/WETH deployment tooling and comparison are described below (T3).
 The earlier reserve manifest remains `contracts/deployments/bsc-testnet-reserve-v2.json` (port 8791).
 `bsc-testnet.json` is retained as the historical lifetime-points comparison manifest.
 
@@ -147,6 +148,40 @@ The keeper routes ordinary ERC-20 vault fees automatically when a router balance
 smallest units. Workers call `RelayerRewards.claim(token)` to withdraw; a long unclaimed work history
 may require repeated calls (128 new point lots per default call). Rewards are not guaranteed gas reimbursement.
 See [T1 review](docs/tasks/T1_REPORT.md) for this deployed version's accounting and finality rules.
+
+### Sepolia / WETH (T3)
+
+The same Bitcoin checkpoint and genesis are reused on Sepolia, chain 11155111. The example vault uses
+the [Sepolia WETH address listed by Uniswap](https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments)
+with 0.001 WETH per pair. This is a separate collateral claim sharing an index with the BSC deployment.
+
+Use a separate encrypted Foundry account. `contracts/.env.sepolia` contains only `KEYSTORE_ACCOUNT`,
+`PASSWORD_FILE`, `DEPLOYER` and `RPC`. Keep it and the password file local, mode 600; never paste a key
+into a command or a log. The deployment wrapper simulates by default; `--broadcast` submits to Sepolia only.
+
+```bash
+node --test indexer/bitcoin*.test.mjs scripts/compare-chains.test.mjs apps/terminal/wallet.test.mjs
+bash contracts/scripts/deploy-sepolia.sh
+bash contracts/scripts/deploy-sepolia.sh --broadcast
+# After successful broadcast, set DEPLOYMENT_COMMIT to the full reviewed source commit:
+DEPLOYMENT_COMMIT=<full-commit> node scripts/record-sepolia-deployment.mjs
+MANIFEST=contracts/deployments/sepolia-weth-v3.json VERIFICATION_OUTPUT=contracts/deployments/sepolia-verification.json node scripts/verify-bitcoin-deployment.mjs
+ENV_FILE="$PWD/contracts/.env.sepolia" MANIFEST=contracts/deployments/sepolia-weth-v3.json bash scripts/bitcoin-testnet.sh
+node scripts/compare-chains.mjs
+```
+
+The Sepolia terminal defaults to port 8793, a separate cache and `wuji-sepolia` process names. Its keeper uses
+automatic Ethereum fee selection, not the BSC-specific legacy gas override. Before starting the keeper,
+`scripts/sepolia-smoke.mjs` can wrap 0.003 test ETH, donate 0.001 WETH to the operations reserve, mint and
+redeem one pair, then route its fees. Source the local Sepolia env first; the script records receipts and
+refuses to overwrite an existing smoke run. Donations are ordinary public funding, not a privilege.
+
+The comparison pins reads to an EVM block on each chain, rejects differing parameters or a frozen folded
+hash, and compares exact integer S and Bitcoin hash at the lower folded height. A faster chain is reversed
+to that height by subtracting its extra canonical header increments (at most 4320). Empty indexes report
+WAIT rather than PASS. This checks agreement under those RPC responses; T4 adds independent two-source
+Bitcoin reconstruction. ETH gas is spent and WETH remains collateral; testnet bounties do not establish
+economic sustainability.
 
 Historical bytecode verification must use that release's build artifacts, not the current reserve build.
 The additional [T2 deployment](contracts/deployments/t2-interrupted-deployment.json) was confirmed on testnet

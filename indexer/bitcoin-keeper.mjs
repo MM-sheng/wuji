@@ -1,4 +1,5 @@
 import { BitcoinAPI, step } from './bitcoin.mjs';
+import { assertChain } from './networks.mjs';
 // WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles fixed-block series.
 // Signs with `cast` (Foundry) so this file has no dependencies and never touches the key itself.
 //
@@ -17,7 +18,12 @@ const RPC0 = RPC.split(',')[0];
 const cast = (...a) => execFileSync(CAST, [...a, '--rpc-url', RPC0], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const PWFILE = path.isAbsolute(PASSWORD_FILE) ? PASSWORD_FILE : path.join(process.cwd(), 'contracts', PASSWORD_FILE);
 const gasOptions=process.env.KEEPER_GAS_PRICE?['--legacy','--gas-price',process.env.KEEPER_GAS_PRICE]:[];
-const send = (to, sig, gas, ...args) => cast('send', to, sig, ...args, '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), ...gasOptions, '--json');
+const expectedChain=Number(process.env.CHAIN_ID||97);
+const checkChain=()=>assertChain(cast('chain-id'),expectedChain);
+const send = (to, sig, gas, ...args) => {
+ checkChain();
+ return cast('send', to, sig, ...args, '--chain', String(expectedChain), '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), ...gasOptions, '--json');
+};
 let cachedWorker;
 const workerAddress=()=>cachedWorker ||= execFileSync(CAST,['wallet','address','--account',KEYSTORE_ACCOUNT,'--password-file',PWFILE],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
 const redact = s => { const lines = String(s).replace(/0x[0-9a-fA-F]{64}/g, '0x…').split('\n').map(l => l.trim()).filter(Boolean); return lines.find(l => /^Error|insufficient|revert|nonce|underpriced|timeout/i.test(l)) || lines.find(l => !/^Command failed/.test(l)) || 'cast send failed'; };
@@ -72,6 +78,7 @@ const api=new BitcoinAPI();
 const RELAY=process.env.RELAY;
 if(!RELAY)throw Error('RELAY required');
 async function once(){
+ checkChain();
  const tip=await api.tip();
  const best=num(cast('call',RELAY,'bestHeight()(uint64)'));
  const checkpoint=num(cast('call',RELAY,'checkpointHeight()(uint64)'));

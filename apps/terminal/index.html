@@ -316,7 +316,7 @@
         </div>
         <div class="wal">
           <h4>Wallet</h4>
-          <div id="tjWallet"><button id="wConnect">CONNECT WALLET</button><div class="msg2">MetaMask / any EIP-1193 wallet · BSC testnet</div></div>
+          <div id="tjWallet"><button id="wConnect">CONNECT WALLET</button><div class="msg2">MetaMask / any EIP-1193 wallet</div></div>
         </div>
       </div>
     </div>
@@ -681,7 +681,7 @@
     $('tjSeries').innerHTML=sel+`
       <div style="color:var(--muted);font-size:10px;margin-bottom:6px">Settlement share (not price) · 结算份额</div>
       <div class="yy"><div class="yang" style="width:${yang}%">YANG ${fmt(yang)}%</div><div class="yin">${fmt(yin)}% YIN</div></div>
-      <div class="kv"><span>Chain · series</span><b>${v.chainId} · #${v.seriesId}</b></div>
+      <div class="kv"><span>Chain · series</span><b>${v.networkName||v.chainId} · #${v.seriesId}</b></div>
       <div class="kv"><span>Collateral</span><b>${v.symbol||'—'} · ${v.notional} per pair · <a href="${ex}/token/${v.asset}" target="_blank">${short(v.asset)}</a></b></div>
       <div class="kv"><span>Series</span><b>#${v.seriesId} · ${v.settled?'SETTLED':'OPEN'}</b></div>
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Start Bitcoin height':'Start block'}</span><b>#${v.startBlock.toLocaleString()}</b></div>
@@ -712,33 +712,51 @@
 
   // ---- wallet: raw EIP-1193, hand-rolled ABI. No third-party runtime library; wallet/chain trust still applies.
   const W={acct:null,chainId:null,bal:{},busy:false,msg:''};
+  const walletNetworks={
+    97:{chainId:'0x61',chainName:'BNB Smart Chain Testnet',nativeCurrency:{name:'tBNB',symbol:'tBNB',decimals:18},rpcUrls:['https://bsc-testnet-rpc.publicnode.com'],blockExplorerUrls:['https://testnet.bscscan.com']},
+    11155111:{chainId:'0xaa36a7',chainName:'Ethereum Sepolia',nativeCurrency:{name:'Sepolia ETH',symbol:'ETH',decimals:18},rpcUrls:['https://ethereum-sepolia-rpc.publicnode.com'],blockExplorerUrls:['https://sepolia.etherscan.io']}
+  };
+  let walletEvents=false;
+  async function requireWalletChain(expected){
+    W.chainId=Number(BigInt(await eth().request({method:'eth_chainId'})));
+    if(W.chainId!==expected)throw Error('Switch wallet to '+(walletNetworks[expected]?.chainName||expected));
+  }
   const pad=(h)=>h.replace(/^0x/,'').padStart(64,'0');
   const toWad=n=>BigInt(Math.round(n*1e6))*10n**12n;
   const hex=(b)=>'0x'+b.toString(16);
   const eth=()=>window.ethereum;
   async function ethCall(to,data){return eth().request({method:'eth_call',params:[{to,data},'latest']});}
-  async function refreshWallet(){ const c=HEAD.chain; const v=curVault(); if(!W.acct||!c||!v)return; const me=pad(W.acct);
+  async function refreshWallet(){ const c=HEAD.chain; const v=curVault(); if(!W.acct||!c||!v)return; W.bal={}; await requireWalletChain(v.chainId); const account=W.acct, me=pad(account);
     const [u,y,n,al]=await Promise.all([ethCall(v.asset,'0x70a08231'+me),ethCall(v.yang,'0x70a08231'+me),ethCall(v.yin,'0x70a08231'+me),ethCall(v.asset,'0xdd62ed3e'+me+pad(v.address))]);
-    W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; W.chainId=parseInt(await eth().request({method:'eth_chainId'}),16); renderWallet(); }
+    await requireWalletChain(v.chainId); if(W.acct!==account||curVault()?.address!==v.address)return;
+    W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; renderWallet(); }
   async function connect(){ if(!eth()){W.msg='No wallet found. Install MetaMask.';renderWallet();return;}
     try{ const a=await eth().request({method:'eth_requestAccounts'}); W.acct=a[0]; W.msg='';
-      const want=curVault()?.chainId||97; const cur=parseInt(await eth().request({method:'eth_chainId'}),16);
-      if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&want===97) await eth().request({method:'wallet_addEthereumChain',params:[{chainId:'0x61',chainName:'BNB Smart Chain Testnet',nativeCurrency:{name:'tBNB',symbol:'tBNB',decimals:18},rpcUrls:['https://bsc-testnet-rpc.publicnode.com'],blockExplorerUrls:['https://testnet.bscscan.com']}]}); else throw e; } }
-      eth().on&&eth().on('accountsChanged',a=>{W.acct=a[0]||null;refreshWallet();renderWallet();});
+      const want=curVault()?.chainId; if(!want)throw Error('Wait for the deployed vault to load');
+      const cur=Number(BigInt(await eth().request({method:'eth_chainId'})));
+      if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&walletNetworks[want]) await eth().request({method:'wallet_addEthereumChain',params:[walletNetworks[want]]}); else throw e; } }
+      if(eth().on&&!walletEvents){walletEvents=true;
+        eth().on('accountsChanged',a=>{W.acct=a[0]||null;W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();});
+        eth().on('chainChanged',id=>{W.chainId=Number(BigInt(id));W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();});
+      }
       await refreshWallet(); }catch(e){ W.msg=e.message||String(e); renderWallet(); } }
-  async function send(to,data,label){ W.busy=true;W.msg=label+' · confirm in wallet…';renderWallet();
-    try{ const h=await eth().request({method:'eth_sendTransaction',params:[{from:W.acct,to,data}]}); W.msg=label+' · sent '+short(h)+' · waiting…';renderWallet();
-      for(let i=0;i<120;i++){ const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]}); if(r){ W.msg=(r.status==='0x1'?'✓ ':'✗ ')+label+' · '+short(h); break;} await new Promise(r=>setTimeout(r,1500)); }
+  async function send(to,data,label,context){ W.busy=true;W.msg=label+' · confirm in wallet…';renderWallet();let success=false;
+    try{ if(!context||W.acct!==context.account||curVault()?.address!==context.vault)throw Error('Wallet or vault changed; retry');
+      await requireWalletChain(context.chainId);
+      const h=await eth().request({method:'eth_sendTransaction',params:[{from:context.account,to,data,chainId:hex(context.chainId)}]}); W.msg=label+' · sent '+short(h)+' · waiting…';renderWallet();
+      for(let i=0;i<120;i++){ await requireWalletChain(context.chainId); const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]}); if(r){success=r.status==='0x1';W.msg=(success?'✓ ':'✗ ')+label+' · '+short(h);break;} await new Promise(r=>setTimeout(r,1500)); }
+      if(!success&&W.msg.includes('waiting'))W.msg='Receipt still pending · '+h+' · check explorer before retrying';
     }catch(e){ W.msg='✗ '+(e.shortMessage||e.message||String(e)).slice(0,120); }
-    W.busy=false; await refreshWallet(); renderWallet(); }
-  async function doMint(){ const v=curVault(), pairs=Math.max(0.01,+$('wPairs').value||1), need=pairs*v.notional*1.0005;
-    if(W.bal.allow<need) await send(v.asset,'0x095ea7b3'+pad(v.address)+pad((2n**256n-1n).toString(16)),'approve USDT');
-    await send(v.address,'0xa0712d68'+pad(toWad(pairs).toString(16)),`mint ${pairs} pair`); }
+    W.busy=false;try{await refreshWallet();}catch(e){W.bal={};}renderWallet();return success; }
+  const walletContext=v=>({account:W.acct,vault:v.address,chainId:v.chainId});
+  async function doMint(){ const v=curVault(), context=walletContext(v), pairs=Math.max(0.01,+$('wPairs').value||1), need=pairs*v.notional*1.0005;
+    if(!(W.bal.allow>=need)&&!await send(v.asset,'0x095ea7b3'+pad(v.address)+pad((2n**256n-1n).toString(16)),'approve '+(v.symbol||'collateral'),context))return;
+    await send(v.address,'0xa0712d68'+pad(toWad(pairs).toString(16)),`mint ${pairs} pair`,context); }
   async function doRedeem(){ const v=curVault(), pairs=Math.max(0.01,+$('wPairs').value||1);
-    await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`); }
+    await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`,walletContext(v)); }
   function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; const vv=curVault(); if(!c||!vv){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
-    if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${W.msg||'MetaMask / any EIP-1193 wallet · BSC testnet'}</div>`; $('wConnect').onclick=connect; return; }
-    const v=vv, b=W.bal, wrong=W.chainId&&W.chainId!==v.chainId;
+    if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${W.msg||'MetaMask / any EIP-1193 wallet · '+(vv.networkName||vv.chainId)}</div>`; $('wConnect').onclick=connect; return; }
+    const v=vv, b=W.bal, wrong=W.chainId!==v.chainId;
     el.innerHTML=`
       <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
       <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmt(b.usdt)}</b></div>

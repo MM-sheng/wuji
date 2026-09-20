@@ -7,18 +7,18 @@ import path from 'node:path';
 import {step} from '../indexer/bitcoin.mjs';
 const manifest=process.env.MANIFEST||'contracts/deployments/bsc-testnet-reserve-v2.json';
 const j=JSON.parse(fs.readFileSync(manifest));
-assert.ok(['bitcoin-reserve-v2','bitcoin-timestamps-v3'].includes(j.version));assert.equal(j.status,'confirmed');
+assert.ok(['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version));assert.equal(j.status,'confirmed');
 const cast=process.env.CAST||path.join(os.homedir(),'.foundry/bin/cast');
 const encode=(...a)=>execFileSync(cast,a,{encoding:'utf8'}).trim();
 async function rpc(method,params,endpoint=j.rpc){
  const r=await(await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),signal:AbortSignal.timeout(15000)})).json();
  if(r.error)throw Error(r.error.message);return r.result;
 }
-assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),97);
+assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),j.chainId);
 const at=await rpc('eth_blockNumber',[]);
 const logsRpc=process.env.LOG_RPC||j.rpc;
 if(logsRpc!==j.rpc){
- assert.equal(Number(BigInt(await rpc('eth_chainId',[],logsRpc))),97);
+ assert.equal(Number(BigInt(await rpc('eth_chainId',[],logsRpc))),j.chainId);
  const [a,b]=await Promise.all([rpc('eth_getBlockByNumber',[at,false]),rpc('eth_getBlockByNumber',[at,false],logsRpc)]);
  assert.ok(a&&b,'event provider has not reached the observation block');
  assert.equal(a.hash,b.hash,'event provider disagrees on the observation block');

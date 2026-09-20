@@ -9,6 +9,7 @@ const file=process.env.TEST_KEEPER_STATE,s=JSON.parse(fs.readFileSync(file)),a=p
 const save=()=>fs.writeFileSync(file,JSON.stringify(s));
 const fail=m=>{save();process.stderr.write('Error: execution reverted: '+m);process.exit(1);};
 const output=x=>process.stdout.write(String(x));
+if(a[0]==='chain-id'){output(s.mode==='wrong-chain'?1:97);process.exit(0);}
 if(a[0]==='wallet'){output(s.worker);process.exit(0);}
 const name=a[2].split('(')[0],stale=s.mode==='catchup'&&s.best<s.tip;
 const pending=()=>Math.max(0,s.best-6-s.folded);
@@ -43,7 +44,7 @@ if(a[0]==='call'){
 }else fail('unexpected command');
 `;
 
-for(const mode of ['catchup','fresh'])test(`keeper ${mode}: advance headers safely and simulate with the actual worker`,{timeout:30000},async()=>{
+for(const mode of ['catchup','fresh','wrong-chain'])test(`keeper ${mode}: advance headers safely and simulate with the actual worker`,{timeout:30000},async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wuji-keeper-test-')),stateFile=path.join(dir,'state.json'),cast=path.join(dir,'cast.mjs');
  const cp=meta.checkpointHeight,headers={[cp]:meta.checkpointHeader},hashes={};
  for(let i=0;i<50;i++)headers[cp+1+i]=fixture.slice(i*160,(i+1)*160);
@@ -58,11 +59,12 @@ for(const mode of ['catchup','fresh'])test(`keeper ${mode}: advance headers safe
   res.statusCode=404;res.end();
  });server.listen(0,'127.0.0.1');await once(server,'listening');
  const url='http://127.0.0.1:'+server.address().port;let log='';
- const child=spawn(process.execPath,[new URL('./bitcoin-keeper.mjs',import.meta.url).pathname],{env:{...process.env,CAST:cast,KEEPER_GAS_PRICE:mode==='catchup'?'0.1gwei':'',TEST_KEEPER_STATE:stateFile,BITCOIN_API:url,RPC:url,KEYSTORE_ACCOUNT:'test-double-only',PASSWORD_FILE:'/nonexistent/test-double-only',CONTRACT:'0x2222222222222222222222222222222222222222',RELAY:'0x3333333333333333333333333333333333333333',REWARDS:'0x4444444444444444444444444444444444444444',REWARD_MODEL:'operations-reserve',RELAY_TIMESTAMPS:'1',REWARD_TOKENS:'',FACTORY:'',VAULT:'',FEE_ROUTER:'',INTERVAL:'0.02'},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,[new URL('./bitcoin-keeper.mjs',import.meta.url).pathname],{env:{...process.env,CHAIN_ID:'97',CAST:cast,KEEPER_GAS_PRICE:mode==='catchup'?'0.1gwei':'',TEST_KEEPER_STATE:stateFile,BITCOIN_API:url,RPC:url,KEYSTORE_ACCOUNT:'test-double-only',PASSWORD_FILE:'/nonexistent/test-double-only',CONTRACT:'0x2222222222222222222222222222222222222222',RELAY:'0x3333333333333333333333333333333333333333',REWARDS:'0x4444444444444444444444444444444444444444',REWARD_MODEL:'operations-reserve',RELAY_TIMESTAMPS:'1',REWARD_TOKENS:'',FACTORY:'',VAULT:'',FEE_ROUTER:'',INTERVAL:'0.02'},stdio:['ignore','pipe','pipe']});
  child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
  try{
   let result;
-  for(let i=0;i<600;i++){result=JSON.parse(fs.readFileSync(stateFile));if(result.folded===state.tip-6)break;if(child.exitCode!==null)break;await new Promise(r=>setTimeout(r,25));}
+  for(let i=0;i<600;i++){result=JSON.parse(fs.readFileSync(stateFile));if(result.folded===state.tip-6||(mode==='wrong-chain'&&log.includes('RPC chain mismatch')))break;if(child.exitCode!==null)break;await new Promise(r=>setTimeout(r,25));}
+  if(mode==='wrong-chain'){assert.equal(result.sends.length,0);assert.match(log,/RPC chain mismatch/);return;}
   assert.equal(result.folded,state.tip-6,log);
   if(mode==='catchup'){
    assert.deepEqual(result.sends,['submit','submit','submit','fold','fold','fold']);

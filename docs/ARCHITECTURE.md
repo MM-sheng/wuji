@@ -38,6 +38,16 @@ R 对原始 H 哈希，不对显示字符串或其 ASCII 字节哈希。二次�
 检查点高度为 GENESIS_HEIGHT + k×4320 − 1，每期平均约 30 天，实际历时随出块速度变化。
 中继延迟只影响可用时间，不改变增量。链下浮点数只用于显示，合约整数 S 与赔付运算为准。
 
+T3 的 BSC 测试网与 Ethereum Sepolia 使用同一 genesis 967826 和中继 checkpoint 967825。
+这是 **a shared settlement index; each deployment is a separate claim**。Sepolia 示例金库使用
+现有 WETH 合约 `0xfff9976782d46cc05630d1f6ebab18b2324d6b14`，每对面值 0.001 WETH；
+包装和解包 ETH 属于抵押品合约，WUJI 的配对规则、5 bps 费率和无管理权限结构不变。
+两条链的 keeper 使用不同加密账户；RPC 链号在启动轮次及每次签名前检查。
+`scripts/compare-chains.mjs` 固定每条链自己的 EVM 观察块，比较双方较低的 Bitcoin lastHeight。
+若一方领先，从其 S 中精确扣除多折叠高度的中继哈希增量；检查最后折叠哈希仍在主链。
+空指数报 WAIT，参数、哈希或整数差异报 FAIL。PASS 仅说明这些 RPC 观察下同高一致，
+不证明全球同步、抵押品等价或独立数据源验证；后者属于 T4。
+
 ## 2. 两仪与检查点
 
 - 1 对 = 1 YANG + 1 YIN；铸造抵押为 NOTIONAL，费率仍为 5 bps。

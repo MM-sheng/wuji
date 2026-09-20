@@ -7,3 +7,5 @@ contracts/broadcast/
 contracts/test/fixtures/real-hashes.json
 contracts/.env
 contracts/.keystore-password
+contracts/.env.sepolia
+contracts/.keystore-password-sepolia
