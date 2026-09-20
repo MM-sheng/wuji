@@ -1,0 +1,51 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-09-20T16:43:55.513Z",
+  "height": 967841,
+  "params": {
+    "genesis": 967826,
+    "confirmations": 6,
+    "interval": 4320,
+    "unit": "12000000000000",
+    "checkpointHeight": 967825,
+    "checkpointHash": "0x6bc016e24a9987823eb4ef0c72925304ef16a7bc7cd600000000000000000000",
+    "checkpointWork": "570195989278543477056646"
+  },
+  "chains": [
+    {
+      "chainId": 97,
+      "index": "0xe26b0951082c61575ecfe04c44b19c4dca2cd19b",
+      "evmBlock": 132168228,
+      "evmBlockHash": "0xa060858416d4c7409daf391881c0bf056239b58318cb5f6c37f55c20dde8d2c9",
+      "lastHeight": 967851,
+      "lastHash": "0xeb2fed18316e414ffed2dfd652d4713528a4a5216d2e00000000000000000000",
+      "fresh": true,
+      "S_wad": "30312000000000000",
+      "atHeight": {
+        "height": 967841,
+        "lastHash": "0x08d168533fc2633e7591d67a530475ae4bf3591eb6c800000000000000000000",
+        "S_wad": "18924000000000000",
+        "method": "subtract-relay-increments",
+        "subtractedHeights": 10
+      }
+    },
+    {
+      "chainId": 11155111,
+      "index": "0x66e5d15c4c62e81084126c5429e10208b69cc65e",
+      "evmBlock": 11745437,
+      "evmBlockHash": "0xa7f9a1bcc689c2bfa8d79d340a02e638e825241d0ed8d2650fe420c7deb84d65",
+      "lastHeight": 967841,
+      "lastHash": "0x08d168533fc2633e7591d67a530475ae4bf3591eb6c800000000000000000000",
+      "fresh": true,
+      "S_wad": "18924000000000000",
+      "atHeight": {
+        "height": 967841,
+        "lastHash": "0x08d168533fc2633e7591d67a530475ae4bf3591eb6c800000000000000000000",
+        "S_wad": "18924000000000000",
+        "method": "direct",
+        "subtractedHeights": 0
+      }
+    }
+  ],
+  "scope": "Same-height index equality under these RPC responses; separate claims, not a bridge or proof of global Bitcoin synchronization."
+}

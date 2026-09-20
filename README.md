@@ -40,7 +40,8 @@ cd contracts && ~/.foundry/bin/forge test # unit / fuzz / invariant suites
 ```
 
 Current timestamp-checking testnet manifest: `contracts/deployments/bsc-testnet-timestamps-v3.json` (port 8792).
-Sepolia/WETH deployment tooling and comparison are described below (T3).
+Sepolia/WETH manifest: `contracts/deployments/sepolia-weth-v3.json` (port 8793).
+Live verification and receipts: [T3 report](docs/tasks/T3_REPORT.md).
 The earlier reserve manifest remains `contracts/deployments/bsc-testnet-reserve-v2.json` (port 8791).
 `bsc-testnet.json` is retained as the historical lifetime-points comparison manifest.
 
@@ -168,6 +169,7 @@ DEPLOYMENT_COMMIT=<full-commit> node scripts/record-sepolia-deployment.mjs
 MANIFEST=contracts/deployments/sepolia-weth-v3.json VERIFICATION_OUTPUT=contracts/deployments/sepolia-verification.json node scripts/verify-bitcoin-deployment.mjs
 ENV_FILE="$PWD/contracts/.env.sepolia" MANIFEST=contracts/deployments/sepolia-weth-v3.json bash scripts/bitcoin-testnet.sh
 node scripts/compare-chains.mjs
+READ_RPC=https://ethereum-sepolia.publicnode.com MANIFEST=contracts/deployments/sepolia-weth-v3.json INDEXER_URL=http://localhost:8793 OPERATION_OUTPUT=contracts/deployments/sepolia-operation.json node scripts/verify-reserve-operation.mjs
 ```
 
 The Sepolia terminal defaults to port 8793, a separate cache and `wuji-sepolia` process names. Its keeper uses
@@ -182,6 +184,11 @@ to that height by subtracting its extra canonical header increments (at most 432
 WAIT rather than PASS. This checks agreement under those RPC responses; T4 adds independent two-source
 Bitcoin reconstruction. ETH gas is spent and WETH remains collateral; testnet bounties do not establish
 economic sustainability.
+
+`READ_RPC` optionally selects another historical-state endpoint for the operations replay. It must return
+the expected chain ID and the same observation-block hash as the manifest RPC; `LOG_RPC` can independently
+select a log endpoint subject to the same checks. Transport timeouts/HTTP 429/5xx on public reads have a
+bounded retry budget; JSON-RPC execution errors fail immediately and writes are not automatically retried.
 
 Historical bytecode verification must use that release's build artifacts, not the current reserve build.
 The additional [T2 deployment](contracts/deployments/t2-interrupted-deployment.json) was confirmed on testnet

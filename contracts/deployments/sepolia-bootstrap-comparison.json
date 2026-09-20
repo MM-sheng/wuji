@@ -1,0 +1,36 @@
+{
+  "status": "WAIT",
+  "reason": "At least one index has not folded its first height",
+  "height": 967825,
+  "params": {
+    "genesis": 967826,
+    "confirmations": 6,
+    "interval": 4320,
+    "unit": "12000000000000",
+    "checkpointHeight": 967825,
+    "checkpointHash": "0x6bc016e24a9987823eb4ef0c72925304ef16a7bc7cd600000000000000000000",
+    "checkpointWork": "570195989278543477056646"
+  },
+  "chains": [
+    {
+      "chainId": 97,
+      "index": "0xe26b0951082c61575ecfe04c44b19c4dca2cd19b",
+      "evmBlock": 132167106,
+      "evmBlockHash": "0xdaf46bb6b154b4649a1f424f25f0541cb195ec8eebba97be70cdd85657e27f06",
+      "lastHeight": 967851,
+      "lastHash": "0xeb2fed18316e414ffed2dfd652d4713528a4a5216d2e00000000000000000000",
+      "fresh": true,
+      "S_wad": "30312000000000000"
+    },
+    {
+      "chainId": 11155111,
+      "index": "0x66e5d15c4c62e81084126c5429e10208b69cc65e",
+      "evmBlock": 11745399,
+      "evmBlockHash": "0xa9dc5ac43dd2786e49f6d3ec5ac44df12dacaab1f307c26491c426fdb90c012e",
+      "lastHeight": 967825,
+      "lastHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "fresh": false,
+      "S_wad": "0"
+    }
+  ]
+}

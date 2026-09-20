@@ -11,13 +11,14 @@ const j=JSON.parse(fs.readFileSync(manifest));
 assert.ok(['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version));assert.equal(j.status,'confirmed');
 const cast=process.env.CAST||path.join(os.homedir(),'.foundry/bin/cast');
 const encode=(...a)=>execFileSync(cast,a,{encoding:'utf8'}).trim();
-const rpc=(method,params,endpoint=j.rpc)=>rpcRequest(endpoint,method,params);
+const readRpc=process.env.READ_RPC||j.rpc;
+const rpc=(method,params,endpoint=readRpc)=>rpcRequest(endpoint,method,params);
 assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),j.chainId);
 const at=await rpc('eth_blockNumber',[]);
-const logsRpc=process.env.LOG_RPC||j.rpc;
-if(logsRpc!==j.rpc){
- assert.equal(Number(BigInt(await rpc('eth_chainId',[],logsRpc))),j.chainId);
- const [a,b]=await Promise.all([rpc('eth_getBlockByNumber',[at,false]),rpc('eth_getBlockByNumber',[at,false],logsRpc)]);
+const logsRpc=process.env.LOG_RPC||readRpc;
+for(const endpoint of new Set([j.rpc,logsRpc].filter(url=>url!==readRpc))){
+ assert.equal(Number(BigInt(await rpc('eth_chainId',[],endpoint))),j.chainId);
+ const [a,b]=await Promise.all([rpc('eth_getBlockByNumber',[at,false]),rpc('eth_getBlockByNumber',[at,false],endpoint)]);
  assert.ok(a&&b,'event provider has not reached the observation block');
  assert.equal(a.hash,b.hash,'event provider disagrees on the observation block');
 }
@@ -79,7 +80,7 @@ for(const hash of new Set(evidence.map(e=>e.hash))){
  const r=await rpc('eth_getTransactionReceipt',[hash]);assert.equal(r.status,'0x1');
  transactions.push({hash,status:r.status,block:Number(BigInt(r.blockNumber)),gasUsed:Number(BigInt(r.gasUsed)),effectiveGasPrice:BigInt(r.effectiveGasPrice).toString()});
 }
-const result={verifiedAt:new Date().toISOString(),manifest,eventSource:logsRpc,sourceCommit:j.sourceCommit,evmBlock:Number(BigInt(at)),events:evidence,transactions,assets:Object.fromEntries([...assets].map(([t,a])=>[t,{...a,workers:Object.fromEntries(a.workers)}])),reconciliation:{evmBlock:c.observedAt,height:c.lastHeight,U,S_wad:S,lastHash:c.lastHash,matched:true,method:'Recomputed every cached raw header, then read contract state at the indexer observation block; this is not the two-source independent verifier planned in T4.'}};
+const result={verifiedAt:new Date().toISOString(),manifest,readSource:readRpc,eventSource:logsRpc,sourceCommit:j.sourceCommit,evmBlock:Number(BigInt(at)),events:evidence,transactions,assets:Object.fromEntries([...assets].map(([t,a])=>[t,{...a,workers:Object.fromEntries(a.workers)}])),reconciliation:{evmBlock:c.observedAt,height:c.lastHeight,U,S_wad:S,lastHash:c.lastHash,matched:true,method:'Recomputed every cached raw header, then read contract state at the indexer observation block; this is not the two-source independent verifier planned in T4.'}};
 const output=process.env.OPERATION_OUTPUT||'contracts/deployments/reserve-operation.json';
 fs.writeFileSync(output,JSON.stringify(result,(_,v)=>typeof v==='bigint'?v.toString():v,2)+'\n');
 console.log('PASS',output,JSON.stringify(result.reconciliation));

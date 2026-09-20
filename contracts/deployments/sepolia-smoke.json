@@ -1,0 +1,74 @@
+{
+  "chainId": 11155111,
+  "manifest": "contracts/deployments/sepolia-weth-v3.json",
+  "worker": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "startedAt": "2026-09-20T16:31:46.471Z",
+  "status": "confirmed",
+  "transactions": [
+    {
+      "operation": "deposit()",
+      "to": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "hash": "0x8ce19561e899c86cce6e4bbf47bd0c00cb65921a600156a4bbd8e5806b7e17e6",
+      "status": "0x1",
+      "block": 11745385,
+      "gasUsed": 45038
+    },
+    {
+      "operation": "approve(address,uint256)",
+      "to": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "hash": "0x67fcb3bb7824c679f2d2d5068be4b7090eff49d8e52b8df07de9ee4576622db0",
+      "status": "0x1",
+      "block": 11745387,
+      "gasUsed": 46052
+    },
+    {
+      "operation": "fund(address,uint256)",
+      "to": "0x1c2a6f16fa9e481c712abe6dfa22215e833b64ae",
+      "hash": "0xb9ae027a255915f527b6b5e98e933bf9fa3912204941e8ae34161155a768c0ed",
+      "status": "0x1",
+      "block": 11745388,
+      "gasUsed": 86916
+    },
+    {
+      "operation": "approve(address,uint256)",
+      "to": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "hash": "0x0a7392f1a9167b39484ab39f2c05c7a9e4abfa8bb0f202ccaf2af039fffca5ce",
+      "status": "0x1",
+      "block": 11745390,
+      "gasUsed": 46052
+    },
+    {
+      "operation": "mint(uint256)",
+      "to": "0x8783FcE1D731242B8Af3C42f8680B9A7B6F1BF7D",
+      "hash": "0x69d4233c7d6e09574d6672f1067daf6f97d019099a9fc315f6cab6109fbe8f8b",
+      "status": "0x1",
+      "block": 11745398,
+      "gasUsed": 203007
+    },
+    {
+      "operation": "redeemPair(uint256,uint256)",
+      "to": "0x8783FcE1D731242B8Af3C42f8680B9A7B6F1BF7D",
+      "hash": "0xcad16ff64dfad0b8cc72c885769789ece6491bdb762dda7d2b1e5e757313cb03",
+      "status": "0x1",
+      "block": 11745411,
+      "gasUsed": 73200
+    },
+    {
+      "operation": "route(address)",
+      "to": "0xcd1d0e1d3f46067b6185c1719a2bffeecd2ef493",
+      "hash": "0xa0546754a17fc0c8b82b8a6df213c8a35bdacfc3c39de52a5599789c069e30c1",
+      "status": "0x1",
+      "block": 11745412,
+      "gasUsed": 74870
+    }
+  ],
+  "completedAt": "2026-09-20T16:38:27.483Z",
+  "checks": {
+    "wrapped": "3000000000000000",
+    "funded": "1000000000000000",
+    "fees": "1000000000000",
+    "liabilitiesAfter": 0,
+    "walletDelta": "1999000000000000",
+    "reserveDelta": "1001000000000000"
+  }
+}

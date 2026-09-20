@@ -96,6 +96,12 @@ The age gate does not prove global synchronization. Independent review remains o
 
 ## T3 · Deploy to Ethereum Sepolia with **ETH (WETH) collateral** — this is the mainnet shape (see ARCHITECTURE 目标栈)
 
+Delivered on `codex/sepolia`: [T3_REPORT.md](T3_REPORT.md). Sepolia WETH vault and separate keeper are live
+at :8793; seven deployment and seven smoke receipts succeeded. BSC/Sepolia agreed at Bitcoin 967851,
+including exact integer S and hash; reserve funding, 26-height bounty allocation and actual claims were
+replayed. 112 Solidity tests and 28 Node tests passed; protocol source and original invariants unchanged.
+Independent review remains open. The next implementation task is T4.
+
 Same contracts, same `GENESIS_HEIGHT`, same relay checkpoint, deployed on Sepolia (chain 11155111). Run a second
 keeper against it. Add `scripts/compare-chains.mjs` that reads `S`, `lastHeight`, `lastHash` from both the BSC-testnet
 and Sepolia indexes and prints whether they agree at the same height (they must while neither has frozen). Document

@@ -216,7 +216,7 @@ FeeRouter 是金库的 immutable treasury。`route(token)` 将该币种的 **100
 深重组导致 fold 失败时，独立 submit 仍可推进 relay，而原子调用整体回滚。
 
 构造顺序为 reserve → relay → index → router；reserve 只绑定预测的 index 地址与 GENESIS_HEIGHT，
-没有 setter。部署脚本核对 CREATE 地址，测试网捐赠 MockUSDT/MockWBNB。主网目标中的原生 ETH 金库
+没有 setter。部署脚本核对 CREATE 地址；BSC 测试网捐赠 MockUSDT/MockWBNB，Sepolia 另行包装测试 ETH 并捐赠 WETH。主网目标中的原生 ETH 金库
 和 CREATE2 创世部署仍需另行实现，不能由本轮 ERC-20 储备替代。
 
 keeper 的 operations-reserve 模式只对操作者指定的 REWARD_TOKENS 计赏（可在启动时配置），正常跟进优先

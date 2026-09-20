@@ -1,0 +1,112 @@
+{
+  "verifiedAt": "2026-09-20T16:52:40.892Z",
+  "manifest": "contracts/deployments/sepolia-weth-v3.json",
+  "readSource": "https://ethereum-sepolia.publicnode.com",
+  "eventSource": "https://ethereum-sepolia.publicnode.com",
+  "sourceCommit": "901fa89d506c3fb4ed2f7f278e6747df4a353bef",
+  "evmBlock": 11745479,
+  "events": [
+    {
+      "kind": "Funded",
+      "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "worker": "0x85967858e2464535a12031103aba38f2795fe8fd",
+      "amount": "1000000000000000",
+      "hash": "0xb9ae027a255915f527b6b5e98e933bf9fa3912204941e8ae34161155a768c0ed",
+      "block": 11745388
+    },
+    {
+      "kind": "Funded",
+      "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "worker": "0xcd1d0e1d3f46067b6185c1719a2bffeecd2ef493",
+      "amount": "1000000000000",
+      "hash": "0xa0546754a17fc0c8b82b8a6df213c8a35bdacfc3c39de52a5599789c069e30c1",
+      "block": 11745412
+    },
+    {
+      "kind": "Bounty",
+      "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "worker": "0x85967858e2464535a12031103aba38f2795fe8fd",
+      "amount": "1600399360369",
+      "from": "967826",
+      "to": "967841",
+      "hash": "0xb53fe8a1ed521b82ed554517a117fd5a4dfd9014c077277955a3f58c08b41d58",
+      "block": 11745434
+    },
+    {
+      "kind": "Claimed",
+      "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "worker": "0x85967858e2464535a12031103aba38f2795fe8fd",
+      "amount": "1600399360369",
+      "hash": "0x90eb9715995cf88a082e4e7293f1a33f61ef37b2de28573d2e6eecdeeb1a81f2",
+      "block": 11745440
+    },
+    {
+      "kind": "Bounty",
+      "token": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "worker": "0x85967858e2464535a12031103aba38f2795fe8fd",
+      "amount": "998949990719",
+      "from": "967842",
+      "to": "967851",
+      "hash": "0xfa92ebffe03b72b9dc1f4e377c39ef264aa988f558a488dda88d4b97bfb42d04",
+      "block": 11745458
+    }
+  ],
+  "transactions": [
+    {
+      "hash": "0xb9ae027a255915f527b6b5e98e933bf9fa3912204941e8ae34161155a768c0ed",
+      "status": "0x1",
+      "block": 11745388,
+      "gasUsed": 86916,
+      "effectiveGasPrice": "1119248607"
+    },
+    {
+      "hash": "0xa0546754a17fc0c8b82b8a6df213c8a35bdacfc3c39de52a5599789c069e30c1",
+      "status": "0x1",
+      "block": 11745412,
+      "gasUsed": 74870,
+      "effectiveGasPrice": "1020662966"
+    },
+    {
+      "hash": "0xb53fe8a1ed521b82ed554517a117fd5a4dfd9014c077277955a3f58c08b41d58",
+      "status": "0x1",
+      "block": 11745434,
+      "gasUsed": 2281757,
+      "effectiveGasPrice": "1097087852"
+    },
+    {
+      "hash": "0x90eb9715995cf88a082e4e7293f1a33f61ef37b2de28573d2e6eecdeeb1a81f2",
+      "status": "0x1",
+      "block": 11745440,
+      "gasUsed": 47612,
+      "effectiveGasPrice": "1106653642"
+    },
+    {
+      "hash": "0xfa92ebffe03b72b9dc1f4e377c39ef264aa988f558a488dda88d4b97bfb42d04",
+      "status": "0x1",
+      "block": 11745458,
+      "gasUsed": 911842,
+      "effectiveGasPrice": "1015232561"
+    }
+  ],
+  "assets": {
+    "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": {
+      "reserve": "998400650648912",
+      "allocated": "998949990719",
+      "funded": "1001000000000000",
+      "paid": "1600399360369",
+      "workers": {
+        "0x85967858e2464535a12031103aba38f2795fe8fd": "998949990719"
+      },
+      "heights": "26"
+    }
+  },
+  "reconciliation": {
+    "evmBlock": 11745477,
+    "height": 967851,
+    "U": 2526,
+    "S_wad": "30312000000000000",
+    "lastHash": "0xeb2fed18316e414ffed2dfd652d4713528a4a5216d2e00000000000000000000",
+    "matched": true,
+    "method": "Recomputed every cached raw header, then read contract state at the indexer observation block; this is not the two-source independent verifier planned in T4."
+  }
+}
