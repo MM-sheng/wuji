@@ -8,6 +8,10 @@ derived from Bitcoin proof-of-work headers and can be independently recomputed. 
 the intended model; it is not a proof of unbiased mining, independence from every asset, or investment returns.
 There is no owner, governance or upgrade key. Paired YANG/YIN vaults are one application of this public index.
 
+Read the six-page Chinese whitepaper: [PDF](docs/WHITEPAPER.pdf) · [editable Markdown](docs/WHITEPAPER.md).
+It describes the testnet implementation, conditional mathematical model and remaining verification boundaries.
+[Recompute its numbers or render the PDF](docs/tools/README.md).
+
 Four different things must be distinguished:
 
 | Object | Meaning |

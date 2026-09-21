@@ -132,7 +132,7 @@ Implemented on `codex/terminal-ipfs`: [T5_REPORT.md](T5_REPORT.md). Staircase vi
 fresh browser RPC comparison, read-only CORS and verified single-file IPFS pinning are delivered. 112 Solidity
 and 74 Node tests pass. Live Sepolia snapshot comparison and the offline IPFS gateway flow were verified.
 Public persistent hosting/DNS remain unconfigured; T4's full live two-source reconstruction remains open.
-T6 is the next implementation task.
+T6's whitepaper is delivered below; T7's design note is next.
 
 - The market now steps every ~10 min. Make that legible: last Bitcoin height and hash (→ mempool.space), time since
   last block, next-block ETA from mempool fee/stat endpoints, the current series boundary height with blocks-to-go,
@@ -144,6 +144,12 @@ T6 is the next implementation task.
   `wuji.market` → IPFS gateway / DNSLink setup for when the domain exists.
 
 ## T6 · Whitepaper
+
+Delivered on `codex/whitepaper`: [T6_REPORT.md](T6_REPORT.md). The Chinese Markdown and six-page PDF cover the
+current implementation, conditional model, preregistration method and related work. Offline facts come from
+contract constants, public manifests and real fixtures. 112 Solidity tests and the three Bitcoin JS tests pass;
+protocol code and financial invariants are unchanged. This is a research whitepaper, not an independent audit.
+T7 is next: write and review the mathematical design before implementing any rolling contract.
 
 `docs/WHITEPAPER.md`, ≤ 6 pages, in this order: (1) 无极生太极，太极生两仪 — what it is in one paragraph;
 (2) the path: Bitcoin PoW, byteSum, UNIT, why re-hash, expected vol; (3) the pair: absolute-position clamped settlement shares, expiry payoffs versus market prices, bounded claims and series; (4) collateral vaults and the factory; (5) settlement
@@ -163,7 +169,9 @@ simulation over the real header fixtures; build only after review. It may turn o
 
 ## T9 · Frozen-state exit (review item #7) — required before mainnet
 
-A >6-block Bitcoin reorg halts `fold` forever; pairs still redeem at par but a one-sided holder has no exit.
+A Bitcoin reorg replacing a folded hash makes `fold` reject progress while that mismatch persists; there is no
+rollback/recomputation mechanism for the replacement branch. Matched pairs remain redeemable less fees under
+ordinary collateral behaviour, but an unmatched holder may have no single-sided exit before settlement.
 Design and implement a rule with no admin: if `fold` has been halted for more than X Bitcoin blocks (measured by the
 relay's own best height, not wall clock), the current series settles at the **last recorded checkpoint** (or, if none
 in this series, at ½/½) and no further series opens for that vault. Analyse and test the incentive to trigger the halt

@@ -1,0 +1,59 @@
+{
+  "basis": "Solidity constants, public v3 manifests, real Bitcoin fixtures; mathematical outputs are conditional models, not measured market returns",
+  "constants": {
+    "unitWad": "12000000000000",
+    "unit": 0.000012,
+    "mean": 4080,
+    "confirmations": 6,
+    "feeBps": 5,
+    "bountyDivisor": 10000,
+    "maxRelayAgeSeconds": 10800
+  },
+  "release": {
+    "genesisHeight": 967826,
+    "interval": 4320,
+    "firstBoundary": 972145,
+    "sepoliaNotionalWad": "1000000000000000"
+  },
+  "idealIndependentBytes": {
+    "varianceByteSum": 174760,
+    "standardDeviationByteSum": 418.04305998305966,
+    "maximumAbsoluteStep": 0.04896,
+    "sigmaPerHeight": 0.005016516719796716,
+    "sigmaAt144Heights": 0.06019820063756059,
+    "meanDaysPerFullSeries": 30
+  },
+  "known800000": {
+    "explorerHash": "00000000000000000002a7c4c1e48d76c5a37902165a270156b7a8d72728a054",
+    "rawHash": "54a02827d7a8b75601275a160279a3c5768de4c1c4a702000000000000000000",
+    "R": "74323d1b46bfc56d162ea5725ebc666028c5ee2b0a4824e32dedff53fe3ec1fd",
+    "delta": -187,
+    "incrementWad": "-2244000000000000",
+    "nBits": "0x17053894",
+    "rawByteSumMeanUnderUniformValidHash": 2802.8829041044646
+  },
+  "scenarios": {
+    "assumedGasPerHeight": 300000,
+    "assumedGwei": 1,
+    "assumedHeightsPerDay": 144,
+    "costEthPerDay": 0.0432,
+    "reserveEthForNextBounty": 3,
+    "feeBaseEthPerDay": 86.4,
+    "zeroRevenueHalfLifeDays": 48.132814071065425
+  },
+  "evidence": {
+    "originalHeaders": 2028,
+    "extendedHeaders": 6060,
+    "coreTimestampVectors": 345,
+    "extendedRange": [
+      798336,
+      804395
+    ],
+    "retargets": [
+      798336,
+      800352,
+      802368,
+      804384
+    ]
+  }
+}
