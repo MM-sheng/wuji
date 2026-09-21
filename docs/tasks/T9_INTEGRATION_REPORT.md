@@ -14,7 +14,13 @@ anchor, smoke transactions and ongoing keepers need more headroom. These are obs
 The Sepolia dry-run completed successfully: estimated gas 17,625,107; estimated max fee 2.057607588 gwei;
 estimated funding requirement 0.036265553902511916 test ETH for deployment alone. This is a simulation,
 not a receipt or a fee charged. Public summary: `contracts/deployments/sepolia-v4-preflight.json`.
-The PoW faucet form is filled; this new CAPTCHA is awaiting action-time confirmation. No faucet claim is asserted.
+Funding follow-up (2026-09-21, approximately 23:20 CST): after the user completed the faucet step, the
+PoW faucet reported `[IPINFO_RESTRICTION] IP Blocked: You're connecting from a hosting IP range.` No session
+or claim succeeded. The Google Cloud Sepolia faucet was also tried normally with the same deployment address;
+it reported its daily account/address quota was exhausted and displayed a retry time of September 22, 2026,
+00:12:37 (desktop timezone Asia/Shanghai). That filled page is retained for a later retry; no scheduled retry
+has been created. An on-chain read still showed exactly 0.015681414448876420 test ETH and both latest/pending
+nonces equal to 70. No new deployment or funding transaction was broadcast during this follow-up.
 
 ## Delivered behaviour
 
