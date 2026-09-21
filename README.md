@@ -287,3 +287,15 @@ check**, implemented by `scripts/verify-bitcoin-deployment.mjs`; equality of mas
 `READ_RPC` overrides the read endpoint and `BYTECODE_OUTPUT` saves the result. `SOLC` may select a native compiler
 path; its exact version is checked. These scripts target the current v3 source; old releases require their own checkout.
 The workflow runs all existing financial tests plus independent-verifier, real local deployment and container checks.
+
+## Terminal heartbeat, source selection and IPFS
+
+The Bitcoin terminal now has **Steps**, a block-height/hash heartbeat, a labelled statistical arrival estimate
+and per-series heights remaining. In **数据源 · 核验**, save/select indexer URLs and choose an independent RPC.
+The browser reads exact `S` and `yangShare` at a pinned EVM block, checks deployment bindings and clears stale
+agreement badges. An RPC-only read still works when the indexer is unavailable; it is not header reconstruction.
+
+With an initialized Kubo repository, run `bash scripts/publish-ipfs.sh`. It pins only the standalone `index.html`,
+reads it back to check the bytes, and prints its directory CID. A local pin is not permanent public hosting.
+See [terminal / IPFS operations](docs/TERMINAL_IPFS.md) for CORS, HTTPS, provider trust, pin replication and the
+future `wuji.market` DNSLink setup. Delivery evidence: [T5 report](docs/tasks/T5_REPORT.md).

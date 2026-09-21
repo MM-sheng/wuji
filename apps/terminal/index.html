@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>μ · WUJI</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230e1116%27/%3E%3Ctext x=%2716%27 y=%2723%27 text-anchor=%27middle%27 font-family=%27IBM Plex Mono,monospace%27 font-size=%2720%27 fill=%27%23f5b342%27%3Eμ%3C/text%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#0e1116; --panel:#131820; --panel2:#171d27; --head:#10151d;
@@ -24,7 +23,7 @@
   button{cursor:pointer;background:none;border:0}
   .up{color:var(--up)} .dn{color:var(--dn)} .flat{color:var(--muted)}
 
-  .term{display:grid;height:100vh;grid-template-rows:44px 1fr 220px;grid-template-columns:minmax(0,1fr) 300px;gap:1px;background:var(--line)}
+  .term{display:grid;height:100vh;grid-template-rows:44px 1fr 285px;grid-template-columns:minmax(0,1fr) 300px;gap:1px;background:var(--line)}
   .top{grid-column:1/3}
   .chartwrap{grid-row:2;grid-column:1;background:var(--panel);display:flex;flex-direction:column;min-height:0}
   .rail{grid-row:2;grid-column:2;background:var(--panel);display:flex;flex-direction:column;min-height:0}
@@ -190,9 +189,19 @@
   .wal input{width:70px;background:var(--panel);border:1px solid var(--line2);border-radius:2px;padding:4px 6px;font-family:var(--mono);font-size:11px;text-align:right;outline:none}
   .wal .msg2{color:var(--muted);font-size:10.5px;min-height:14px;margin-top:6px;word-break:break-all}
   .stat.yy2 .v{font-size:11.5px}
+  .sources{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:18px;padding:12px 14px;font-size:11px;line-height:1.7}
+  .sources>div{min-width:0} .sources label{display:block;color:var(--muted);margin-bottom:4px}
+  .sources input,.sources select,.sources textarea{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line2);padding:5px;font:11px var(--mono)}
+  .sources textarea{height:64px;resize:vertical} .sources button{border:1px solid var(--line2);padding:4px 8px;margin:5px 4px 5px 0;border-radius:2px}
+  .sources button:hover{border-color:var(--acc)} #directResult{overflow-wrap:anywhere;font-family:var(--mono)} .muted{color:var(--muted);font-size:10px}
+  #directBadge{font-size:10px;padding:3px 10px;border-bottom:1px solid var(--line);line-height:1.5;flex:none}
+  #sourceMessage{overflow-wrap:anywhere} button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   @media (max-width:900px){
+    .sources,.taiji{grid-template-columns:1fr;height:auto} .taiji>div{overflow:visible} .sources{gap:12px}
+
     body{overflow-y:auto}
-    .term{height:auto;min-height:100vh;grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(280px,35vh) auto minmax(300px,40vh)}
+    .ctrl{gap:6px}.ctrl #tWindow{display:none}.ctrl input[type=range]{min-width:60px}.ctrl .mode{white-space:nowrap}
+    .term{height:auto;min-height:100vh;grid-template-columns:minmax(0,1fr);grid-template-rows:44px minmax(380px,45vh) auto minmax(300px,40vh)}
     .top,.bottom{grid-column:1}
     .rail{grid-row:3;grid-column:1} .bottom{grid-row:4;grid-column:1} .chartwrap{grid-column:1}
     .book{display:none} .top .stat:nth-child(n+5){display:none}
@@ -217,14 +226,15 @@
 
   <div class="chartwrap">
     <div class="ph">
-      <span id="sourceDefinition">WUJI-INDEX · 100·e^S · S = Σ unit·(byteSum(blockhash) − 4080) · one path for everyone, written by the chain</span>
+      <span id="sourceDefinition">WUJI-INDEX · 100·e^S · 等待数据源 · 指数展示不是代币市价</span>
       <span class="sp"></span>
       <div class="tb" id="tfBar"><button data-tf="1">1s</button><button data-tf="5">5s</button><button data-tf="15" class="on">15s</button><button data-tf="60">1m</button><button data-tf="300">5m</button><button data-tf="900">15m</button></div>
-      <div class="tb" id="typeBar"><button data-type="candle" class="on">Candles</button><button data-type="line">Line</button></div>
+      <div class="tb" id="typeBar"><button data-type="candle" class="on">Candles</button><button data-type="line">Line</button><button data-type="steps">Steps</button></div>
       <div class="tb"><button id="taBtn">TA overlay</button></div>
     </div>
     <div id="bitcoinSource" style="display:none;padding:6px 10px;color:var(--muted)"></div>
     <div class="tape" id="tape"><span class="src">NOISEWIRE</span><span class="h">—</span></div>
+    <div id="directBadge" role="status">等待浏览器直读</div>
     <div class="chartbody"><canvas id="chart"></canvas><div class="legend" id="legend"></div><div class="msg" id="msg"></div><div class="ta-note" id="taNote" hidden>INDICATORS DESCRIBE THE INDEX HISTORY · NO PREDICTIVE EDGE ESTABLISHED</div></div>
     <div class="ctrl">
       <button class="mode live" id="modeBtn">● LIVE</button>
@@ -253,9 +263,9 @@
       <div class="row"><span class="k">Notional / margin</span><span id="estMargin">—</span></div>
       <div class="row"><span class="k">Est. fee · liq px</span><span id="estFee">—</span></div>
       <div class="submit">
-        <button class="b" id="bLong">BUY<span class="kbd">B</span></button>
-        <button class="s" id="bShort">SELL<span class="kbd">S</span></button>
-        <button class="f" id="bFlat">CLOSE POSITION<span class="kbd">F</span></button>
+        <button class="b" id="bLong" disabled>BUY<span class="kbd">B</span></button>
+        <button class="s" id="bShort" disabled>SELL<span class="kbd">S</span></button>
+        <button class="f" id="bFlat" disabled>CLOSE POSITION<span class="kbd">F</span></button>
       </div>
     </div>
     <div class="acct">
@@ -279,6 +289,7 @@
       <button data-p="liqs">Liquidations<em id="cLiqs">0</em></button>
       <button data-p="verdict">Verdict</button>
       <button data-p="taiji">两仪 · On-chain<em id="cChain"></em></button>
+      <button data-p="data">数据源 · 核验</button>
       <button data-p="about">About</button>
       <span class="sp"></span>
       <button class="link" id="bReset">reset my account</button>
@@ -304,11 +315,22 @@
       </div>
       <div class="ruling" id="vRuling"></div>
     </div>
+    <div class="pane" id="p-data">
+      <div class="sources">
+        <div><label for="sourceSelect">索引器 · 当前来源</label><select id="sourceSelect"></select>
+          <label for="sourceList">候选 URL（每行一个）</label><textarea id="sourceList" spellcheck="false"></textarea>
+          <button id="saveSource">保存并切换</button><div id="sourceMessage" class="muted" role="status"></div></div>
+        <div><label for="deploymentSelect">直读部署（地址随页面发布固定）</label><select id="deploymentSelect"><option value="sepolia">Ethereum Sepolia · WETH · v3</option><option value="bsc">BSC testnet · USDT / WBNB · v3</option></select>
+          <label for="rpcURL">独立 RPC URL</label><input id="rpcURL" type="url" spellcheck="false">
+          <button id="saveRPC">保存 RPC</button><button id="verifyNow">立即核验</button><div class="muted">公共服务需 HTTPS 与 CORS。切换来源会重载页面，模拟账户按来源分开保存。</div></div>
+        <div id="directResult" role="status"></div>
+      </div>
+    </div>
     <div class="pane" id="p-taiji">
       <div class="taiji">
         <div>
           <h4>Series · 两仪</h4>
-          <div id="tjSeries"><div class="empty">这条链上还没有部署合约——这里只有指数。测试网版本在 :8788。</div></div>
+          <div id="tjSeries"><div class="empty">等待索引器快照；可在「数据源 · 核验」配置来源。</div></div>
         </div>
         <div>
           <h4>Contract vs index · 可验证</h4>
@@ -345,7 +367,159 @@
   // Display index = 100·exp(S). Bitcoin mode rehashes raw SHA256d(header); legacy BSC uses its old rule.
   // These chart levels and paper fills are not executable YANG/YIN quotes (docs/ARCHITECTURE.md §1–2).
   // The indexer is a cache, not an authority: /proof/:block lets anyone recompute a step from a public RPC.
-  const API=location.protocol==='file:'?'http://localhost:8787':'';   // same origin as the indexer that serves this page
+  // BEGIN VERIFICATION HELPERS — also exercised by terminal.test.mjs.
+  const ADDRESS=/^0x[0-9a-f]{40}$/i, WORD=/^0x[0-9a-f]{64}$/i;
+  function endpoint(value){
+    const u=new URL(value);
+    if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.search||u.hash)throw Error('Use an HTTP(S) URL without credentials, query or fragment');
+    if(u.protocol==='http:'&&!['localhost','127.0.0.1','[::1]'].includes(u.hostname))throw Error('Public endpoints require HTTPS');
+    return u.href.replace(/\/+$/,'');
+  }
+  function stairPoints(read,start,end){
+    const out=[[start,read(start)]];let previous=out[0][1];
+    for(let t=start+1;t<=end;t++){const next=read(t);if(next!==previous){out.push([t,previous],[t,next]);previous=next;}}
+    out.push([end,previous]);return out;
+  }
+  function word(value){if(!WORD.test(value))throw Error('Invalid ABI word');return BigInt(value);}
+  const signedWord=value=>BigInt.asIntN(256,word(value)).toString();
+  const addressWord=value=>{word(value);if(BigInt(value)>>160n)throw Error('Invalid ABI address');return '0x'+value.slice(-40).toLowerCase();};
+  const same=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();
+  function healthyHead(h,received,now=Date.now()){
+    return !!h.ts&&now-received<30000&&Math.abs(now/1000-h.ts)<90&&!h.err&&!h.halted&&!h.chain?.err;
+  }
+  async function verifySnapshot(rpc,deployment,vault,h,received,now=Date.now()){
+    if(Number(BigInt(await rpc('eth_chainId',[])))!==deployment.chainId)throw Error('RPC chain mismatch');
+    const latest=await rpc('eth_getBlockByNumber',['latest',false]);
+    const c=h.chain,v=(c?.vaults||[c?.vault]).find(v=>v&&same(v.address,vault.address));
+    const comparable=healthyHead(h,received,now)&&c&&same(c.contract,deployment.index)&&v&&Number.isSafeInteger(c.observedAt)&&c.observedAt>0&&c.observedAt<=Number(BigInt(latest.number));
+    const at=comparable?'0x'+c.observedAt.toString(16):latest.number;
+    const block=at===latest.number?latest:await rpc('eth_getBlockByNumber',[at,false]);
+    if(!block||!WORD.test(block.hash)||block.number!==at||Math.abs(now/1000-Number(BigInt(block.timestamp)))>120)throw Error('RPC block is stale or unavailable');
+    const read=(to,data)=>rpc('eth_call',[{to,data},at]);
+    const [s,height,hash,share,id,index,asset,notional,relay]=await Promise.all([
+      read(deployment.index,'0x4be1c796'),read(deployment.index,'0x25159aa9'),read(deployment.index,'0x3fa21806'),
+      read(vault.address,'0xdbc1faef'),read(vault.address,'0xe00dd161'),read(vault.address,'0x2986c0e5'),
+      read(vault.address,'0x38d52e0f'),read(vault.address,'0x858dccb3'),read(deployment.index,'0xb59589d1')]);
+    if(!same(addressWord(index),deployment.index)||!same(addressWord(asset),vault.asset)||word(notional).toString()!==vault.notional||!same(addressWord(relay),deployment.relay))throw Error('Deployment binding mismatch');
+    if(word(share)>10n**18n)throw Error('Invalid share');word(hash);
+    const series=await read(vault.address,'0xdc22cb6a'+word(id).toString(16).padStart(64,'0'));
+    if(!/^0x[0-9a-f]{448}$/i.test(series))throw Error('Invalid series ABI');
+    const sw=n=>'0x'+series.slice(2+n*64,66+n*64);
+    const result={block:Number(BigInt(at)),blockHash:block.hash,checkedAt:now,height:Number(word(height)),S_wad:signedWord(s),lastHash:hash,
+      yangShare_wad:word(share).toString(),seriesId:Number(word(id)),yang:addressWord(sw(0)),yin:addressWord(sw(1)),s0_wad:signedWord(sw(2)),
+      startHeight:Number(word(sw(3))),settlementHeight:Number(word(sw(4))),settled:word(sw(5))!==0n,vault:vault.address,asset:vault.asset,index:deployment.index,chainId:deployment.chainId,notional_wad:vault.notional};
+    const after=await rpc('eth_getBlockByNumber',[at,false]);
+    if(after?.hash!==block.hash)throw Error('EVM reorg during verification; retry');
+    const mismatches=[];
+    if(comparable){
+      for(const [key,expected] of Object.entries({S_wad:c.S_wad,height:c.lastHeight,lastHash:c.lastHash}))if(!same(result[key],expected))mismatches.push(key);
+      if(!same(result.S_wad,c.indexer_S_wad)||!same(result.lastHash,c.indexerHash))mismatches.push('indexer S/hash');
+      for(const key of ['yangShare_wad','seriesId','yang','yin','s0_wad','startHeight','settlementHeight','settled','asset','notional_wad'])if(!same(result[key],v[key]))mismatches.push(key);
+      if(Number(v.chainId)!==deployment.chainId||Number(v.notional)!==Number(result.notional_wad)/1e18||Number(v.yangShare)!==Number(result.yangShare_wad)/1e18)mismatches.push('display metadata');
+    }
+    return {...result,status:comparable?(mismatches.length?'mismatch':'matched'):'direct-only',mismatches};
+  }
+  // END VERIFICATION HELPERS
+
+  const RELEASES={"sepolia":{"chainId":11155111,"index":"0x66e5d15c4c62e81084126c5429e10208b69cc65e","relay":"0xdf1cf7734eda917976e88ea88899c4f3e5ad6170","rpc":"https://ethereum-sepolia-rpc.publicnode.com","vaults":[{"symbol":"WETH","address":"0x8783FcE1D731242B8Af3C42f8680B9A7B6F1BF7D","asset":"0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14","notional":"1000000000000000"}]},"bsc":{"chainId":97,"index":"0xe26b0951082c61575ecfe04c44b19c4dca2cd19b","relay":"0xa75d3b6581194584c1845b7dc7fed03a02bc2cbf","rpc":"https://bsc-testnet-dataseed.bnbchain.org","vaults":[{"symbol":"USDT","address":"0x381e19FA6654316ee5F7f55Db03cF2d56eD374b9","asset":"0xCc7459B3f3ff46C79B55ec69a6F0705089223426","notional":"100000000000000000000"},{"symbol":"WBNB","address":"0x57DBC0C73C8aE7B8131831A1b990dC5d74f14688","asset":"0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15","notional":"1000000000000000000"}]}};
+  // Sources are explicit browser preferences, never accepted from an indexer's payload.
+  const SOURCE_KEY='wuji:terminal-sources:v1';
+  let sourcePrefs={};try{sourcePrefs=JSON.parse(localStorage.getItem(SOURCE_KEY))||{};}catch{}
+  const sameOriginAPI=location.protocol!=='file:'&&!location.pathname.includes('/ipfs/')&&!location.pathname.includes('/ipns/')&&!location.hostname.includes('.ipfs.')&&!location.hostname.includes('.ipns.');
+  let sources=[];try{sources=(sourcePrefs.sources||[]).map(endpoint);}catch{}
+  if(!sources.length&&sameOriginAPI)sources=[location.origin];
+  const API=sources.includes(sourcePrefs.active)?sourcePrefs.active:(sources[0]||null);
+  let headReceived=0,checkResult=null,checking=false,checkEpoch=0,stats=null,statsReceived=0;
+  let deploymentId=RELEASES[sourcePrefs.deployment]?sourcePrefs.deployment:'sepolia';
+  let rpcURLs=sourcePrefs.rpcs||{};
+  const deployment=()=>RELEASES[deploymentId];
+  function selectedVerificationVault(){const d=deployment();return d.vaults.find(v=>same(v.address,curVault()?.address))||d.vaults[0];}
+  const activeRPC=()=>rpcURLs[deploymentId]||deployment().rpc;
+  function saveSources(){localStorage.setItem(SOURCE_KEY,JSON.stringify({sources,active:API,deployment:deploymentId,rpcs:rpcURLs}));}
+  async function fetchTimed(url,options={}){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+    try{const r=await fetch(url,{...options,signal:controller.signal,cache:'no-store',credentials:'omit'});if(!r.ok)throw Error('HTTP '+r.status);return new Response(await r.arrayBuffer(),{status:r.status,headers:r.headers});}finally{clearTimeout(timer);}
+  }
+  // Escape all remote strings before legacy template rendering. Links have additional allowlists.
+  function safeHead(value){
+    if(typeof value==='string')return esc(value);
+    if(Array.isArray(value))return value.map(safeHead);
+    if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,safeHead(v)]));
+    return value;
+  }
+  function validateHead(h){
+    if(!Number.isSafeInteger(h.ts)||!Number.isSafeInteger(h.genesisTs)||h.genesisTs<0||h.ts<h.genesisTs||Math.abs(Date.now()/1000-h.ts)>90)throw Error('Invalid or stale indexer clock');
+    for(const k of ['tipHash','hash'])if(h[k]&&!/^[0-9a-f]{64}$/i.test(h[k]))throw Error('Invalid Bitcoin hash');
+    const c=h.chain;if(c){
+      if(!ADDRESS.test(c.contract))throw Error('Invalid index address');
+      for(const v of c.vaults||(c.vault?[c.vault]:[])){
+        for(const k of ['address','asset','yang','yin'])if(!ADDRESS.test(v[k]))throw Error('Invalid vault address');
+        v.explorer=Number(v.chainId)===11155111?'https://sepolia.etherscan.io':Number(v.chainId)===97?'https://testnet.bscscan.com':'https://bscscan.com';
+      }
+    }
+    return safeHead(h);
+  }
+  function proofStatus(){
+    if(!checkResult)return {status:'waiting',label:checking?'浏览器正在直读…':'等待浏览器直读'};
+    if(checkResult.status==='error')return {status:'error',label:'直读失败 · '+checkResult.error};
+    if(Date.now()-checkResult.checkedAt>60000)return {status:'stale',label:'直读结果已过期 · 等待更新'};
+    if(!healthyHead(HEAD,headReceived))return {status:'direct-only',label:'浏览器直读可用 · 索引器不可比'};
+    if(!same(checkResult.index,HEAD.chain?.contract)||!same(checkResult.vault,curVault()?.address))return {status:'direct-only',label:'浏览器直读为另一部署或金库 · 不可比'};
+    if(checkResult.status==='matched')return {status:'matched',label:'✓ 浏览器直读与索引快照逐位一致'};
+    if(checkResult.status==='mismatch')return {status:'mismatch',label:'✗ 不一致 · '+checkResult.mismatches.join(', ')};
+    return {status:'direct-only',label:'仅浏览器直读 · 缺少对应索引快照'};
+  }
+  function walletVerified(v){
+    const r=checkResult;
+    return !!(v&&r&&proofStatus().status==='matched'&&r.chainId===v.chainId&&same(r.index,HEAD.chain?.contract)&&same(r.vault,v.address)&&
+      ['asset','yang','yin','seriesId','notional_wad'].every(k=>same(r[k],v[k])));
+  }
+  function assertVerifiedWallet(v){if(!walletVerified(v))throw Error('等待浏览器直读核验通过；请查看数据源标签');}
+  function renderVerification(){
+    const state=proofStatus(),r=checkResult,el=$('directResult');
+    const details=r&&r.S_wad!==undefined?`<div>EVM #${r.block} · BTC #${r.height} · ${Math.max(0,Math.floor((Date.now()-r.checkedAt)/1000))} 秒前</div><div>S (wad) ${r.S_wad}</div><div>YANG (wad) ${r.yangShare_wad} · 结算份额 ${(Number(r.yangShare_wad)/1e16).toFixed(4)}%</div><div>期末 #${r.settlementHeight} · 还需 ${Math.max(0,r.settlementHeight-r.height)} 个计入高度</div>`:'';
+    el.innerHTML=`<b class="${state.status==='matched'?'ok':state.status==='mismatch'?'bad':'warnv'}">${esc(state.label)}</b>${details}<div class="muted">固定区块核对 S、份额和金库绑定。依赖所选 RPC；不替代独立重算比特币区块头。</div>`;
+    $('directBadge').textContent=state.label;$('directBadge').className=state.status==='matched'?'ok':'warnv';
+  }
+  async function checkRPC(){
+    if(checking)return;checking=true;const epoch=checkEpoch,d=deployment(),v=selectedVerificationVault(),url=activeRPC(),h=structuredClone(HEAD),received=headReceived;
+    renderVerification();let id=0;
+    const rpc=async(method,params)=>{const n=++id,r=await fetchTimed(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:n,method,params})}),j=await r.json();if(j.error||j.id!==n||j.result===undefined)throw Error(j.error?.message||'Invalid RPC response');return j.result;};
+    try{const result=await verifySnapshot(rpc,d,v,h,received);if(epoch===checkEpoch)checkResult=result;}
+    catch(e){if(epoch===checkEpoch)checkResult={status:'error',error:e.message.slice(0,180)};}
+    finally{checking=false;renderVerification();renderTaiji();if(epoch!==checkEpoch)checkRPC();}
+  }
+  function invalidateCheck(){checkEpoch++;checkResult=null;renderVerification();checkRPC();}
+  function initSources(){
+    $('sourceList').value=sources.join('\n');
+    $('sourceSelect').replaceChildren(...sources.map(url=>{const o=document.createElement('option');o.value=o.textContent=url;o.selected=url===API;return o;}));
+    $('deploymentSelect').value=deploymentId;$('rpcURL').value=activeRPC();
+    $('saveSource').onclick=()=>{try{
+      if(W.busy)throw Error('等待钱包交易完成后再切换');
+      const next=[...new Set($('sourceList').value.split('\n').map(s=>s.trim()).filter(Boolean).map(endpoint))];
+      if(!next.length||next.length>12)throw Error('填写 1–12 个索引器 URL');
+      const selected=$('sourceSelect').value,active=next.includes(selected)?selected:next[0];
+      localStorage.setItem(SOURCE_KEY,JSON.stringify({sources:next,active,deployment:deploymentId,rpcs:rpcURLs}));location.reload();
+    }catch(e){$('sourceMessage').textContent=e.message;}};
+    $('sourceSelect').onchange=()=>{$('sourceMessage').textContent='点击保存并切换后生效';};
+    $('deploymentSelect').onchange=()=>{if(W.busy){$('deploymentSelect').value=deploymentId;return;}deploymentId=$('deploymentSelect').value;$('rpcURL').value=activeRPC();saveSources();invalidateCheck();};
+    $('saveRPC').onclick=()=>{try{rpcURLs[deploymentId]=endpoint($('rpcURL').value);saveSources();invalidateCheck();}catch(e){$('sourceMessage').textContent=e.message;}};
+    $('verifyNow').onclick=checkRPC;
+    $('sourceMessage').textContent=API?'当前索引器：'+API:'请添加索引器。IPFS 网关只提供页面，不提供行情 API。';
+    applyTF();applyType();applyTab();renderVerification();
+  }
+  async function pollStats(){
+    try{const j=await(await fetchTimed('https://mempool.space/api/v1/difficulty-adjustment')).json();if(!(j.timeAvg>0&&j.timeAvg<7200000))throw Error('Invalid block average');stats=j;statsReceived=Date.now();}catch{stats=null;}
+  }
+  function renderHeartbeat(){
+    if(HEAD.source!=='bitcoin')return;
+    const age=HEAD.tipTs?Math.floor(Date.now()/1000)-HEAD.tipTs:null;
+    const ageText=age===null?'块时间未知':age<0?'块时间戳超前 '+ago(-age):'距块时间戳 '+ago(age);
+    const mean=stats&&Date.now()-statsReceived<600000?(stats.timeAvg/60000).toFixed(1):null;
+    $('bitcoinSource').style.display='block';
+    $('bitcoinSource').innerHTML=`<div>BTC 链头 #${Number(HEAD.chainHead||0).toLocaleString()} · ${HEAD.tipHash?`<a href="https://mempool.space/block/${HEAD.tipHash}" target="_blank" rel="noopener">${HEAD.tipHash.slice(0,12)}…${HEAD.tipHash.slice(-12)}</a>`:''} · ${ageText}</div><div>已计入 #${Number(HEAD.height||0).toLocaleString()}${HEAD.behind>0?' · 尚待同步 '+Number(HEAD.behind)+' 块':''} · 等待下一块 · ${mean?'统计均值约 '+mean+' 分钟（mempool.space）':'目标均值约 10 分钟（统计源不可用）'} · 到达时间不确定，无倒计时</div>${healthyHead(HEAD,headReceived)?'':'<div class="warnv">索引数据不可用或已过期 · 上述为最后观察值</div>'}`;
+  }
+
   const SIG=0.000138*Math.sqrt(192000/86400);  // ≈ per-second log vol equivalent, used only for volume scaling
   const PX0=100, FEE_BPS=2, MONKEY_SZ=5, MONKEY_BLK=60;
   const SEED='wuji:v1';                          // seeds the monkey / synthetic book / newsroom — NOT the price
@@ -358,9 +532,19 @@
     return ((h2>>>0)*4294967296+(h1>>>0))/18446744073709551616;}
 
   function appendPX(buf){ const add=new Float32Array(buf); if(PXN+add.length>PX.length){const nx=new Float32Array(Math.max(PX.length*2,PXN+add.length+86400));nx.set(PX.subarray(0,PXN));PX=nx;} PX.set(add,PXN); PXN+=add.length; }
-  async function fetchSeconds(fromTs,toTs){ for(let a=fromTs;a<=toTs;a+=7*86400){ const b=Math.min(toTs,a+7*86400-1); const r=await fetch(`${API}/seconds?from=${a}&to=${b}`); if(!r.ok)throw new Error('seconds '+r.status); appendPX(await r.arrayBuffer()); } }
-  async function pollHead(){ const r=await fetch(API+'/head'); HEAD=await r.json(); if(!HEAD.ts||!HEAD.genesisTs)return; if(HEAD.source==='bitcoin'&&bitcoinRevision!==HEAD.blocks){PXN=0;bitcoinRevision=HEAD.blocks;blockCache.clear();} if(!GENESIS)GENESIS=HEAD.genesisTs;
-    const want=HEAD.ts-GENESIS; if(want>=PXN) await fetchSeconds(GENESIS+PXN,HEAD.ts); }
+  async function fetchSeconds(fromTs,toTs){ for(let a=fromTs;a<=toTs;a+=7*86400){ const b=Math.min(toTs,a+7*86400-1); const r=await fetchTimed(`${API}/seconds?from=${a}&to=${b}`); if(!r.ok)throw new Error('seconds '+r.status); appendPX(await r.arrayBuffer()); } }
+  async function pollHead(){
+    if(!API)throw Error('Configure an indexer in 数据源');
+    const r=await fetchTimed(API+'/head'),next=validateHead(await r.json());
+    HEAD=next;headReceived=Date.now();
+    // Select a known deployment on first load only; RPC endpoints never come from /head.
+    if(!sourcePrefs.deployment){const known=Object.entries(RELEASES).find(([,d])=>same(d.index,HEAD.chain?.contract));if(known){deploymentId=known[0];sourcePrefs.deployment=deploymentId;initSources();}}
+    if(!HEAD.ts||!HEAD.genesisTs)return;
+    if(HEAD.source==='bitcoin'&&bitcoinRevision!==HEAD.blocks){PXN=0;bitcoinRevision=HEAD.blocks;blockCache.clear();}
+    if(GENESIS&&GENESIS!==HEAD.genesisTs)throw Error('Indexer genesis changed; reload the page');
+    if(!GENESIS)GENESIS=HEAD.genesisTs;
+    const want=HEAD.ts-GENESIS;if(want>=PXN)await fetchSeconds(GENESIS+PXN,HEAD.ts);
+  }
   const priceAt=t=>PXN?PX[Math.min(PXN-1,Math.max(0,t|0))]:PX0;
   const logp=t=>Math.log(priceAt(t)/PX0);
   const nowTick=()=>Math.max(0,PXN-1);           // latest confirmed second, not the wall clock
@@ -394,8 +578,9 @@
     pnl+=prev*(priceAt(t1)-pStart); return {pnl:pnl-fees,fees,pos:prev}; }
 
   // ================= ACCOUNT (local) =================
-  const KEY='acct:'+SEED;   // account is tied to the path it was traded on
-  const LKEY='liqs:'+SEED;  // liquidation history survives account resets
+  const accountScope=API===location.origin?'':':'+API;
+  const KEY='acct:'+SEED+accountScope;   // account is tied to the path it was traded on
+  const LKEY='liqs:'+SEED+accountScope;  // liquidation history survives account resets
   const MMR=0.005, LIQ_FEE=0.003, LEVS=[1,5,10,25,50];
   let A=load(), LIQS=loadLiqs(); save();   // persist a fresh account immediately so name & join time survive reloads
   function fresh(){return{name:'anon-'+Math.floor(Math.random()*9000+1000),joined:nowTick(),pos:0,avg:0,real:0,fees:0,n:0,closes:0,fills:[],lev:10,lastCheck:nowTick(),dead:false,refunds:0};}
@@ -456,7 +641,7 @@
   const PKEY='noise-perp:prefs';
   let prefs={}; try{prefs=JSON.parse(localStorage.getItem(PKEY))||{};}catch(e){}
   const savePrefs=()=>{try{localStorage.setItem(PKEY,JSON.stringify({tf,chartType,ta:taOn,tab:curTab,vault:typeof vaultIdx==='number'?vaultIdx:0}));}catch(e){}};
-  let tf=+prefs.tf||15, chartType=prefs.chartType==='line'?'line':'candle', size=5, curTab=prefs.tab||'lead';
+  let tf=+prefs.tf||300, chartType=['line','candle','steps'].includes(prefs.chartType)?prefs.chartType:'steps', size=5, curTab=prefs.tab||(API?'taiji':'data');
   let mouse=null, chartMap=null, hoverT=null, hoverBlock=null;   // crosshair state + last draw's coordinate map
   const cv=$('chart'), ctx=cv.getContext('2d');
   function sizeCanvas(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
@@ -475,6 +660,7 @@
     return out;
   }
   function draw(){
+    if(!PXN)return;
     const W=cv.getBoundingClientRect().width,H=cv.getBoundingClientRect().height; if(!W||!H)return;
     const now=viewTick(), price=priceAt(now);
     const pad={l:6,r:64,t:26,b:22}, volH=Math.round((H-pad.t-pad.b)*0.16);
@@ -499,6 +685,9 @@
       cs.forEach(c=>{const x=X(c.t0),w=Math.max(1,cw-1),xc=x+w/2,up=c.c>=c.o;ctx.strokeStyle=ctx.fillStyle=up?css('--up'):css('--dn');
         ctx.beginPath();ctx.moveTo(xc,Y(c.h));ctx.lineTo(xc,Y(c.l));ctx.stroke();
         const yo=Y(c.o),yc=Y(c.c),top=Math.min(yo,yc),hh=Math.max(1,Math.abs(yo-yc));if(w<3)ctx.fillRect(xc-.5,top,1,hh);else ctx.fillRect(x,top,w,hh);});
+    } else if(chartType==='steps'){
+      ctx.strokeStyle=css('--acc');ctx.lineWidth=1.4;ctx.beginPath();
+      stairPoints(priceAt,tStart,now).forEach(([t,p],i)=>i?ctx.lineTo(X(t),Y(p)):ctx.moveTo(X(t),Y(p)));ctx.stroke();ctx.lineWidth=1;
     } else {
       ctx.strokeStyle=css('--acc');ctx.lineWidth=1.4;ctx.lineJoin='round';ctx.beginPath();
       const step=Math.max(1,Math.floor(span/gw)); for(let t=tStart,i=0;t<=now;t+=step,i++){const x=X(t),y=Y(priceAt(Math.max(0,t)));i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.lineTo(X(now),Y(price));ctx.stroke();ctx.lineWidth=1;
@@ -517,7 +706,7 @@
       ctx.strokeStyle=css('--muted');ctx.globalAlpha=.6;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(cx,pad.t);ctx.lineTo(cx,volTop+volH);ctx.moveTo(pad.l,cy);ctx.lineTo(pad.l+gw,cy);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
       ctx.font='10px "IBM Plex Mono",monospace';
       if(mouse.y<=pad.t+gh){ctx.fillStyle=css('--line2');ctx.fillRect(pad.l+gw+1,cy-7,pad.r-2,14);ctx.fillStyle=css('--ink');ctx.textAlign='left';ctx.fillText(mp.toFixed(2),pad.l+gw+8,cy+3);}
-      hoverT=hc?hc.t1:Math.round(mt); const bj=blockCache.get(GENESIS+hoverT); if(!bj){blockAtTick(hoverT).then(()=>{if(mouse)draw();});} hoverBlock=bj&&bj.block?bj.block:null;
+      hoverT=hc?hc.t1:Math.round(mt); const bj=blockCache.get(GENESIS+hoverT); if(!bj){blockAtTick(hoverT).then(()=>{if(mouse)draw();}).catch(()=>{});} hoverBlock=bj&&bj.block?bj.block:null;
       const tl=utc(Math.round(hc?hc.t0:mt)), tw=ctx.measureText(tl).width+10; ctx.fillStyle=css('--line2');ctx.fillRect(cx-tw/2,H-16,tw,14);ctx.fillStyle=css('--ink');ctx.textAlign='center';ctx.fillText(tl,cx,H-6);
     }
     $('legend').innerHTML=`<span>O <b>${fmt(last.o)}</b></span><span>H <b>${fmt(last.h)}</b></span><span>L <b>${fmt(last.l)}</b></span><span>C <b class="${last.c>=last.o?'up':'dn'}">${fmt(last.c)}</b></span><span>Vol <b>${Math.round(last.v)}</b></span>${last!==cs[cs.length-1]?`<span>Δ <b class="${last.c>=last.o?'up':'dn'}">${sgn(last.c/last.o*100-100)}${fmt(last.c/last.o*100-100)}%</b></span><span style="color:var(--dim)">${utc(last.t0)}</span>`:''}${mouse&&hoverBlock?`<span style="color:var(--acc)">BLOCK #${hoverBlock.toLocaleString()} · click → ${HEAD.source==='bitcoin'?'mempool.space':'BscScan'}</span>`:''}`;
@@ -673,11 +862,11 @@
   const curVault=()=>{const c=HEAD.chain; if(!c)return null; const list=c.vaults||(c.vault?[c.vault]:[]); if(!list.length)return null; if(vaultIdx>=list.length)vaultIdx=0; return list[vaultIdx];};
   function renderTaiji(){
     const c=HEAD.chain; const wrap=$('tYYwrap'); const v0=curVault();
-    if(!c||!v0){wrap.hidden=true;$('cChain').textContent='';return;}
+    if(!c||!v0||!healthyHead(HEAD,headReceived)){wrap.hidden=true;$('cChain').textContent='⚠';$('tjSeries').textContent='索引数据不可用或已过期，等待更新';$('tjChain').textContent='索引器未能提供新鲜快照，请到数据源标签查看浏览器直读结果。';$('tjWallet').textContent='等待有效金库数据';return;}
     const v={...v0,startBlock:v0.startHeight??v0.startBlock,settlementBlock:v0.settlementHeight??v0.settlementBlock}, ex=v.explorer, yang=100*v.yangShare, yin=100-yang;
-    const blocksLeft=Math.max(0,v.settlementBlock-HEAD.block), eta=blocksLeft*(HEAD.source==='bitcoin'?600:.45);
+    const blocksLeft=Math.max(0,v.settlementBlock-(c.lastHeight??c.lastBlock)), eta=blocksLeft*(HEAD.source==='bitcoin'?600:.45);
     wrap.hidden=false;$('tYang').textContent=fmt(yang);$('tYin').textContent=fmt(yin);$('tSeries').textContent=(v.symbol||'')+' #'+v.seriesId;
-    $('cChain').textContent=c.reconciliation==='matched'?'✓':'⚠';
+    $('cChain').textContent=proofStatus().status==='matched'?'✓':'⚠';
     const list=c.vaults||[v]; const sel=list.length>1?`<div class="tb" style="display:flex;gap:2px;margin-bottom:8px">${list.map((x,i)=>`<button data-v="${i}" class="${i===vaultIdx?'on':''}" style="font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:2px;color:${i===vaultIdx?'var(--ink)':'var(--dim)'};background:${i===vaultIdx?'var(--panel2)':'none'};border:1px solid ${i===vaultIdx?'var(--line2)':'transparent'}">${x.symbol||'?'} · ${x.notional}/pair</button>`).join('')}</div>`:'';
     $('tjSeries').innerHTML=sel+`
       <div style="color:var(--muted);font-size:10px;margin-bottom:6px">Settlement share (not price) · 结算份额</div>
@@ -686,7 +875,7 @@
       <div class="kv"><span>Collateral</span><b>${v.symbol||'—'} · ${v.notional} per pair · <a href="${ex}/token/${v.asset}" target="_blank">${short(v.asset)}</a></b></div>
       <div class="kv"><span>Series</span><b>#${v.seriesId} · ${v.settled?'SETTLED':'OPEN'}</b></div>
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Start Bitcoin height':'Start block'}</span><b>#${v.startBlock.toLocaleString()}</b></div>
-      <div class="kv"><span>${HEAD.source==='bitcoin'?'Settlement Bitcoin height':'Settlement block'}</span><b>#${v.settlementBlock.toLocaleString()} · ${HEAD.block<v.settlementBlock?'≈ '+ago(eta):'checkpoint ready'}</b></div>
+      <div class="kv"><span>${HEAD.source==='bitcoin'?'Settlement Bitcoin height':'Settlement block'}</span><b>#${v.settlementBlock.toLocaleString()} · ${blocksLeft?'还需 '+blocksLeft+' 个计入高度 · 均值 ≈ '+ago(eta):'checkpoint ready'}</b></div>
       <div class="kv"><span>S at open</span><b>${(Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
       <div class="kv"><span>ΔS since open</span><b class="${cls(c.S-Number(v.s0_wad)/1e18)}">${sgn(c.S-Number(v.s0_wad)/1e18)}${(c.S-Number(v.s0_wad)/1e18).toFixed(8)}</b></div>
       <div class="kv"><span>YANG-${v.seriesId}</span><b><a href="${ex}/token/${v.yang}" target="_blank">${short(v.yang)}</a></b></div>
@@ -700,14 +889,14 @@
       <div class="kv"><span>WujiIndex</span><b><a href="${ex}/address/${c.contract}" target="_blank">${short(c.contract)}</a></b></div>
       <div class="kv"><span>Contract S (wad)</span><b>${c.S_wad}</b></div>
       <div class="kv"><span>Indexer S @ same block</span><b>${c.indexer_S_wad??'—'}</b></div>
-      <div class="kv"><span>Agreement</span><b class="${agree?'ok':'bad'}">${agreement}</b></div>
+      <div class="kv"><span>索引器报告</span><b class="${agree?'ok':'bad'}">${agreement}</b></div>
       ${c.relay?`<div class="kv"><span>中继时间状态</span><b class="${c.relay.fresh?'ok':'bad'}">${c.relay.fresh?'允许计入确认块':'中继过时 · 暂缓计入'}</b></div><div class="kv"><span>Relay Bitcoin height</span><b>#${c.relay.height.toLocaleString()}</b></div>`:''}
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Contract last Bitcoin height':'Contract last block'}</span><b>#${c.lastBlock.toLocaleString()}</b></div>
       <div class="kv"><span>${HEAD.source==='bitcoin'?'Index Bitcoin height':'Index head block'}</span><b>#${HEAD.block.toLocaleString()} · contract ${(HEAD.block-c.lastBlock).toLocaleString()} behind</b></div>
       ${HEAD.source==='bitcoin'?'':`<div class="kv"><span>Frozen blocks</span><b>${c.frozenBlocks}</b></div>`}
       <div class="kv"><span>Index display · 100e^S</span><b>${fmt4(c.price)}</b></div>
       <div style="margin-top:10px;color:var(--dim);font-size:10px;line-height:1.6">${HEAD.source==='bitcoin'?'S = 1.2e-5 · Σ(byteSum(SHA256(Bitcoin hash)) − 4080)，6 确认后按高度折叠。':'S = 3.3e-7 · Σ(byteSum(blockhash) − 4080)。'}同一高度的整数必须逐位一致。</div>`;
-    [...$('tjSeries').querySelectorAll('button[data-v]')].forEach(b=>b.onclick=()=>{vaultIdx=+b.dataset.v;savePrefs();W.bal={};renderTaiji();refreshWallet().catch(()=>{});});
+    [...$('tjSeries').querySelectorAll('button[data-v]')].forEach(b=>b.onclick=()=>{if(W.busy)return;vaultIdx=+b.dataset.v;savePrefs();W.bal={};invalidateCheck();renderTaiji();refreshWallet().catch(()=>{});});
     renderWallet();
   }
 
@@ -743,7 +932,7 @@
       await refreshWallet(); }catch(e){ W.msg=e.message||String(e); renderWallet(); } }
   async function send(to,data,label,context){ W.busy=true;W.msg=label+' · confirm in wallet…';renderWallet();let success=false;
     try{ if(!context||W.acct!==context.account||curVault()?.address!==context.vault)throw Error('Wallet or vault changed; retry');
-      await requireWalletChain(context.chainId);
+      await requireWalletChain(context.chainId);assertVerifiedWallet(curVault());
       const h=await eth().request({method:'eth_sendTransaction',params:[{from:context.account,to,data,chainId:hex(context.chainId)}]}); W.msg=label+' · sent '+short(h)+' · waiting…';renderWallet();
       for(let i=0;i<120;i++){ await requireWalletChain(context.chainId); const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]}); if(r){success=r.status==='0x1';W.msg=(success?'✓ ':'✗ ')+label+' · '+short(h);break;} await new Promise(r=>setTimeout(r,1500)); }
       if(!success&&W.msg.includes('waiting'))W.msg='Receipt still pending · '+h+' · check explorer before retrying';
@@ -756,8 +945,8 @@
   async function doRedeem(){ const v=curVault(), pairs=Math.max(0.01,+$('wPairs').value||1);
     await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`,walletContext(v)); }
   function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; const vv=curVault(); if(!c||!vv){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
-    if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${W.msg||'MetaMask / any EIP-1193 wallet · '+(vv.networkName||vv.chainId)}</div>`; $('wConnect').onclick=connect; return; }
-    const v=vv, b=W.bal, wrong=W.chainId!==v.chainId;
+    if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${esc(W.msg)||'MetaMask / any EIP-1193 wallet · '+(vv.networkName||vv.chainId)}</div>`; $('wConnect').onclick=connect; return; }
+    const v=vv, b=W.bal, wrong=W.chainId!==v.chainId||!walletVerified(v);
     el.innerHTML=`
       <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
       <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmtAmount(b.usdt)}</b></div>
@@ -765,7 +954,7 @@
       <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmtAmount(b.yang*v.notional*v.yangShare)} ${v.symbol||''}</span></div>
       <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmtAmount(b.yin*v.notional*(1-v.yangShare))} ${v.symbol||''}</span></div>
       <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · ${v.notional} ${v.symbol||''}/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
-      <div class="msg2">${W.msg||`mint: 1 pair = 1 YANG + 1 YIN for ${v.notional} ${v.symbol||''} (+0.05%). redeem: a pair → ${v.notional} ${v.symbol||''} any time.`}</div>`;
+      <div class="msg2">${esc(W.msg)||(!walletVerified(v)?'等待浏览器直读核验通过；请查看数据源标签':'')||`mint: 1 pair = 1 YANG + 1 YIN for ${v.notional} ${v.symbol||''} (+0.05%). redeem: a pair → ${v.notional} ${v.symbol||''} any time.`}</div>`;
     $('wMint').onclick=doMint; $('wRedeem').onclick=doRedeem; }
   $('wConnect').onclick=connect;
   setInterval(()=>{ if(W.acct&&!W.busy)refreshWallet().catch(()=>{}); },15000);
@@ -777,12 +966,10 @@
     if(HEAD.source==='bitcoin'){
       $('sourceTag').textContent='无极 · Bitcoin PoW';
       $('sourceDefinition').textContent='WUJI-INDEX · 100e^S · Bitcoin SHA256d → SHA256 → byteSum · 6 confirmations · shared index, separate claims';
-      const el=$('bitcoinSource');el.style.display='block';
-      const age=HEAD.tipTs?Math.max(0,Math.floor(Date.now()/1000)-HEAD.tipTs):null;
-      el.innerHTML=`BTC 链头 #${HEAD.chainHead?.toLocaleString()} · ${HEAD.tipHash?`<a href="https://mempool.space/block/${HEAD.tipHash}" target="_blank">${HEAD.tipHash.slice(0,12)}…${HEAD.tipHash.slice(-12)}</a>`:''} · ${HEAD.blocks?'已计入 #'+HEAD.height:'等待首个满足 6 确认的高度'} · ${age===null?'':`距该块 ${ago(age)} · `}等待下一个块（平均约 10 分钟，无固定倒计时）`;
+      renderHeartbeat();
     }
-    $('statusBox').className='status'+(rp?' replay':''); $('statusTxt').textContent=rp?'REPLAY':(HEAD.err?'RPC ERROR':HEAD.source==='bitcoin'&&!HEAD.blocks?'等待 6 确认':`LIVE · #${(HEAD.block||0).toLocaleString()}${HEAD.behind>20?' · '+HEAD.behind+' behind':''}`);
-    ['bLong','bShort'].forEach(id=>{$(id).disabled=rp||A.dead;$(id).style.opacity=(rp||A.dead)?.35:1;});$('bFlat').disabled=rp;$('bFlat').style.opacity=rp?.35:1;
+    $('statusBox').className='status'+(rp?' replay':''); $('statusTxt').textContent=rp?'REPLAY':(!healthyHead(HEAD,headReceived)?'DATA UNAVAILABLE':HEAD.source==='bitcoin'&&!HEAD.blocks?'等待 6 确认':`${HEAD.behind>0?'SYNCING':'LIVE'} · #${(HEAD.block||0).toLocaleString()}${HEAD.behind>0?' · '+HEAD.behind+' behind':''}`);
+    ['bLong','bShort'].forEach(id=>{$(id).disabled=rp||A.dead||!healthyHead(HEAD,headReceived);$(id).style.opacity=$(id).disabled?.35:1;});$('bFlat').disabled=rp||!healthyHead(HEAD,headReceived);$('bFlat').style.opacity=$('bFlat').disabled?.35:1;
     $('tWindow').textContent=(rp?'VIEWING ':'')+new Date((GENESIS+now)*1000).toISOString().slice(0,19).replace('T',' ')+'Z';
   }
   let lastTick=-1;
@@ -799,8 +986,8 @@
 
   // ================= CONTROLS =================
   function afterTrade(){renderAll(true);renderFills();renderLiqs();}
-  const canTrade=()=>replayT===null&&!A.dead;
-  function gated(sd){ if(!canTrade()){if(A.dead)flash('ACCOUNT REKT · re-fund to continue');return false;}
+  const canTrade=()=>PXN>0&&healthyHead(HEAD,headReceived)&&replayT===null&&!A.dead;
+  function gated(sd){ if(!canTrade()){if(!healthyHead(HEAD,headReceived))flash('等待有效索引数据');else if(A.dead)flash('ACCOUNT REKT · re-fund to continue');return false;}
     const t=nowTick(),p=priceAt(t),want=sd*size,need=Math.abs(want)*p/A.lev,eq=equity(p);
     if(need>eq+1e-9){flash(`INSUFFICIENT MARGIN<br>need ${money(need)} · equity ${money(eq)} · max ${maxQty(p)} @ ${A.lev}×`);return false;}
     return true; }
@@ -817,7 +1004,7 @@
   $('scrub').oninput=e=>setReplay(+e.target.value);
   $('shareBtn').onclick=()=>{const t=viewTick();const url=location.origin+location.pathname+'#t='+new Date((GENESIS+t)*1000).toISOString().slice(0,19)+'Z';navigator.clipboard&&navigator.clipboard.writeText(url);$('shareBtn').textContent='✓ COPIED';setTimeout(()=>$('shareBtn').textContent='⧉ LINK',1200);};
   window.addEventListener('hashchange',readHash);
-  document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key==='ArrowLeft'){setReplay(viewTick()-(e.shiftKey?600:60));}else if(e.key==='ArrowRight'){setReplay(viewTick()+(e.shiftKey?600:60));}else if(e.key==='Escape'){setReplay(null);}});
+  document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(e.target.tagName))return;if(e.key==='ArrowLeft'){setReplay(viewTick()-(e.shiftKey?600:60));}else if(e.key==='ArrowRight'){setReplay(viewTick()+(e.shiftKey?600:60));}else if(e.key==='Escape'){setReplay(null);}});
   function setSize(v){size=Math.min(99999,Math.max(1,v|0||1));$('szVal').value=size;renderAcct(priceAt(viewTick()));}
   $('bLong').onclick=doLong;$('bShort').onclick=doShort;$('bFlat').onclick=()=>A.dead?refund():doFlat();
   $('szUp').onclick=()=>setSize(size+1);$('szDown').onclick=()=>setSize(size-1);$('szVal').onchange=e=>setSize(+e.target.value);
@@ -829,23 +1016,27 @@
   $('typeBar').onclick=e=>{const b=e.target.closest('button');if(!b)return;chartType=b.dataset.type;savePrefs();applyType();};
   function applyTab(){[...$('tabs').querySelectorAll('button[data-p]')].forEach(x=>x.classList.toggle('on',x.dataset.p===curTab));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+curTab));}
   $('tabs').onclick=e=>{const b=e.target.closest('button[data-p]');if(!b)return;curTab=b.dataset.p;savePrefs();applyTab();};
-  document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const k=e.key.toLowerCase();if(k==='b')doLong();else if(k==='s')doShort();else if(k==='f')doFlat();});
+  document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(e.target.tagName))return;const k=e.key.toLowerCase();if(k==='b')doLong();else if(k==='s')doShort();else if(k==='f')doFlat();});
   cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse={x:e.clientX-r.left,y:e.clientY-r.top};cv.parentElement.classList.add('hover');draw();});
   let blockCache=new Map();
-  async function blockAtTick(t){ const ts=GENESIS+t; if(blockCache.has(ts))return blockCache.get(ts); const r=await fetch(`${API}/blockAt?ts=${ts}`); const j=await r.json(); blockCache.set(ts,j); if(blockCache.size>2000)blockCache.delete(blockCache.keys().next().value); return j; }
+  async function blockAtTick(t){ const ts=GENESIS+t; if(blockCache.has(ts))return blockCache.get(ts); const r=await fetchTimed(`${API}/blockAt?ts=${ts}`); const j=await r.json(); blockCache.set(ts,j); if(blockCache.size>2000)blockCache.delete(blockCache.keys().next().value); return j; }
   cv.addEventListener('click',async e=>{ if(!chartMap)return; const r=cv.getBoundingClientRect(),x=e.clientX-r.left; const t=Math.round(chartMap.tStart+(x-chartMap.pad.l)/chartMap.gw*chartMap.span); if(t<0||t>nowTick())return;
-    const j=await blockAtTick(t); if(j.block) window.open(j.url||`https://${HEAD.chain?.vault?.chainId===97?'testnet.':''}bscscan.com/block/${j.block}`,'_blank'); });
+    try{const j=await blockAtTick(t);if(Number.isSafeInteger(j.block)){const url=HEAD.source==='bitcoin'&&/^[0-9a-f]{64}$/i.test(j.hash)?'https://mempool.space/block/'+j.hash:`https://${HEAD.chain?.vault?.chainId===97?'testnet.':''}bscscan.com/block/${j.block}`;window.open(url,'_blank','noopener');}}catch{} });
   cv.addEventListener('mouseleave',()=>{mouse=null;cv.parentElement.classList.remove('hover');draw();});
   window.addEventListener('resize',sizeCanvas);new ResizeObserver(sizeCanvas).observe(cv.parentElement);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderAll(true);});
 
   async function boot(){
     $('statusTxt').textContent='SYNCING';
-    for(;;){ try{ await pollHead(); if(PXN>0)break; }catch(e){ $('statusTxt').textContent='INDEXER OFFLINE'; } await new Promise(r=>setTimeout(r,800)); }
+    for(;;){ try{ await pollHead(); if(PXN>0)break; }catch(e){ HEAD.err=e.message;$('statusTxt').textContent='INDEXER OFFLINE'; } await new Promise(r=>setTimeout(r,3000)); }
     if(!A.fills.length&&!A.pos){A.joined=nowTick();A.lastCheck=nowTick();} A.joined=Math.min(A.joined,nowTick()); A.lastCheck=Math.min(A.lastCheck,nowTick()); save();
     applyTF();applyType();applyTA();applyTab();renderFills();renderLiqs();sizeCanvas();readHash();renderAll(true);requestAnimationFrame(loop);
-    (async function poll(){ for(;;){ try{ await pollHead(); }catch(e){ HEAD.err=e.message; } await new Promise(r=>setTimeout(r,400)); } })();
+    (async function poll(){ for(;;){ try{ await pollHead(); }catch(e){ HEAD.err=e.message; } await new Promise(r=>setTimeout(r,3000)); } })();
   }
+  initSources();pollStats();setInterval(pollStats,300000);
+  // Freshness and errors must update even when the chart has no new second.
+  setInterval(()=>{renderHeartbeat();renderVerification();renderTaiji();if(PXN)renderMode(viewTick());},1000);
+  setTimeout(checkRPC,1000);setInterval(checkRPC,30000);
   boot();
 })();
 </script>

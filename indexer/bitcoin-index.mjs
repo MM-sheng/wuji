@@ -30,12 +30,12 @@ async function readVault(V,at) {
   const id = Number(BigInt(cid)); const assetAddr = '0x' + asset.slice(26);
   const [sr, bal] = await Promise.all([read(V, SEL.series + id.toString(16).padStart(64, '0')), read(assetAddr, SEL.balanceOf + V.slice(2).toLowerCase().padStart(64, '0'))]);
   const w = k => '0x' + sr.slice(2 + 64 * k, 2 + 64 * (k + 1));
-  c.v = { address: V, asset: assetAddr, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), startHeight: Number(BigInt(w(3))), settlementHeight: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18,
+  c.v = { address: V, asset: assetAddr, seriesId: id, yang: '0x' + w(0).slice(26), yin: '0x' + w(1).slice(26), s0_wad: toInt(w(2)).toString(), startHeight: Number(BigInt(w(3))), settlementHeight: Number(BigInt(w(4))), settled: BigInt(w(5)) !== 0n, yangShare: Number(BigInt(ys)) / 1e18, yangShare_wad: BigInt(ys).toString(),
     balance: Number(BigInt(bal)) / 1e18, liabilities: Number(BigInt(liab)) / 1e18, chainId: CHAIN_ID, networkName: NETWORK.name, explorer: NETWORK.explorer };
   const sym = await read(V, '0xbf911794').catch(() => null);                                          // collateralSymbol()
   if (sym) { try { const off = Number(BigInt('0x' + sym.slice(2, 66))), len = Number(BigInt('0x' + sym.slice(2 + off * 2, 2 + off * 2 + 64))); c.v.symbol = Buffer.from(sym.slice(2 + off * 2 + 64, 2 + off * 2 + 64 + len * 2), 'hex').toString(); } catch (e) {} }
   const notional = await read(V, '0x858dccb3');
-  c.v.notional = Number(BigInt(notional)) / 1e18;
+  c.v.notional = Number(BigInt(notional)) / 1e18;c.v.notional_wad=BigInt(notional).toString();
   c.v.balance_wad=BigInt(bal).toString();c.v.liabilities_wad=BigInt(liab).toString();c.v.solvent=BigInt(bal)>=BigInt(liab);
   return c.v;
 }
@@ -63,8 +63,8 @@ async function pollChain(){
 }
 async function sync(){
  if(halted)return;
- tip=await api.tip();
- const tipBlock=await api.at(tip);const tipStep=step(tipBlock.header);if(tipStep.hash!==tipBlock.hash)throw Error("tip hash mismatch");tipHash=tipStep.hash;tipTs=tipStep.timestamp;
+ const nextTip=await api.tip();
+ const tipBlock=await api.at(nextTip);const tipStep=step(tipBlock.header);if(tipStep.hash!==tipBlock.hash)throw Error("tip hash mismatch");tip=nextTip;tipHash=tipStep.hash;tipTs=tipStep.timestamp;
  if(!genesisTs)genesisTs=step((await api.at(genesis)).header).timestamp;
  if(rows.length){const last=rows.at(-1);if((await api.hashAt(last.height))!==last.hash){halted=true;throw Error('deep Bitcoin reorg: finalized history changed');}}
  const final=tip-6;
@@ -91,6 +91,9 @@ function head(){const last=rows.at(-1);return {source:'bitcoin',block:last?.heig
 const staticDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../apps/terminal');
 http.createServer(async(req,res)=>{
  const u=new URL(req.url,'http://local'),q=u.searchParams;
+ res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET, OPTIONS');
+ if(req.method==='OPTIONS'){res.writeHead(204);return res.end();}
+ if(req.method!=='GET'){res.writeHead(405,{'Allow':'GET, OPTIONS'});return res.end();}
  const json=(v,status=200)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store'});res.end(JSON.stringify(v));};
  try{
   if(u.pathname==='/head')return json(head());

@@ -128,6 +128,12 @@ no successful live reconstruction is claimed. T5 is the next implementation task
 
 ## T5 · Terminal for a 10-minute heartbeat + IPFS
 
+Implemented on `codex/terminal-ipfs`: [T5_REPORT.md](T5_REPORT.md). Staircase view, persisted source selection,
+fresh browser RPC comparison, read-only CORS and verified single-file IPFS pinning are delivered. 112 Solidity
+and 74 Node tests pass. Live Sepolia snapshot comparison and the offline IPFS gateway flow were verified.
+Public persistent hosting/DNS remain unconfigured; T4's full live two-source reconstruction remains open.
+T6 is the next implementation task.
+
 - The market now steps every ~10 min. Make that legible: last Bitcoin height and hash (→ mempool.space), time since
   last block, next-block ETA from mempool fee/stat endpoints, the current series boundary height with blocks-to-go,
   and the on-chain S vs indexer S badge as today. Candles stay; add a "steps" line-style that draws the path as a
