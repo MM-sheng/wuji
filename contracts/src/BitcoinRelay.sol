@@ -21,6 +21,9 @@ contract BitcoinRelay {
     uint32 internal workerCount;
     bytes32 public bestHash;
     uint64 public bestHeight;
+    /// @notice Changes on every heavier non-extension, even if a later fork restores an earlier branch.
+    /// @dev Consumers can reject an observation that straddles an otherwise unobserved reorg.
+    uint256 public reorgCount;
     uint64 public immutable checkpointHeight;
     bytes32 public immutable checkpointHash;
     struct Info { uint32 height; uint32 time; uint32 epoch; uint32 worker; }
@@ -106,6 +109,7 @@ contract BitcoinRelay {
             if(work > tipWork) {
                 if(parent == tip) main[height] = hash;
                 else {
+                    ++reorgCount;
                     bytes32 cursor = hash; uint64 at = height;
                     while(main[at] != cursor) {
                         main[at] = cursor;

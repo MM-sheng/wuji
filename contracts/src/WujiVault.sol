@@ -16,7 +16,7 @@ import {SeriesToken, SeriesTokenDeployer} from "./SeriesToken.sol";
 ///         yangShare = clamp(1/2 + (S_now - S_start)/2, 0, 1). It is not a lending price feed.
 ///
 ///         Every series ends at a block fixed before its hash exists. After that block anyone may settle():
-///         the share is frozen from its index checkpoint and the next series opens at ½/½. Settled tokens redeem
+///         the share is frozen from its index checkpoint and the next series uses that checkpoint as its base. Settled tokens redeem
 ///         individually at their frozen value; pairs of the same series always redeem for NOTIONAL.
 ///
 ///         No owner. No pause. No upgrade. Fee and treasury are immutable.
@@ -43,9 +43,12 @@ contract WujiVault is ReentrancyGuard {
         uint256 yangShare; // wad share of NOTIONAL owed per YANG after settlement; yin = WAD − yangShare
     }
     Series[] public series;
+    /// @notice Terminal closure after the index's permissionless deep-reorg exit; never reopens.
+    bool public closed;
 
     event SeriesOpened(uint256 indexed id, address yang, address yin, int256 s0, uint64 settlementHeight);
     event SeriesSettled(uint256 indexed id, int256 s1, uint256 yangShare);
+    event FrozenSettlement(uint256 indexed id, bool boundaryRecorded, uint256 yangShare);
     event Minted(uint256 indexed id, address indexed to, uint256 pairs, uint256 collateral, uint256 fee);
     event RedeemedPair(uint256 indexed id, address indexed from, uint256 pairs, uint256 collateral, uint256 fee);
     event RedeemedSettled(
@@ -117,6 +120,7 @@ contract WujiVault is ReentrancyGuard {
 
     /// @notice Mint `pairs` (wad) of YANG+YIN in the current series. Pulls pairs·NOTIONAL + fee.
     function mint(uint256 pairs) external nonReentrant returns (uint256 id) {
+        _requireActive();
         require(pairs > 0, "zero");
         id = currentId();
         Series storage s = series[id];
@@ -152,6 +156,7 @@ contract WujiVault is ReentrancyGuard {
     /// @notice Freeze the current series at its predetermined index checkpoint and open the next one.
     /// @dev If the checkpoint is more than one default fold away, advance WujiIndex separately first.
     function settle() external nonReentrant returns (uint256 settledId, uint256 nextId) {
+        _requireActive();
         settledId = currentId();
         Series storage s = series[settledId];
         uint64 boundary = s.settlementHeight;
@@ -167,6 +172,22 @@ contract WujiVault is ReentrancyGuard {
         s.yangShare = _share(s.s0, s1);
         emit SeriesSettled(settledId, s1, s.yangShare);
         nextId = _open(s1, boundary + 1, boundary + index.CHECKPOINT_INTERVAL());
+    }
+
+    /// @notice Close the current series without opening another after the index is permanently frozen.
+    /// @dev Each series contains at most its own end checkpoint. Earlier/later checkpoints cannot replace it.
+    ///      Preserve a recorded end payoff; otherwise split at 1/2. Previously settled claims never change.
+    function settleFrozen() external nonReentrant returns (uint256 settledId) {
+        require(!closed, "vault closed");
+        require(index.frozen(), "index not frozen");
+        settledId = currentId();
+        Series storage s = series[settledId];
+        bool recorded = index.checkpointed(s.settlementHeight);
+        uint256 share = recorded ? _share(s.s0, index.checkpointS(s.settlementHeight)) : WAD / 2;
+        closed = true;
+        s.settled = true;
+        s.yangShare = share;
+        emit FrozenSettlement(settledId, recorded, share);
     }
 
     /// @notice Redeem settled tokens one-sided at their frozen values.
@@ -190,6 +211,12 @@ contract WujiVault is ReentrancyGuard {
     }
 
     // ---------------------------------------------------------------- internals
+
+    function _requireActive() internal view {
+        require(!closed, "vault closed");
+        require(!index.frozen(), "index frozen");
+        require(index.historyConsistent(), "deep Bitcoin reorg");
+    }
 
     function _open(int256 s0, uint64 startHeight, uint64 settlementHeight) internal returns (uint256 id) {
         id = series.length;

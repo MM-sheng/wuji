@@ -10,6 +10,8 @@ contract WujiIndex {
     uint256 public constant DEFAULT_MAX = 256;
     // Bounds the advertised tip's age, not proof that no higher-work Bitcoin tip exists elsewhere.
     uint256 public constant MAX_RELAY_AGE = 3 hours;
+    // Testnet candidate: a branch-observation delay, not a proven mining-cost/security threshold.
+    uint64 public constant FROZEN_EXIT_DELAY = 144;
     BitcoinRelay public immutable relay;
     RelayerRewards public immutable rewards;
     uint64 public immutable GENESIS_HEIGHT;
@@ -20,8 +22,20 @@ contract WujiIndex {
     uint64 public nextCheckpointHeight;
     mapping(uint64 => int256) public checkpointS;
     mapping(uint64 => bool) public checkpointed;
+    struct ReorgNotice {
+        uint64 fromHeight;
+        uint64 readyHeight;
+        uint64 foldedHeight;
+        bytes32 foldedHash;
+        bytes32 tipHash;
+        uint256 revision;
+    }
+    ReorgNotice public reorgNotice;
+    bool public frozen;
     event Fold(uint64 indexed fromHeight, uint64 indexed toHeight, int256 S);
     event Checkpoint(uint64 indexed height, int256 S);
+    event ReorgObserved(uint64 indexed fromHeight, uint64 readyHeight, bytes32 tipHash, uint256 revision);
+    event Frozen(uint64 indexed foldedHeight, bytes32 foldedHash, int256 S, uint64 relayHeight);
     constructor(BitcoinRelay relay_, uint64 genesis, uint64 interval, RelayerRewards rewards_) {
         if (address(rewards_) != address(0)) {
             require(rewards_.index() == address(this) && rewards_.GENESIS_HEIGHT() == genesis, "reward index mismatch");
@@ -43,6 +57,40 @@ contract WujiIndex {
         uint256 time = relay.timestampOf(relay.bestHash());
         return block.timestamp <= time + MAX_RELAY_AGE && time <= block.timestamp + 2 hours;
     }
+    function historyConsistent() public view returns (bool) {
+        return lastHash == bytes32(0) || relay.headerAt(lastHeight) == lastHash;
+    }
+    /// @notice Record a proven folded-history mismatch. Repeating a valid notice cannot postpone its deadline.
+    /// @dev A reverted fold cannot persist this state; observation must be a separate successful call.
+    function observeReorg() external returns (uint64 readyHeight) {
+        require(!frozen, "index frozen");
+        require(!historyConsistent(), "history consistent");
+        if (_noticeValid()) return reorgNotice.readyHeight;
+        uint64 height = relay.bestHeight();
+        uint64 base = height > lastHeight ? height : lastHeight;
+        readyHeight = base + FROZEN_EXIT_DELAY;
+        bytes32 tip = relay.bestHash();
+        uint256 revision = relay.reorgCount();
+        reorgNotice = ReorgNotice(height, readyHeight, lastHeight, lastHash, tip, revision);
+        emit ReorgObserved(height, readyHeight, tip, revision);
+    }
+    function _noticeValid() internal view returns (bool) {
+        ReorgNotice memory n = reorgNotice;
+        return n.fromHeight != 0 && n.foldedHeight == lastHeight && n.foldedHash == lastHash
+            && !historyConsistent() && n.revision == relay.reorgCount()
+            && relay.headerAt(n.fromHeight) == n.tipHash;
+    }
+    function frozenExitReady() public view returns (bool) {
+        return !frozen && _noticeValid() && relay.bestHeight() >= reorgNotice.readyHeight;
+    }
+    /// @notice Irreversibly seal this index; all vaults may then close using already recorded boundaries.
+    /// @dev No wall-clock/staleness shortcut, caller-selected value or new reward allocation.
+    function freeze() external {
+        require(!frozen, "index frozen");
+        require(frozenExitReady(), "frozen exit not ready");
+        frozen = true;
+        emit Frozen(lastHeight, lastHash, S, relay.bestHeight());
+    }
     function fold() external returns (uint64) { return fold(DEFAULT_MAX); }
     /// @notice Atomically relay and fold so the transaction completing both can earn the bounty.
     /// @dev Standalone submit/fold remain available, including when a deep reorg prevents folding.
@@ -57,7 +105,8 @@ contract WujiIndex {
         require(rewardTokens.length == 0 || address(rewards) != address(0), "rewards disabled");
         require(rewardTokens.length <= 8, "token limit");
         require(rewardTokens.length == 0 || max <= DEFAULT_MAX, "height limit");
-        require(lastHash == bytes32(0) || relay.headerAt(lastHeight) == lastHash, "deep Bitcoin reorg");
+        require(!frozen, "index frozen");
+        require(historyConsistent(), "deep Bitcoin reorg");
         uint256 count = pending();
         // Empty deployments can create their vaults before catch-up. A stale nonempty backlog cannot advance.
         if(count>0) require(relayFresh(), "relay stale");

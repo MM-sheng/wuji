@@ -1,9 +1,11 @@
 # WUJI threat model
 
 Status: Bitcoin-source testnet prototype, updated after the 2026-09-20 adversarial review. The source
-contains T2 storage packing, T1 operations-reserve bounties and T2b header-time checks / bounded tip-age gating.
+contains T2 storage packing, T1 operations-reserve bounties, T2b header-time checks / bounded tip-age gating,
+and the **not-yet-deployed T9 frozen-exit candidate** described below.
 Ports 8790 and 8791 retain their earlier immutable comparison deployments. T2b evidence is in
-[tasks/T2B_REPORT.md](tasks/T2B_REPORT.md); independent review and frozen-state exit (T9) remain pending.
+[tasks/T2B_REPORT.md](tasks/T2B_REPORT.md). Ports 8792/8793 still use v3 without T9 exits. Independent review,
+the T9 parameter decision and a new testnet integration/exit drill remain pending.
 Legacy BSC Gap/EIP-2935 rules do not apply to Bitcoin mode.
 
 ## Objective and assumptions
@@ -79,9 +81,52 @@ This removes the settlement-call timing option, not miner influence or the infor
 Six descendants are a probabilistic margin. If a heavier branch replaces a folded height, `fold` reverts
 with `deep Bitcoin reorg`, including when called without pending work. No zero increment is substituted and
 previous payments cannot be undone. Full pairs can still be redeemed, but an unsettled one-sided holder
-has no guaranteed protocol exit. A market buyer is not an assured recovery mechanism. T9 must define and
-analyse an immutable frozen-state exit before mainnet; it does not exist today. Different deployments can
-halt at different heights. Deep fork rewrites can also exceed transaction gas limits.
+has no guaranteed protocol exit on the existing v3 deployments. A market buyer is not an assured recovery
+mechanism. The T9 source candidate below supplies a conditional exit on new deployments, without undoing
+historical payments. Different deployments can halt at different heights. Deep fork rewrites can also exceed
+transaction gas limits.
+
+### T9 source candidate: branch-bound observation and terminal settlement
+
+A separate successful `observeReorg()` call records the mismatch; a reverting fold cannot persist it.
+The record binds last folded height/hash, observed relay height/tip and `BitcoinRelay.reorgCount`.
+The immutable test-candidate delay is 144 beyond the greater of observed relay height and folded height.
+The record must remain valid: unchanged folded state, a continuing mismatch, identical relay revision and
+the same canonical hash at the observed height. Any subsequent winning non-extension invalidates the record,
+including a restoration and re-divergence that no index caller witnessed. Repeating a valid observation cannot
+extend its deadline. Shorter higher-work chains cannot shorten the base below the last folded height.
+
+On reaching the height threshold, anyone can `freeze()` the index permanently. Each vault separately calls
+`settleFrozen()` and closes without creating a successor. An already recorded **own** maturity checkpoint fixes
+the original payoff; with no own maturity checkpoint, the share is 1/2. Earlier/later checkpoints are ineligible,
+including checkpoints preceding a late-created vault. Previously settled series and payments never change.
+Current-series mint and ordinary settlement are rejected as soon as history mismatches; matched pairs and
+already settled claims remain redeemable with the existing fee and rounding. Closed vaults never reopen even
+if the original Bitcoin branch later returns, since withdrawals may already have relied on the exit allocation.
+
+This preserves solvency under the same standard-token assumptions, but **does not preserve every holder's
+economic value**. With whole-claim holdings qY/qN and a stipulated counterfactual normal payoff a, changing to
+half yields approximately `N*(qY-qN)*(0.5-a)*(1-0.0005)` incremental collateral after fees. The gross absolute
+difference is at most `N*abs(qY-qN)/2` for a in [0,1]; external positions and leverage can increase total incentive.
+For example, ten YANG, notional 100 and counterfactual a=0.1 gain 400 gross / 399.8 net relative to that payoff,
+at the other side's expense. This is a scenario, not a prediction from the current displayed share or a live quote.
+For a boundary already recorded, the candidate does not let the caller choose a new allocation.
+
+144 heights are an observation window, **not** a proven unprofitable-attack threshold or safe TVL limit.
+Subsequent headers may be honestly mined or already available; the attacker does not necessarily pay to mine
+144 fresh blocks after the notice. Private fork/withholding costs, external exposure, partial SPV views and
+host-chain censorship matter. There is no on-chain exposure cap. Independent economic/security review of the
+half-allocation policy, delay and release exposure is required before mainnet.
+
+Residual liveness costs are explicit: even a shallow winning fork on the replacement branch resets the notice;
+an attacker may postpone exit by provoking repeated changes. A missing relayer cannot advance the threshold.
+Ordinary staleness or elapsed wall time alone does not trigger exit. No new bounty pays observe/freeze/closure
+calls. Standalone relay submission remains available after a seal; submit-and-fold reverts atomically.
+Allocated historical rewards remain claimable, but unallocated reserve and fees arriving after the index is
+sealed have no future fold task to pay and may remain locked permanently. There is no rescue owner or migration key.
+
+Specification, implementation boundaries and tests: [T9_DESIGN.md](tasks/T9_DESIGN.md),
+[T9_REPORT.md](tasks/T9_REPORT.md). No existing immutable deployment is upgraded by this source change.
 
 ## Defences and evidence
 
@@ -122,7 +167,8 @@ costs the caller gas and does not remove reserve funds, but cannot be excluded a
 The keeper uses an explicitly configured token list, normally takes the atomic path, and by default attempts
 fee collection and claims only every 144 folded heights. This limits gas spent on tiny transfers. Separate
 submit/fold remain available for fork recovery; an atomic call that fails folding also reverts its submissions.
-Independent relaying can continue after a deep reorg, but the frozen index still needs the T9 design.
+Independent relaying can continue after a deep reorg. New deployments can use the T9 candidate's conditional
+exit; existing v3 deployments cannot. The residual reserve limitation above is deliberately not a new withdrawal permission.
 
 The economic model in ARCHITECTURE §4 includes single-height and batch measurements. Nonzero reserves do not
 promise profitable operation: without income they decay, and fees, token prices, routing, competition and
@@ -181,4 +227,5 @@ an incomplete but sufficiently recent branch. Since a header may be up to two ho
 can remain inside the three-hour age bound for about five hours after publication, with host/node clock
 variation adding further uncertainty. A natural three-hour Bitcoin block gap can also stop folding; a valid
 new tip restores it without a key. This gate does not remove public-information delay, force a miner to publish,
-or fix the permanent index halt after a reorg of folded history. T9 remains separate required work.
+or repair a persistent mismatch of folded history. The T9 candidate terminates affected contracts instead of
+repairing the history; its review and public-testnet validation remain separate required work.

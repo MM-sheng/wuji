@@ -59,6 +59,12 @@ cross-checks, series solvency, wallet balances, paired minting, and paired redem
 
 ## Production status
 
+Current source includes the [T9 frozen-exit candidate](docs/tasks/T9_DESIGN.md). It is locally tested but **not
+deployed to the existing v3 addresses** below; public-testnet deployment, client integration and independent
+review remain pending. The 144-height wait and half-allocation fallback are candidate economic decisions,
+not proven attack deterrence. Use the original source revision (for example `c8ea538`) to reproduce old v3
+runtime bytecode; current source should not match those old runtimes.
+
 Testnet prototype only. Fixed Bitcoin-height checkpoint settlement removes the known caller timing option.
 One series spans 4320 Bitcoin heights (about 30 days on average, not a fixed calendar deadline).
 Do not deploy to mainnet until an independent contract review and the remaining checklist are complete.

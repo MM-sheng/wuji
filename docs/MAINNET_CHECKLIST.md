@@ -71,6 +71,9 @@ The release audit and production-parameter checks below remain separate from suc
 ## Review follow-through
 
 - [ ] Confirm terminal and integration docs distinguish index / share / expiry payoff / market price (T0).
-- [ ] Implement and adversarially analyse immutable frozen-state exit for one-sided holders (T9).
+- [x] Implement and locally test the T9 frozen-exit candidate, including restoration/re-divergence and one-sided redemption ([design](tasks/T9_DESIGN.md)). This is a source candidate, not a deployed mainnet safeguard.
+- [ ] Independently review T9's half-allocation incentive, 144-height candidate delay, reset/griefing risks and exposure policy.
+- [ ] Deploy the exact reviewed T9 release on a separate testnet, integrate terminal/keeper state and complete a user exit drill. Existing v3 addresses cannot be upgraded.
+- [ ] Accept and disclose unallocated reserve/post-freeze fee retention, or separately redesign and review it before mainnet.
 - [ ] Complete the 48-hour author-shutdown drill with independent operators and document user exit (T8).
 - [ ] Publish conservative exposure policy and its private-cost assumptions; do not label the toy attack threshold a proven safe cap.
