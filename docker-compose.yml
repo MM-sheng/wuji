@@ -13,6 +13,7 @@ x-runtime: &runtime
     RPC: ${RPC:-}
     BITCOIN_API: ${BITCOIN_API:-https://mempool.space/api,https://blockstream.info/api}
     BITCOIN_API_KIND: ${BITCOIN_API_KIND:-esplora}
+    BITCOIN_REQUEST_DELAY_MS: ${BITCOIN_REQUEST_DELAY_MS:-}
 services:
   indexer:
     <<: *runtime

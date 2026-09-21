@@ -78,7 +78,7 @@ T3 的 BSC 测试网与 Ethereum Sepolia 使用同一 genesis 967826 和中继 c
   边界已记录则保留原赔付，否则 ½/½；不使用早于或晚于本期的检查点，不开新期。
 - 既有已结算期不改价，配对与冻结单边仍按原费率、舍入赎回。封存后即使原链恢复也不重新开期。
 - 144 不构成矿工成本证明或安全 TVL。½ 退出可改变单边价值；浅分叉重置等待、无人中继和不可回收运营储备
-  都是保留限制。独立审阅、候选参数评估及新测试网/终端/keeper 集成未完成，不能当作 v3 地址已有的保护。
+  都是保留限制。终端/keeper 与本地演练已交付；独立审阅、候选参数评估及新公网测试网部署未完成，不能当作 v3 地址已有的保护。
 
 规范与攻击分析见 [T9_DESIGN.md](tasks/T9_DESIGN.md)，合约验证见 [T9_REPORT.md](tasks/T9_REPORT.md)。
 客户端、测试网 keeper 与本地退出演练见 [T9_INTEGRATION_REPORT.md](tasks/T9_INTEGRATION_REPORT.md)；公网 v4 尚未部署。
@@ -166,6 +166,10 @@ T10 中的证明开销与预算只是未来目标，不能替代本轮实测。
 
 - `SOURCE=bitcoin`，默认公共 Esplora 接口 mempool.space 和 blockstream.info。
 - `BITCOIN_API` 可配置本地 Esplora；`BITCOIN_API_KIND=bitcoind-rest` 配合本地 Core REST 根 URL。
+- Bitcoin HTTP 客户端串行请求，按来源间隔与指数退避，并跨轮次遵守 `Retry-After`；长等待明确报错留待下一轮。
+  默认公网间隔 1 秒、Blockstream 至少 6 秒、回环地址 0；`BITCOIN_REQUEST_DELAY_MS` 可配置 0–60000 毫秒。
+  每进程最多缓存 4096 个已核对哈希的原始区块头；高度对应哈希与 tip 不缓存，原有六后继与重组检查保留。
+  多进程仍共享来源的 IP 配额，节流不能保证公共服务可用；本地 Core/Esplora 仍是可选的数据来源。
 - `GENESIS_HEIGHT` 必填，数据文件为 `bitcoin-<genesis>.json`，与旧缓存分离。
 - 核对 header 的显示哈希、父链接和六个后继头后发布。已发布历史变化时停止，不继续重写路径。
 - 秒级指数展示按确认头时间发布；时间取该头及六后继时间的最大值，再与上一条发布时间取最大，避免比特币时间戳倒退导致时间索引错序。这是确定的展示约定，不是精确现实确认时间。

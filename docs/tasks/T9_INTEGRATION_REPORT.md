@@ -22,6 +22,29 @@ it reported its daily account/address quota was exhausted and displayed a retry 
 has been created. An on-chain read still showed exactly 0.015681414448876420 test ETH and both latest/pending
 nonces equal to 70. No new deployment or funding transaction was broadcast during this follow-up.
 
+### Bitcoin source follow-up (September 21)
+
+Repeated `HTTP 429` errors in the existing Sepolia keeper exposed a separate availability issue: the shared
+Bitcoin client retried immediately and downloaded overlapping confirmation headers repeatedly. The client now
+serializes requests, tracks per-source spacing and exponential cooldown across polls, respects delta/date
+`Retry-After`, and returns promptly when all sources are cooling down beyond its 30-second request budget.
+Permanent HTTP errors are attempted once per source in a request. Local Core REST and Esplora remain supported.
+
+Only exact 80-byte headers whose double-SHA256 matches their requested hash enter a bounded 4096-header cache.
+Canonical height-to-hash and tip responses are never cached. In a five-candidate real-fixture test, overlapping
+six-descendant checks require 11 header downloads instead of 35, while all 35 canonical height lookups remain.
+The original deep-reorg halt and keeper catch-up tests still pass. No protocol arithmetic, consensus check,
+confirmation count, fee, invariant or production Solidity source changed.
+
+Verification: all **115 Node tests** and **134 Foundry tests** passed; `docker compose config --quiet` and diff
+checks passed. A bounded read-only public-source probe obtained Bitcoin height **968010** and verified header
+hash `000000000000000000015a733791fe9c74913f2d8a5ba703ff016c377c2a9b1f`. Blockstream returned 429 during
+the probe; the configured mempool source succeeded, completing the read in approximately 5.4 seconds.
+This is a single-header availability check, not the independent two-source full reconstruction required by T4.
+Spacing and cache are per process, so simultaneous old stacks still share the provider's IP quota.
+Existing comparison processes were not restarted; they load these changes on their next deliberate restart.
+No new public deployment, signing transaction or funding claim was made in this step.
+
 ## Delivered behaviour
 
 - `indexer/frozen-exit.mjs` reads the notice, folded context, canonical ancestor and relay revision at one EVM

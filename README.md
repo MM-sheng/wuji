@@ -93,6 +93,14 @@ For a local Bitcoin source: set `BITCOIN_API=http://127.0.0.1:8332` and
 `SOURCE=bitcoin GENESIS_HEIGHT=... PORT=8789 node indexer/index.mjs` also runs standalone without contracts.
 It stays at 100 until the genesis height has six descendants. Averages are not block countdown guarantees.
 
+Bitcoin HTTP reads are serialized per client with source-specific backoff and `Retry-After` handling across
+polls. Default minimum spacing is 1 second for public sources, 6 seconds for Blockstream, and zero for loopback.
+`BITCOIN_REQUEST_DELAY_MS` overrides spacing (0–60000 ms; Blockstream retains its 6-second minimum).
+Long cooldowns return an error instead of blocking a poll indefinitely. Verified raw headers are cached by
+hash, up to 4096 per process; canonical height-to-hash and tip reads are never cached, so reorg checks remain live.
+These limits are per process: multiple local stacks still share the provider's IP quota. This reduces repeated
+requests; it does not guarantee public API availability or replace running your own source.
+
 The old BSC deployments are archived in `contracts/deployments/bsc-testnet-legacy.json`.
 On the Bitcoin branch, use `scripts/bitcoin-testnet.sh`; do not run the old BSC startup script against the new manifest.
 
