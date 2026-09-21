@@ -1,5 +1,8 @@
 # T9 Sepolia v4 deployment
 
+Later runtime follow-up: [T8_KEEPER_RUNTIME.md](T8_KEEPER_RUNTIME.md) records the direct-read fix and current
+process/funding status. The receipt and balance observations below describe the initial rollout.
+
 ## Status
 
 The frozen-exit candidate is deployed on Ethereum Sepolia. All seven deployment receipts succeeded in

@@ -196,6 +196,11 @@ deliberately (who gains at which state) and choose X accordingly. Write-up in TH
 
 ## T8 · Operations before mainnet (not code-heavy, but required)
 
+Runtime preparation: [T8_KEEPER_RUNTIME.md](T8_KEEPER_RUNTIME.md) removes slow per-read Foundry capability
+probes, checks pending work and fuel before signing, and records a live v4 update after the change. This is
+author-operated evidence; the independent-machine, 48-hour and first-settlement requirements below remain open.
+The v3 comparison keeper is currently stopped for insufficient test fuel; its read-only indexer remains available.
+
 - Second keeper on a different machine and RPC provider (T4's Docker makes this trivial).
 - **Disappearance drill** (review item #14): switch off every author-run node, RPC, keeper and front-end for 48 h on
   testnet; record whether independent participants take over profitably and whether a one-sided holder can exit.

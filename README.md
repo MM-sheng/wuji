@@ -157,6 +157,10 @@ remain available. Plain folds or omitted assets forgo their bounty, and no rewar
 Before signing, the keeper estimates gas with its actual sender and selected fees, adds 25% headroom within
 the existing operation ceiling, then checks the chain again. Invalid or over-ceiling estimates cannot send.
 This avoids reserving a multi-million-gas maximum for every small update; it does not lower actual gas usage.
+Routine keeper reads, simulation and estimation now use direct JSON-RPC; Foundry handles local ABI conversion
+and encrypted-keystore signing. Before signing, a pending transaction or an insufficient balance at the sampled
+gas price stops the send. This balance check is a floor, not a guarantee that an automatically selected maximum
+fee fits. Keep one signing process per account. Runtime evidence: [keeper follow-up](docs/tasks/T8_KEEPER_RUNTIME.md).
 
 See [T1 reserve report](docs/tasks/T1_RESERVE_REPORT.md) for 92 Solidity tests, four Node tests, deployed bytecode
 checks, mock mint/redeem/route receipts and live bounty evidence. T2b header checks are delivered separately above.

@@ -1,0 +1,102 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-09-21T23:22:26.730Z",
+  "chainId": 11155111,
+  "rpc": "https://rpc.sepolia.ethpandaops.io",
+  "manifest": "contracts/deployments/sepolia-weth-v4.json",
+  "runtimeBaseCommit": "11b22a0",
+  "runtimeFileSha256": {
+    "indexer/bitcoin-keeper.mjs": "790f572f76cedfa07df9c3aa1ab5a8248d24a41743372527fc452ccdc87dd12c",
+    "indexer/keeper-rpc.mjs": "158c0da473f63e69cf1b28716af65bb1ab97b16f6e64fbd9a048d9d5c45ead3d",
+    "indexer/frozen-keeper.mjs": "4c303e2e8ad926bfbeae774617c716e6ddb04cda739a785a3a043450da865bba",
+    "indexer/evm-rpc.mjs": "b7a3cdef7629de3c88975fcb249f83cfda912b2895b040d6e5135ab72b4bb89b"
+  },
+  "latency": {
+    "status": "PASS",
+    "checkedAt": "2026-09-21T23:20:12.867Z",
+    "chainId": 11155111,
+    "rpc": "https://rpc.sepolia.ethpandaops.io",
+    "to": "0xd10d08faf8cf4ca582319fe56df223203a852d02",
+    "signature": "checkpointHash()(bytes32)",
+    "result": "0x6bc016e24a9987823eb4ef0c72925304ef16a7bc7cd600000000000000000000",
+    "directMs": 664,
+    "castCallMs": 38194,
+    "directRpcMethods": [
+      "eth_call"
+    ],
+    "scope": "One sequential read of the same immutable checkpoint hash via each transport. Not a performance guarantee or a consensus audit."
+  },
+  "automaticTransaction": {
+    "hash": "0x0725c4bc4a4c821ee988c32be0d7a43be3ad4da7a6f977ce5f48773f74a9447e",
+    "status": "0x1",
+    "block": 11754072,
+    "nonce": 39,
+    "gasLimit": 289689,
+    "gasUsed": 227357,
+    "feeWei": "247583606109203",
+    "fromHeight": 968055,
+    "toHeight": 968055
+  },
+  "direct": {
+    "block": 11754074,
+    "blockHash": "0x30967ca732e54d203b47eb766d0999ad1978f883521630f12c2f378d87753a1e",
+    "checkedAt": 1790032940112,
+    "height": 968049,
+    "S_wad": "-85392000000000000",
+    "lastHash": "0xd71e5c8fb383699b82ed224b521af9d05db22a4f387200000000000000000000",
+    "yangShare_wad": "457304000000000000",
+    "currentId": 0,
+    "seriesId": 0,
+    "yang": "0xaa331b8c0ef51f7af3d82c78471b2612d5f98058",
+    "yin": "0x4aa32100dcd0b74e27ca1fdc7797e63be3319728",
+    "s0_wad": "0",
+    "startHeight": 967826,
+    "settlementHeight": 972145,
+    "settled": false,
+    "vault": "0xC350b5b77E0Cc7853cCD3C1EDEC562DE09e98195",
+    "asset": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    "index": "0x67a6ec0afa4f9b4dfe1d7d111a92302bd9e15e6e",
+    "chainId": 11155111,
+    "notional_wad": "1000000000000000",
+    "frozenExit": {
+      "frozen": false,
+      "historyConsistent": true,
+      "exitReady": false,
+      "noticeValid": false,
+      "delay": 144,
+      "relayHeight": 968055,
+      "revision": "0",
+      "fromHeight": 0,
+      "readyHeight": 0,
+      "remaining": null,
+      "phase": "active"
+    },
+    "closed": false,
+    "status": "matched",
+    "mismatches": []
+  },
+  "indexerHeight": 968049,
+  "balanceSnapshot": {
+    "block": 11754076,
+    "blockHash": "0xeb057c080dc3b5130dcac62ac3f973064ff83b03f29ae69e2e5bf677370d5b9f",
+    "accounts": [
+      {
+        "address": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+        "balanceWei": "640180451620034"
+      },
+      {
+        "address": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+        "balanceWei": "5995096812256163"
+      }
+    ]
+  },
+  "operations": {
+    "v4": "Indexer and revised keeper running on this workstation; no new deployment.",
+    "v3": "Keeper deliberately stopped for insufficient test fuel; indexer remains read-only on port 8793. Relay is stale and catching up remains incomplete."
+  },
+  "tests": {
+    "node": 129,
+    "foundry": 134
+  },
+  "scope": "Author-operated runtime transport verification and a confirmed public testnet update. Not independent release review, MetaMask acceptance, two-source reconstruction, or a 48-hour disappearance drill."
+}

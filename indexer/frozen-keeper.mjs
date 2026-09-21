@@ -12,7 +12,7 @@ export async function maintainFrozenExit({ rpc, index, relay, vaults, send, chai
   if ('0x' + binding.slice(-40).toLowerCase() !== relay.toLowerCase()) throw Error('Exit relay binding mismatch');
   const state = await readFrozenExit(read, index, relay);
   const targets = [];
-  if (state.frozen) for (const vault of vaults()) {
+  if (state.frozen) for (const vault of await vaults()) {
     if ('0x' + (await read(vault, '0x2986c0e5')).slice(-40).toLowerCase() !== index.toLowerCase()) throw Error('Exit vault binding mismatch');
     if (BigInt(await read(vault, '0x597e1fb5')) === 0n) targets.push(vault);
   }

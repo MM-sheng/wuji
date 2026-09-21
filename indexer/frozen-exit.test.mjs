@@ -43,3 +43,9 @@ test('only paired or already-settled claims can exit before sealing',async()=>{
  assert.equal(exitActionAllowed(state,'freeze'),false);assert.equal(exitActionAllowed(state,'close'),false);
  assert.equal(exitActionAllowed({},'pair'),false);
 });
+test('frozen closing awaits async vault discovery and propagates discovery failures',async()=>{
+ const f=fixture({frozen:true});f.options.vaults=async()=>[vault];
+ await maintainFrozenExit(f.options);assert.deepEqual(f.sends.map(a=>a[1]),['settleFrozen()']);
+ const bad=fixture({frozen:true});bad.options.vaults=async()=>{throw Error('factory unavailable');};
+ await assert.rejects(maintainFrozenExit(bad.options),/factory unavailable/);assert.equal(bad.sends.length,0);
+});
