@@ -18,3 +18,8 @@ test('keeper needs named encrypted account and absolute password path; chain-spe
 test('reject mainnet, unconfirmed or historical deployments',()=>{
  for(const override of [{chainId:1},{status:'pending'},{version:'bitcoin-rewards-v1'}])assert.throws(()=>containerEnv({...manifest,...override},{},'indexer'));
 });
+
+test('exit automation is bound to the explicit v4 manifest, never inherited by v3',()=>{
+ assert.equal(containerEnv(manifest,{FROZEN_EXIT:'1'},'indexer').FROZEN_EXIT,'0');
+ assert.equal(containerEnv({...manifest,version:'bitcoin-sepolia-v4'}, {}, 'indexer').FROZEN_EXIT,'1');
+});

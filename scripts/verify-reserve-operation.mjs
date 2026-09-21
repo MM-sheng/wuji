@@ -8,7 +8,7 @@ import {rpcRequest} from '../indexer/evm-rpc.mjs';
 import {step} from '../indexer/bitcoin.mjs';
 const manifest=process.env.MANIFEST||'contracts/deployments/bsc-testnet-reserve-v2.json';
 const j=JSON.parse(fs.readFileSync(manifest));
-assert.ok(['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version));assert.equal(j.status,'confirmed');
+assert.ok(['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3','bitcoin-sepolia-v4'].includes(j.version));assert.equal(j.status,'confirmed');
 const cast=process.env.CAST||path.join(os.homedir(),'.foundry/bin/cast');
 const encode=(...a)=>execFileSync(cast,a,{encoding:'utf8'}).trim();
 const readRpc=process.env.READ_RPC||j.rpc;

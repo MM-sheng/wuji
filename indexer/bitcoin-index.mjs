@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { BitcoinAPI, step } from './bitcoin.mjs';
 import { network, assertChain } from './networks.mjs';
 import { rpcRequest } from './evm-rpc.mjs';
+import { readFrozenExit } from './frozen-exit.mjs';
 const api=new BitcoinAPI();
 const genesis=Number(process.env.GENESIS_HEIGHT), port=Number(process.env.PORT||8789);
 if(!Number.isSafeInteger(genesis)||genesis<1) throw Error('GENESIS_HEIGHT required');
@@ -37,13 +38,15 @@ async function readVault(V,at) {
   const notional = await read(V, '0x858dccb3');
   c.v.notional = Number(BigInt(notional)) / 1e18;c.v.notional_wad=BigInt(notional).toString();
   c.v.balance_wad=BigInt(bal).toString();c.v.liabilities_wad=BigInt(liab).toString();c.v.solvent=BigInt(bal)>=BigInt(liab);
+  if(process.env.FROZEN_EXIT==='1')c.v.closed=BigInt(await read(V,'0x597e1fb5'))===1n;
   return c.v;
 }
 async function pollChain(){
  if(!CONTRACT)return;
  try{
   assertChain(await rpc('eth_chainId',[]),CHAIN_ID);
-  const at=await rpc('eth_blockNumber',[]);
+  const block=await rpc('eth_getBlockByNumber',['latest',false]);
+  const at=block.number;
   const [s,last,genesisOnchain,lastHash]=await Promise.all([call(CONTRACT,SEL.S,at),call(CONTRACT,SEL.lastHeight,at),call(CONTRACT,'0x207c8a4c',at),call(CONTRACT,'0x3fa21806',at)]);
   if(Number(BigInt(genesisOnchain))!==genesis)throw Error('Bitcoin genesis configuration mismatch');
   const lastHeight=Number(BigInt(last));const row=rows[lastHeight-genesis];
@@ -58,7 +61,9 @@ async function pollChain(){
    c.relay={address:relayAddress,fresh:BigInt(fresh)===1n,maxAge:Number(BigInt(maxAge)),height:Number(BigInt(height)),timestamp:Number(BigInt(time))};
   }
   if(FACTORY){const count=Number(BigInt(await call(FACTORY,'0x06661abd',at)));c.vaults=[];for(let i=0;i<count;i++){const v='0x'+(await call(FACTORY,'0x8c64ea4a'+i.toString(16).padStart(64,'0'),at)).slice(26);c.vaults.push(await readVault(v,at));}c.vault=c.vaults[0];}
-  chain=c;
+  if(process.env.FROZEN_EXIT==='1')c.frozenExit=await readFrozenExit((to,data)=>call(to,data,at),CONTRACT,c.relay.address);
+  if((await rpc('eth_getBlockByNumber',[at,false]))?.hash!==block.hash)throw Error('EVM reorg during snapshot');
+  c.observedHash=block.hash;chain=c;
  }catch(e){chain={contract:CONTRACT,err:e.message};}
 }
 async function sync(){

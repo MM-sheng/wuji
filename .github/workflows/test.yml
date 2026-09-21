@@ -17,6 +17,7 @@ jobs:
       - run: forge build --root contracts --sizes
       - run: node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs
       - run: node scripts/test-bytecode.mjs
+      - run: node scripts/test-frozen-exit.mjs
       - run: docker compose config --quiet
       - run: docker build -t wuji-node:local .
       - run: docker run --rm --entrypoint /usr/local/bin/cast wuji-node:local --version

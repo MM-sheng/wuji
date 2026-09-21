@@ -2,7 +2,7 @@ import fs from 'node:fs';import assert from 'node:assert/strict';import {execFil
 import {rpcRequest} from '../indexer/evm-rpc.mjs';
 import {BitcoinAPI,step} from '../indexer/bitcoin.mjs';
 const j=JSON.parse(fs.readFileSync(process.env.MANIFEST||'contracts/deployments/bsc-testnet.json'));
-const reserveMode=['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version);
+const reserveMode=['bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3','bitcoin-sepolia-v4'].includes(j.version);
 const rpc=(method,params)=>rpcRequest(j.rpc,method,params);
 assert.equal(Number(BigInt(await rpc('eth_chainId',[]))),j.chainId);
 const verified=[];
@@ -29,13 +29,17 @@ for(const v of Object.values(j.vaults)){
  assert.equal(BigInt(await read(v.address,'NOTIONAL()')),BigInt(v.notional));
  assert.equal(BigInt(await read(v.address,'FEE_BPS()')),5n);
 }
-if(j.version==='bitcoin-sepolia-v3'){
+if(['bitcoin-sepolia-v3','bitcoin-sepolia-v4'].includes(j.version)){
  assert.equal(j.chainId,11155111);assert.equal(j.vaults.WETH.asset.toLowerCase(),'0xfff9976782d46cc05630d1f6ebab18b2324d6b14');
  assert.equal(BigInt(await read(j.vaults.WETH.asset,'decimals()')),18n);
  assert.equal(Number(BigInt(await read(j.BitcoinRelay,'checkpointHeight()'))),j.checkpoint.checkpointHeight);
  const hash='0x'+step(j.checkpoint.checkpointHeader).internalHash;
  assert.equal(await read(j.BitcoinRelay,'checkpointHash()'),hash);
  assert.equal(BigInt(await rpc('eth_call',[{to:j.BitcoinRelay,data:sig('chainWork(bytes32)')+hash.slice(2)},at])),BigInt(j.checkpoint.checkpointChainWork));
+}
+if(j.version==='bitcoin-sepolia-v4'){
+ assert.equal(BigInt(await read(j.WujiIndex,'FROZEN_EXIT_DELAY()')),BigInt(j.frozenExitDelay));
+ assert.equal(j.frozenExitDelay,144);
 }
 if(j.RelayerRewards){
  const addressOf=async(a,s)=>'0x'+(await read(a,s)).slice(-40);
@@ -52,7 +56,7 @@ if(j.RelayerRewards){
 const height=Number(BigInt(await read(j.BitcoinRelay,'bestHeight()'))),hash=await read(j.BitcoinRelay,'bestHash()');
 const api=new BitcoinAPI(),source=await api.at(height);assert.equal(hash.slice(2),step(source.header).internalHash);
 let timestamps;
-if(['bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(j.version)){
+if(['bitcoin-timestamps-v3','bitcoin-sepolia-v3','bitcoin-sepolia-v4'].includes(j.version)){
  assert.equal(BigInt(await read(j.BitcoinRelay,'MAX_FUTURE_BLOCK_TIME()')),7200n);
  assert.equal(BigInt(await read(j.WujiIndex,'MAX_RELAY_AGE()')),10800n);
  assert.equal(('0x'+(await read(j.WujiIndex,'relay()')).slice(-40)).toLowerCase(),j.BitcoinRelay.toLowerCase());

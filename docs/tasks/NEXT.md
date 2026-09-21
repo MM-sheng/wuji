@@ -180,8 +180,9 @@ Source candidate delivered on `codex/frozen-exit`: [T9_DESIGN.md](T9_DESIGN.md),
 It adds revision-bound observation, a 144-height test-candidate delay, irreversible index sealing and per-vault
 closure at the recorded own boundary or 1/2. Paired exits, fees and original financial invariants are preserved.
 134 Foundry tests and 84 Node tests pass; the new terminal-state handler also passed 100000 randomized calls.
-Existing v3 deployments have no such path. Next is review plus a separate testnet deployment/client integration
-and an exit drill; the economic parameter decision and mainnet gate remain open. No mainnet readiness is claimed.
+Existing v3 deployments have no such path. Client/keeper integration and a 22-transaction local exit drill
+are delivered ([integration report](T9_INTEGRATION_REPORT.md)). The separate public deployment is awaiting
+test ETH; review, public wallet verification and the real operator drill remain pending; the economic parameter decision and mainnet gate remain open. No mainnet readiness is claimed.
 
 A Bitcoin reorg replacing a folded hash makes `fold` reject progress while that mismatch persists; there is no
 rollback/recomputation mechanism for the replacement branch. Matched pairs remain redeemable less fees under

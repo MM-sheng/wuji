@@ -58,7 +58,7 @@ test('lost indexer or RPC clears the old on-chain cells instead of retaining gre
  const cells=new Map(),get=id=>{if(!cells.has(id))cells.set(id,{innerHTML:'old green result',textContent:'old green result',hidden:false});return cells.get(id);};
  const render=html.slice(html.indexOf('  function renderTaiji(){'),html.indexOf('  // ---- wallet:'));
  for(const h of [{},{ts:now/1000,chain:{err:'RPC unavailable'}},{ts:now/1000-300,chain:{}}]){
-  const c=vm.createContext({$:get,HEAD:h,headReceived:now,healthyHead:(h,r)=>healthyHead(h,r,now),curVault:()=>({address:addr(3)})});vm.runInContext(render+'\nrenderTaiji();',c);
+  const c=vm.createContext({$:get,renderExit:()=>{},HEAD:h,headReceived:now,healthyHead:(h,r)=>healthyHead(h,r,now),curVault:()=>({address:addr(3)})});vm.runInContext(render+'\nrenderTaiji();',c);
   assert.equal(get('tYYwrap').hidden,true);assert.match(get('tjChain').textContent,/未能提供新鲜快照/);assert.equal(get('cChain').textContent,'⚠');assert.equal(get('tjWallet').textContent,'等待有效金库数据');
  }
 });
@@ -76,4 +76,21 @@ test('an indexer cannot bypass the wallet gate by declaring a legacy source',()=
   c.checkResult={...f.metadata,index:f.d.index,vault:f.v.address};assert.equal(c.allowed(f.metadata),true);
   f.metadata.asset=addr(9);assert.equal(c.allowed(f.metadata),false);
  }
+});
+
+test('historical redemptions use that series fixed share, never the current live share',async()=>{
+ const f=fixture(),original=f.rpc;
+ f.rpc=async(m,p)=>{
+  if(m==='eth_call'&&p[0].to===f.v.address){
+   if(p[0].data==='0xe00dd161')return word(3);
+   if(p[0].data.startsWith('0xdc22cb6a')){
+    assert.equal(p[0].data,'0xdc22cb6a'+word(2).slice(2));
+    return '0x'+[addr(7),addr(8),-8,967826,972145,1,700000000000000000n].map(n=>word(n).slice(2)).join('');
+   }
+  }
+  return original(m,p);
+ };
+ const r=await verifySnapshot(f.rpc,f.d,f.v,{},0,now,'2');
+ assert.equal(r.status,'direct-only');assert.equal(r.currentId,3);assert.equal(r.seriesId,2);assert.equal(r.settled,true);
+ assert.equal(r.yangShare_wad,'700000000000000000');assert.equal(r.yang,addr(7));
 });

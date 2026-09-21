@@ -1,0 +1,18 @@
+{
+  "status": "simulation-only; not deployed",
+  "chainId": 11155111,
+  "contractSourceCommit": "42d61a6cdc7db2688b6469f6cefb2a4166ea6b31",
+  "date": "2026-09-21",
+  "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "genesisHeight": 967826,
+  "checkpointHeight": 967825,
+  "checkpointInterval": 4320,
+  "estimatedGas": 17625107,
+  "estimatedMaxFeeGwei": "2.057607588",
+  "estimatedBaseFeeGwei": "1.028303794",
+  "estimatedPriorityFeeGwei": "0.001",
+  "estimatedDeploymentRequirementEth": "0.036265553902511916",
+  "observedBalanceEth": "0.015681414448876420",
+  "broadcast": false,
+  "scope": "forge script simulation against Sepolia. No v4 deployment addresses or receipts. Estimate excludes Bitcoin header catch-up, smoke transactions and ongoing operations; balance/fees can change."
+}

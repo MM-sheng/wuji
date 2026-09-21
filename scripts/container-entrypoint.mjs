@@ -5,13 +5,13 @@ import {pathToFileURL} from 'node:url';
 export function containerEnv(manifest,env,role){
  assert.ok(['indexer','keeper'].includes(role),'role must be indexer or keeper');
  assert.equal(manifest.status,'confirmed','deployment must be confirmed');
- assert.ok(['bitcoin-timestamps-v3','bitcoin-sepolia-v3'].includes(manifest.version),'use a current timestamp-checking v3 manifest');
+ assert.ok(['bitcoin-timestamps-v3','bitcoin-sepolia-v3','bitcoin-sepolia-v4'].includes(manifest.version),'use a supported timestamp-checking manifest');
  assert.ok([97,11155111].includes(manifest.chainId),'container example supports testnets only');
  assert.ok(Number.isSafeInteger(manifest.genesisHeight)&&manifest.genesisHeight>0,'invalid genesis');
  for(const name of ['WujiIndex','BitcoinRelay','WujiVaultFactory','FeeRouter','RelayerRewards'])assert.match(manifest[name],/^0x[0-9a-fA-F]{40}$/,'invalid '+name);
  const tokens=[...new Set(Object.values(manifest.vaults).map(v=>v.asset.toLowerCase()))].sort();
  assert.ok(tokens.length>0&&tokens.length<=8&&tokens.every(t=>/^0x[0-9a-f]{40}$/.test(t)),'invalid reward assets');
- const result={...env,SOURCE:'bitcoin',CHAIN_ID:String(manifest.chainId),GENESIS_HEIGHT:String(manifest.genesisHeight),CONTRACT:manifest.WujiIndex,RELAY:manifest.BitcoinRelay,FACTORY:manifest.WujiVaultFactory,FEE_ROUTER:manifest.FeeRouter,REWARDS:manifest.RelayerRewards,REWARD_MODEL:'operations-reserve',RELAY_TIMESTAMPS:'1',REWARD_TOKENS:tokens.join(','),RPC:env.RPC||manifest.rpc,PORT:env.PORT||'8789',DATA_DIR:env.DATA_DIR||'/data',CAST:env.CAST||'/usr/local/bin/cast'};
+ const result={...env,SOURCE:'bitcoin',CHAIN_ID:String(manifest.chainId),GENESIS_HEIGHT:String(manifest.genesisHeight),CONTRACT:manifest.WujiIndex,RELAY:manifest.BitcoinRelay,FACTORY:manifest.WujiVaultFactory,FEE_ROUTER:manifest.FeeRouter,REWARDS:manifest.RelayerRewards,REWARD_MODEL:'operations-reserve',RELAY_TIMESTAMPS:'1',FROZEN_EXIT:manifest.version==='bitcoin-sepolia-v4'?'1':'0',REWARD_TOKENS:tokens.join(','),RPC:env.RPC||manifest.rpc,PORT:env.PORT||'8789',DATA_DIR:env.DATA_DIR||'/data',CAST:env.CAST||'/usr/local/bin/cast'};
  if(role==='keeper'){
   assert.match(env.KEYSTORE_ACCOUNT||'',/^[a-zA-Z0-9_-]+$/,'set KEYSTORE_ACCOUNT (name only)');
   assert.ok(env.PASSWORD_FILE?.startsWith('/'),'set an absolute PASSWORD_FILE');

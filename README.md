@@ -60,8 +60,9 @@ cross-checks, series solvency, wallet balances, paired minting, and paired redem
 ## Production status
 
 Current source includes the [T9 frozen-exit candidate](docs/tasks/T9_DESIGN.md). It is locally tested but **not
-deployed to the existing v3 addresses** below; public-testnet deployment, client integration and independent
-review remain pending. The 144-height wait and half-allocation fallback are candidate economic decisions,
+deployed to the existing v3 addresses** below. Client integration and the local transaction exit drill are
+delivered ([integration report](docs/tasks/T9_INTEGRATION_REPORT.md)); the new public-testnet deployment and
+independent review remain pending. The 144-height wait and half-allocation fallback are candidate economic decisions,
 not proven attack deterrence. Use the original source revision (for example `c8ea538`) to reproduce old v3
 runtime bytecode; current source should not match those old runtimes.
 

@@ -206,6 +206,7 @@
     .rail{grid-row:3;grid-column:1} .bottom{grid-row:4;grid-column:1} .chartwrap{grid-column:1}
     .book{display:none} .top .stat:nth-child(n+5){display:none}
   }
+  .sources[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -327,6 +328,7 @@
       </div>
     </div>
     <div class="pane" id="p-taiji">
+      <div id="tjExit" class="sources" aria-live="polite"></div>
       <div class="taiji">
         <div>
           <h4>Series · 两仪</h4>
@@ -387,11 +389,11 @@
   function healthyHead(h,received,now=Date.now()){
     return !!h.ts&&now-received<30000&&Math.abs(now/1000-h.ts)<90&&!h.err&&!h.halted&&!h.chain?.err;
   }
-  async function verifySnapshot(rpc,deployment,vault,h,received,now=Date.now()){
+  async function verifySnapshot(rpc,deployment,vault,h,received,now=Date.now(),requestedSeries=null){
     if(Number(BigInt(await rpc('eth_chainId',[])))!==deployment.chainId)throw Error('RPC chain mismatch');
     const latest=await rpc('eth_getBlockByNumber',['latest',false]);
     const c=h.chain,v=(c?.vaults||[c?.vault]).find(v=>v&&same(v.address,vault.address));
-    const comparable=healthyHead(h,received,now)&&c&&same(c.contract,deployment.index)&&v&&Number.isSafeInteger(c.observedAt)&&c.observedAt>0&&c.observedAt<=Number(BigInt(latest.number));
+    const comparable=requestedSeries===null&&healthyHead(h,received,now)&&c&&same(c.contract,deployment.index)&&v&&Number.isSafeInteger(c.observedAt)&&c.observedAt>0&&c.observedAt<=Number(BigInt(latest.number));
     const at=comparable?'0x'+c.observedAt.toString(16):latest.number;
     const block=at===latest.number?latest:await rpc('eth_getBlockByNumber',[at,false]);
     if(!block||!WORD.test(block.hash)||block.number!==at||Math.abs(now/1000-Number(BigInt(block.timestamp)))>120)throw Error('RPC block is stale or unavailable');
@@ -402,12 +404,19 @@
       read(vault.address,'0x38d52e0f'),read(vault.address,'0x858dccb3'),read(deployment.index,'0xb59589d1')]);
     if(!same(addressWord(index),deployment.index)||!same(addressWord(asset),vault.asset)||word(notional).toString()!==vault.notional||!same(addressWord(relay),deployment.relay))throw Error('Deployment binding mismatch');
     if(word(share)>10n**18n)throw Error('Invalid share');word(hash);
-    const series=await read(vault.address,'0xdc22cb6a'+word(id).toString(16).padStart(64,'0'));
+    const selected=requestedSeries===null?word(id):BigInt(requestedSeries);
+    if(selected<0n||selected>word(id))throw Error('Unknown series');
+    const series=await read(vault.address,'0xdc22cb6a'+selected.toString(16).padStart(64,'0'));
     if(!/^0x[0-9a-f]{448}$/i.test(series))throw Error('Invalid series ABI');
     const sw=n=>'0x'+series.slice(2+n*64,66+n*64);
     const result={block:Number(BigInt(at)),blockHash:block.hash,checkedAt:now,height:Number(word(height)),S_wad:signedWord(s),lastHash:hash,
-      yangShare_wad:word(share).toString(),seriesId:Number(word(id)),yang:addressWord(sw(0)),yin:addressWord(sw(1)),s0_wad:signedWord(sw(2)),
+      yangShare_wad:(selected===word(id)?word(share):word(sw(6))).toString(),currentId:Number(word(id)),seriesId:Number(selected),yang:addressWord(sw(0)),yin:addressWord(sw(1)),s0_wad:signedWord(sw(2)),
       startHeight:Number(word(sw(3))),settlementHeight:Number(word(sw(4))),settled:word(sw(5))!==0n,vault:vault.address,asset:vault.asset,index:deployment.index,chainId:deployment.chainId,notional_wad:vault.notional};
+    if(deployment.frozenExit){
+      result.frozenExit=await readFrozenExit(read,deployment.index,deployment.relay);
+      result.closed=word(await read(vault.address,'0x597e1fb5'))===1n;
+      if(result.frozenExit.delay!==deployment.frozenExitDelay)throw Error('Exit delay binding mismatch');
+    }
     const after=await rpc('eth_getBlockByNumber',[at,false]);
     if(after?.hash!==block.hash)throw Error('EVM reorg during verification; retry');
     const mismatches=[];
@@ -415,10 +424,50 @@
       for(const [key,expected] of Object.entries({S_wad:c.S_wad,height:c.lastHeight,lastHash:c.lastHash}))if(!same(result[key],expected))mismatches.push(key);
       if(!same(result.S_wad,c.indexer_S_wad)||!same(result.lastHash,c.indexerHash))mismatches.push('indexer S/hash');
       for(const key of ['yangShare_wad','seriesId','yang','yin','s0_wad','startHeight','settlementHeight','settled','asset','notional_wad'])if(!same(result[key],v[key]))mismatches.push(key);
+      if(deployment.frozenExit&&(JSON.stringify(result.frozenExit)!==JSON.stringify(c.frozenExit)||result.closed!==v.closed))mismatches.push('exit state');
       if(Number(v.chainId)!==deployment.chainId||Number(v.notional)!==Number(result.notional_wad)/1e18||Number(v.yangShare)!==Number(result.yangShare_wad)/1e18)mismatches.push('display metadata');
     }
     return {...result,status:comparable?(mismatches.length?'mismatch':'matched'):'direct-only',mismatches};
   }
+  // BEGIN FROZEN EXIT SHARED
+// The same dependency-free reader is embedded in the standalone terminal.
+// `read` MUST pin every call to one EVM block; callers check that block's hash afterward.
+async function readFrozenExit(read, index, relay) {
+  const uint = value => {
+    if (!/^0x[0-9a-f]{64}$/i.test(value)) throw Error('Invalid frozen-exit ABI');
+    return BigInt(value);
+  };
+  const bool = value => { const n = uint(value); if (n > 1n) throw Error('Invalid boolean'); return n === 1n; };
+  const [f, consistent, ready, delay, notice, revision, height, folded, hash] = await Promise.all([
+    read(index, '0x054f7d9c'), read(index, '0x68c5cf08'), read(index, '0x482c25fd'),
+    read(index, '0x8dbbb868'), read(index, '0xfcbbb8a9'), read(relay, '0x12c5c524'),
+    read(relay, '0x8cef3d2a'), read(index, '0x25159aa9'), read(index, '0x3fa21806')
+  ]);
+  if (!/^0x[0-9a-f]{384}$/i.test(notice)) throw Error('Invalid reorg notice');
+  const w = n => '0x' + notice.slice(2 + n * 64, 66 + n * 64);
+  const from = uint(w(0)), deadline = uint(w(1)), best = uint(height);
+  const canonical = from ? await read(relay, '0xec1867e3' + from.toString(16).padStart(64, '0')) : null;
+  const frozen = bool(f), historyConsistent = bool(consistent), exitReady = bool(ready);
+  const valid = from > 0n && !historyConsistent && uint(w(2)) === uint(folded) &&
+    uint(w(3)) === uint(hash) && uint(w(5)) === uint(revision) && uint(canonical) === uint(w(4));
+  if (exitReady !== (!frozen && valid && best >= deadline)) throw Error('Inconsistent exit readiness');
+  return { frozen, historyConsistent, exitReady, noticeValid: valid,
+    delay: Number(uint(delay)), relayHeight: Number(best), revision: uint(revision).toString(),
+    fromHeight: Number(from), readyHeight: Number(deadline), remaining: valid ? Number(best < deadline ? deadline - best : 0n) : null,
+    phase: frozen ? 'frozen' : historyConsistent ? 'active' : !valid ? 'unobserved' : exitReady ? 'ready' : 'waiting' };
+}
+
+function exitActionAllowed(state, action) {
+  if (!state?.frozenExit) return false;
+  const x = state.frozenExit;
+  if (action === 'observe') return !x.frozen && !x.historyConsistent && !x.noticeValid;
+  if (action === 'freeze') return x.exitReady && !x.frozen;
+  if (action === 'close') return x.frozen && !state.closed;
+  if (action === 'pair') return true;
+  if (action === 'settled') return state.settled === true;
+  return false;
+}
+  // END FROZEN EXIT SHARED
   // END VERIFICATION HELPERS
 
   const RELEASES={"sepolia":{"chainId":11155111,"index":"0x66e5d15c4c62e81084126c5429e10208b69cc65e","relay":"0xdf1cf7734eda917976e88ea88899c4f3e5ad6170","rpc":"https://ethereum-sepolia-rpc.publicnode.com","vaults":[{"symbol":"WETH","address":"0x8783FcE1D731242B8Af3C42f8680B9A7B6F1BF7D","asset":"0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14","notional":"1000000000000000"}]},"bsc":{"chainId":97,"index":"0xe26b0951082c61575ecfe04c44b19c4dca2cd19b","relay":"0xa75d3b6581194584c1845b7dc7fed03a02bc2cbf","rpc":"https://bsc-testnet-dataseed.bnbchain.org","vaults":[{"symbol":"USDT","address":"0x381e19FA6654316ee5F7f55Db03cF2d56eD374b9","asset":"0xCc7459B3f3ff46C79B55ec69a6F0705089223426","notional":"100000000000000000000"},{"symbol":"WBNB","address":"0x57DBC0C73C8aE7B8131831A1b990dC5d74f14688","asset":"0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15","notional":"1000000000000000000"}]}};
@@ -474,7 +523,7 @@
     return !!(v&&r&&proofStatus().status==='matched'&&r.chainId===v.chainId&&same(r.index,HEAD.chain?.contract)&&same(r.vault,v.address)&&
       ['asset','yang','yin','seriesId','notional_wad'].every(k=>same(r[k],v[k])));
   }
-  function assertVerifiedWallet(v){if(!walletVerified(v))throw Error('等待浏览器直读核验通过；请查看数据源标签');}
+  function assertVerifiedWallet(v){if(checkResult?.frozenExit&&(checkResult.closed||checkResult.frozenExit.frozen||!checkResult.frozenExit.historyConsistent))throw Error('已停止开仓；使用下方退出入口');if(!walletVerified(v))throw Error('等待浏览器直读核验通过；请查看数据源标签');}
   function renderVerification(){
     const state=proofStatus(),r=checkResult,el=$('directResult');
     const details=r&&r.S_wad!==undefined?`<div>EVM #${r.block} · BTC #${r.height} · ${Math.max(0,Math.floor((Date.now()-r.checkedAt)/1000))} 秒前</div><div>S (wad) ${r.S_wad}</div><div>YANG (wad) ${r.yangShare_wad} · 结算份额 ${(Number(r.yangShare_wad)/1e16).toFixed(4)}%</div><div>期末 #${r.settlementHeight} · 还需 ${Math.max(0,r.settlementHeight-r.height)} 个计入高度</div>`:'';
@@ -861,6 +910,7 @@
   let vaultIdx=+(prefs.vault||0);
   const curVault=()=>{const c=HEAD.chain; if(!c)return null; const list=c.vaults||(c.vault?[c.vault]:[]); if(!list.length)return null; if(vaultIdx>=list.length)vaultIdx=0; return list[vaultIdx];};
   function renderTaiji(){
+    renderExit();
     const c=HEAD.chain; const wrap=$('tYYwrap'); const v0=curVault();
     if(!c||!v0||!healthyHead(HEAD,headReceived)){wrap.hidden=true;$('cChain').textContent='⚠';$('tjSeries').textContent='索引数据不可用或已过期，等待更新';$('tjChain').textContent='索引器未能提供新鲜快照，请到数据源标签查看浏览器直读结果。';$('tjWallet').textContent='等待有效金库数据';return;}
     const v={...v0,startBlock:v0.startHeight??v0.startBlock,settlementBlock:v0.settlementHeight??v0.settlementBlock}, ex=v.explorer, yang=100*v.yangShare, yin=100-yang;
@@ -920,9 +970,9 @@
     const [u,y,n,al]=await Promise.all([ethCall(v.asset,'0x70a08231'+me),ethCall(v.yang,'0x70a08231'+me),ethCall(v.yin,'0x70a08231'+me),ethCall(v.asset,'0xdd62ed3e'+me+pad(v.address))]);
     await requireWalletChain(v.chainId); if(W.acct!==account||curVault()?.address!==v.address)return;
     W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; renderWallet(); }
-  async function connect(){ if(!eth()){W.msg='No wallet found. Install MetaMask.';renderWallet();return;}
+  async function connect(target){ if(!eth()){W.msg='No wallet found. Install MetaMask.';renderWallet();return;}
     try{ const a=await eth().request({method:'eth_requestAccounts'}); W.acct=a[0]; W.msg='';
-      const want=curVault()?.chainId; if(!want)throw Error('Wait for the deployed vault to load');
+      const want=target?.address?target.chainId:curVault()?.chainId; if(!want)throw Error('Wait for the deployed vault to load');
       const cur=Number(BigInt(await eth().request({method:'eth_chainId'})));
       if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&walletNetworks[want]) await eth().request({method:'wallet_addEthereumChain',params:[walletNetworks[want]]}); else throw e; } }
       if(eth().on&&!walletEvents){walletEvents=true;
@@ -946,16 +996,89 @@
     await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`,walletContext(v)); }
   function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; const vv=curVault(); if(!c||!vv){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
     if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${esc(W.msg)||'MetaMask / any EIP-1193 wallet · '+(vv.networkName||vv.chainId)}</div>`; $('wConnect').onclick=connect; return; }
-    const v=vv, b=W.bal, wrong=W.chainId!==v.chainId||!walletVerified(v);
+    const v=vv, b=W.bal, wrong=W.chainId!==v.chainId||!walletVerified(v), inactive=checkResult?.closed||checkResult?.frozenExit?.frozen||checkResult?.frozenExit?.historyConsistent===false;
     el.innerHTML=`
       <div class="kv"><span>Account</span><b><a href="${v.explorer}/address/${W.acct}" target="_blank">${short(W.acct)}</a>${wrong?' <span class="bad">wrong network</span>':''}</b></div>
       <div class="kv"><span>${v.symbol||'collateral'}</span><b>${b.usdt===undefined?'…':fmtAmount(b.usdt)}</b></div>
       <div class="msg2">代币数量 · 右侧为按结算份额折算的毛额（非市价）</div>
       <div class="kv"><span>YANG-${v.seriesId}</span><b class="warnv">${b.yang===undefined?'…':fmt4(b.yang)}</b> <span style="color:var(--dim)">≈ ${b.yang===undefined?'':fmtAmount(b.yang*v.notional*v.yangShare)} ${v.symbol||''}</span></div>
       <div class="kv"><span>YIN-${v.seriesId}</span><b style="color:var(--acc)">${b.yin===undefined?'…':fmt4(b.yin)}</b> <span style="color:var(--dim)">≈ ${b.yin===undefined?'':fmtAmount(b.yin*v.notional*(1-v.yangShare))} ${v.symbol||''}</span></div>
-      <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong?'disabled':''}>MINT · ${v.notional} ${v.symbol||''}/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
+      <div class="row2"><span style="color:var(--dim)">PAIRS</span><input id="wPairs" type="number" value="${$('wPairs')?$('wPairs').value:1}" min="0.01" step="1"><button class="pri" id="wMint" ${W.busy||wrong||inactive?'disabled':''}>MINT · ${v.notional} ${v.symbol||''}/pair</button><button id="wRedeem" ${W.busy||wrong?'disabled':''}>REDEEM PAIR</button></div>
       <div class="msg2">${esc(W.msg)||(!walletVerified(v)?'等待浏览器直读核验通过；请查看数据源标签':'')||`mint: 1 pair = 1 YANG + 1 YIN for ${v.notional} ${v.symbol||''} (+0.05%). redeem: a pair → ${v.notional} ${v.symbol||''} any time.`}</div>`;
     $('wMint').onclick=doMint; $('wRedeem').onclick=doRedeem; }
+
+  // Exit controls use a fresh independent RPC read. They never require an indexer agreement badge.
+  const exitForm={series:'',yang:'1',yin:'1'};
+  function exactAmount(text){
+    if(!/^(0|[1-9]\d*)(\.\d{1,18})?$/.test(text))throw Error('输入非负数量，最多 18 位小数');
+    const [whole,fraction='']=text.split('.');const n=BigInt(whole)*10n**18n+BigInt(fraction.padEnd(18,'0'));
+    if(n>=2n**256n)throw Error('数量过大');return n;
+  }
+  function exitRPC(url){let id=0;return async(method,params)=>{
+    const n=++id,j=await(await fetchTimed(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:n,method,params})})).json();
+    if(j.error||j.id!==n||j.result===undefined)throw Error(j.error?.message||'Invalid RPC response');return j.result;
+  };}
+  async function doExit(action){
+    if(W.busy||!W.acct)return;
+    const d=deployment(),v=selectedVerificationVault(),url=activeRPC(),account=W.acct;
+    W.busy=true;W.msg='读取最新链上状态…';renderWallet();renderExit();
+    try{
+      await requireWalletChain(d.chainId);
+      const rpc=exitRPC(url),id=exitForm.series===''?null:exitForm.series;
+      if(id!==null&&!/^(0|[1-9]\d*)$/.test(id))throw Error('期次必须为非负整数');
+      const state=await verifySnapshot(rpc,d,v,{},0,Date.now(),id);
+      if(!exitActionAllowed(state,action))throw Error('当前链上状态不允许此操作');
+      let to=v.address,data,label;
+      if(action==='observe'){to=d.index;data='0x8e27635f';label='记录重组观察';}
+      if(action==='freeze'){to=d.index;data='0x62a5af3b';label='永久终止指数（不可恢复）';}
+      if(action==='close'){data='0x1086bcbf';label='终止当前金库';}
+      if(action==='pair'){
+        const amount=exactAmount(exitForm.yang);if(amount===0n)throw Error('赎回数量必须大于零');
+        data='0xd54b7506'+pad(state.seriesId.toString(16))+pad(amount.toString(16));label='成对赎回 #'+state.seriesId;
+      }
+      if(action==='settled'){
+        const y=exactAmount(exitForm.yang),n=exactAmount(exitForm.yin);if(y+n===0n)throw Error('赎回数量必须大于零');
+        data='0x5058809d'+pad(state.seriesId.toString(16))+pad(y.toString(16))+pad(n.toString(16));label='已结算赎回 #'+state.seriesId;
+      }
+      // Simulate the precise call before opening the wallet; the contract rechecks conditions at execution.
+      await rpc('eth_call',[{from:account,to,data},'latest']);
+      await requireWalletChain(d.chainId);
+      const accounts=await eth().request({method:'eth_accounts'});
+      if(W.acct!==account||!same(accounts[0],account)||deployment()!==d||activeRPC()!==url||!same(selectedVerificationVault().address,v.address))throw Error('钱包或数据源已改变，请重试');
+      W.msg=label+' · 请在钱包确认';renderExit();
+      const hash=await eth().request({method:'eth_sendTransaction',params:[{from:account,to,data,chainId:hex(d.chainId)}]});
+      W.msg=label+' · 已发送 '+hash;renderExit();
+      let receipt;
+      for(let i=0;i<120;i++){
+        receipt=await rpc('eth_getTransactionReceipt',[hash]);if(receipt)break;
+        await new Promise(r=>setTimeout(r,1500));
+      }
+      W.msg=receipt?(receipt.status==='0x1'?'✓ ':'✗ ')+label+' · '+hash:'仍待确认，请在区块浏览器核对后再重试 · '+hash;
+    }catch(e){W.msg='✗ '+(e.message||String(e)).slice(0,200);}
+    finally{W.busy=false;checkResult=null;checkRPC();renderExit();renderWallet();}
+  }
+  function renderExit(){
+    const el=$('tjExit');if(!el)return;
+    const d=deployment();if(!d.frozenExit){el.hidden=true;return;}el.hidden=false;
+    // Keep input focus while periodic market rendering runs.
+    if(el.contains(document.activeElement)&&['INPUT','SELECT'].includes(document.activeElement.tagName))return;
+    const v=selectedVerificationVault(),r=checkResult;
+    const fresh=r?.frozenExit&&same(r.index,d.index)&&same(r.vault,v.address)&&Date.now()-r.checkedAt<60000;
+    const phase=fresh?r.frozenExit.phase:null;
+    const labels={active:'运行中 · 成对赎回始终可用',unobserved:'发现深度重组 · 尚未开始观察',waiting:'观察中 · 还需 '+(fresh?r.frozenExit.remaining:'—')+' 个中继高度',ready:'观察期已满 · 可永久终止指数',frozen:r?.closed?'金库已终止 · 可按固定份额赎回':'指数已终止 · 可终止当前金库'};
+    const disabled=W.busy?'disabled':'';
+    el.innerHTML=`<div><h4>链上退出 · v4 测试候选</h4><div>${esc(labels[phase]||'等待最新链上直读；退出不依赖索引对账')}</div><div class="muted">${esc(v.symbol)} · ${short(v.address)} · ${d.chainId}<br>观察期 ${d.frozenExitDelay} 个比特币中继高度。终止不可恢复；有本期边界记录则保留，否则各 ½。旧期沿用原结算结果。</div><div class="msg2">${esc(W.msg)}</div></div>
+      <div><div>当前期 ${fresh?'#'+r.currentId+' · YANG '+(Number(r.yangShare_wad)/1e16).toFixed(4)+'%':'—'}（结算份额，非市价）</div>
+      <label>赎回期次（留空为当前期）<input id="xSeries" value="${esc(exitForm.series)}" inputmode="numeric"></label>
+      <label>YANG 数量 / 成对数量<input id="xYang" value="${esc(exitForm.yang)}" inputmode="decimal"></label>
+      <label>YIN 数量（已结算赎回用）<input id="xYin" value="${esc(exitForm.yin)}" inputmode="decimal"></label>
+      <div class="muted">单边退出可把另一侧填 0；已结算赎回按输入期次的链上份额计算，扣除原有费用。钱包确认前重新读链并模拟交易。</div></div>
+      <div>${!W.acct?'<button id="xConnect">连接钱包</button>':`<div>${short(W.acct)}</div><button data-exit="pair" ${disabled}>成对赎回</button><button data-exit="settled" ${disabled}>已结算赎回（含历史期）</button>${phase==='unobserved'?`<button data-exit="observe" ${disabled}>记录重组观察</button>`:''}${phase==='ready'?`<button data-exit="freeze" ${disabled}>永久终止指数（不可恢复）</button>`:''}${phase==='frozen'&&!r.closed?`<button data-exit="close" ${disabled}>终止当前金库</button>`:''}`}</div>`;
+    for(const [id,key] of [['xSeries','series'],['xYang','yang'],['xYin','yin']])$(id).oninput=e=>exitForm[key]=e.target.value;
+    if($('xConnect'))$('xConnect').onclick=async()=>{await connect({...v,chainId:d.chainId});renderExit();};
+    for(const b of el.querySelectorAll('[data-exit]'))b.onclick=()=>doExit(b.dataset.exit);
+  }
+
   $('wConnect').onclick=connect;
   setInterval(()=>{ if(W.acct&&!W.busy)refreshWallet().catch(()=>{}); },15000);
 

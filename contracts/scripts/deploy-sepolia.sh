@@ -12,11 +12,15 @@ cast_bin="${CAST:-$HOME/.foundry/bin/cast}"
 [[ "$("$cast_bin" chain-id --rpc-url "$RPC")" == 11155111 ]] || { echo 'Wrong RPC chain' >&2; exit 1; }
 [[ "$("$cast_bin" wallet address --account "$KEYSTORE_ACCOUNT" --password-file "$PASSWORD_FILE" | tr '[:upper:]' '[:lower:]')" == "$(echo "$DEPLOYER" | tr '[:upper:]' '[:lower:]')" ]] || { echo 'Deployer does not match keystore' >&2; exit 1; }
 [[ "$KEYSTORE_ACCOUNT" != wuji-testnet ]] || { echo 'Use a separate Sepolia account' >&2; exit 1; }
-if [[ -f /tmp/wuji-sepolia-keeper.pid ]] && kill -0 "$(cat /tmp/wuji-sepolia-keeper.pid)" 2>/dev/null; then
-  echo 'Stop the Sepolia keeper before using its nonce to deploy' >&2; exit 1
-fi
 args=(script script/Deploy.s.sol --rpc-url "$RPC" --rpc-timeout 45 --fork-retries 2)
-if [[ "${1:-}" == --broadcast && $# == 1 ]]; then args+=(--broadcast);
+if [[ "${1:-}" == --broadcast && $# == 1 ]]; then
+  for pidfile in /tmp/wuji-sepolia-keeper.pid /tmp/wuji-sepolia-v4-keeper.pid; do
+    if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+      echo 'Stop Sepolia keepers before broadcasting a deployment from the shared nonce' >&2; exit 1
+    fi
+  done
+  [[ "$("$cast_bin" nonce "$DEPLOYER" --block pending --rpc-url "$RPC")" == "$("$cast_bin" nonce "$DEPLOYER" --block latest --rpc-url "$RPC")" ]] || { echo 'Pending transaction: wait for confirmation before deploying' >&2; exit 1; }
+  args+=(--broadcast);
 elif [[ $# != 0 ]]; then echo 'Usage: deploy-sepolia.sh [--broadcast]' >&2; exit 1; fi
 "${FORGE:-$HOME/.foundry/bin/forge}" "${args[@]}" \
   --account "$KEYSTORE_ACCOUNT" --password-file "$PASSWORD_FILE" --sender "$DEPLOYER" -vv

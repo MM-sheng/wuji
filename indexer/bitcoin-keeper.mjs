@@ -1,5 +1,7 @@
 import { BitcoinAPI, step } from './bitcoin.mjs';
 import { assertChain } from './networks.mjs';
+import { rpcRequest } from './evm-rpc.mjs';
+import { maintainFrozenExit } from './frozen-keeper.mjs';
 // WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles fixed-block series.
 // Signs with `cast` (Foundry) so this file has no dependencies and never touches the key itself.
 //
@@ -77,8 +79,15 @@ function claimBounties(last){
 const api=new BitcoinAPI();
 const RELAY=process.env.RELAY;
 if(!RELAY)throw Error('RELAY required');
+const frozenExitMode=process.env.FROZEN_EXIT==='1';
+if(frozenExitMode&&![97,11155111].includes(expectedChain))throw Error('Frozen-exit automation is testnet-only');
+const handleExit=()=>maintainFrozenExit({rpc:(m,p)=>rpcRequest(RPC0,m,p),index:CONTRACT,relay:RELAY,chainId:expectedChain,
+ vaults:()=>FACTORY?listVaults():VAULT?[VAULT]:[],send:async(to,sig,gas)=>{const r=JSON.parse(send(to,sig,gas));if(!succeeded(r))throw Error(sig+' reverted');log(sig,to,r.transactionHash);}});
 async function once(){
  checkChain();
+ let exitState=frozenExitMode?await handleExit():null;
+ // Completed exits and claims do not depend on Bitcoin API availability.
+ if(exitState?.frozen){claimBounties(num(cast('call',CONTRACT,'lastHeight()(uint64)')));return;}
  const tip=await api.tip();
  const best=num(cast('call',RELAY,'bestHeight()(uint64)'));
  const checkpoint=num(cast('call',RELAY,'checkpointHeight()(uint64)'));
@@ -105,8 +114,8 @@ async function once(){
  if(end>common){
   const headers=[];
   for(let h=common+1;h<=end;h++){const b=await api.at(h);if(step(b.header).hash!==b.hash)throw Error('Bitcoin source hash mismatch');headers.push(b.header);}
-  let foldHealthy=true;
-  if(reserveMode){
+  let foldHealthy=!exitState||exitState.historyConsistent;
+  if(reserveMode&&foldHealthy){
    try{cast('call',CONTRACT,'fold(uint256)(uint64)','0');}
    catch(e){if(/deep Bitcoin reorg|relay stale/.test(String(e.stderr||e.message)))foldHealthy=false;else throw e;}
   }
@@ -122,6 +131,10 @@ async function once(){
    :send(RELAY,'submit(bytes)',5_000_000,'0x'+headers.join('')));
   if(r.status!=='0x1'&&r.status!==1)throw Error('relay transaction reverted');
   log(`${atomic?'submit + fold':'submit'} Bitcoin ${common+1}..${end} ${r.transactionHash}`);
+ }
+ if(frozenExitMode){
+  exitState=await handleExit();
+  if(!exitState.historyConsistent||exitState.frozen){log('exit status',exitState.phase,'remaining heights',exitState.remaining);return;}
  }
  // Detect deep reorgs even if pending() is zero, before any settlement transactions.
  try{cast('call',CONTRACT,'fold(uint256)(uint64)','0');}
