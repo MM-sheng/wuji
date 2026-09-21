@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "purpose": "Explanatory historical replay, not a preregistered or out-of-sample investment experiment",
+  "fixture": "contracts/test/fixtures/bitcoin-timestamps.hex",
+  "genesisHeight": 798336,
+  "intervals": [4320, 1008, 144],
+  "intervalPolicy": "4320 is the deployed parameter; 1008 and 144 are hypothetical stress comparisons, not proposed changes",
+  "startPolicy": "Use the first fixture height; non-overlapping chronological periods; no offset selection or resampling",
+  "endPolicy": "Exclude the last CONFIRMATIONS headers from finalized observations; retain the final incomplete position without assigning it a market price",
+  "collateral": "WETH units only; no USD conversion or collateral yield",
+  "initialCashWei": "1000000000000000000",
+  "entryPricePolicy": "Hypothetical N/2 throughout, including after confirmation delay; not an executable or information-conditioned quote",
+  "allocationsWad": ["1000000000000000000", "250000000000000000"],
+  "sides": ["YANG", "YIN"],
+  "costs": [
+    {"id": "gross", "entryBps": 0, "protocolRedeemFee": false, "fixedCostWei": "0"},
+    {"id": "redeem-only", "entryBps": 0, "protocolRedeemFee": true, "fixedCostWei": "0"},
+    {"id": "execution-stress", "entryBps": 10, "protocolRedeemFee": true, "fixedCostWei": "300000000000000"}
+  ],
+  "fixedCostPolicy": "Stress case prepays 0.0003 WETH per entered cycle for combined operation costs; assumed, not measured or a bound",
+  "entryChargePolicy": "10 bps is a hypothetical all-in acquisition surcharge; secondary transfers have no WujiVault mint fee. Do not add an invented 5 bps mint fee",
+  "statistics": ["all completed-period cash balances", "drawdown at settlement observations only", "zero-equity events", "entry/exit cost totals", "incomplete position quantities and idle cash with null liquidation NAV"],
+  "prohibitedClaims": ["tradable historical returns", "full mark-to-market drawdown", "future profitability", "independence from other assets", "infinite-horizon guarantee"],
+  "registeredBeforeProspectiveData": false
+}

@@ -12,6 +12,9 @@ Read the six-page Chinese whitepaper: [PDF](docs/WHITEPAPER.pdf) · [editable Ma
 It describes the testnet implementation, conditional mathematical model and remaining verification boundaries.
 [Recompute its numbers or render the PDF](docs/tools/README.md).
 
+Application research: [rollover accounting and historical replay](docs/tasks/T7_DESIGN.md).
+This design study recommends deferring a rolling token; no rolling contract is implemented or approved.
+
 Four different things must be distinguished:
 
 | Object | Meaning |

@@ -132,7 +132,7 @@ Implemented on `codex/terminal-ipfs`: [T5_REPORT.md](T5_REPORT.md). Staircase vi
 fresh browser RPC comparison, read-only CORS and verified single-file IPFS pinning are delivered. 112 Solidity
 and 74 Node tests pass. Live Sepolia snapshot comparison and the offline IPFS gateway flow were verified.
 Public persistent hosting/DNS remain unconfigured; T4's full live two-source reconstruction remains open.
-T6's whitepaper is delivered below; T7's design note is next.
+T6's whitepaper and T7's design-stage delivery follow below.
 
 - The market now steps every ~10 min. Make that legible: last Bitcoin height and hash (→ mempool.space), time since
   last block, next-block ETA from mempool fee/stat endpoints, the current series boundary height with blocks-to-go,
@@ -149,7 +149,7 @@ Delivered on `codex/whitepaper`: [T6_REPORT.md](T6_REPORT.md). The Chinese Markd
 current implementation, conditional model, preregistration method and related work. Offline facts come from
 contract constants, public manifests and real fixtures. 112 Solidity tests and the three Bitcoin JS tests pass;
 protocol code and financial invariants are unchanged. This is a research whitepaper, not an independent audit.
-T7 is next: write and review the mathematical design before implementing any rolling contract.
+T7's design-stage delivery follows below; rolling contract implementation remains subject to review.
 
 `docs/WHITEPAPER.md`, ≤ 6 pages, in this order: (1) 无极生太极，太极生两仪 — what it is in one paragraph;
 (2) the path: Bitcoin PoW, byteSum, UNIT, why re-hash, expected vol; (3) the pair: absolute-position clamped settlement shares, expiry payoffs versus market prices, bounded claims and series; (4) collateral vaults and the factory; (5) settlement
@@ -161,7 +161,14 @@ outlined in WUJI_FOUNDATIONS §§9–10; do not inherit other beacon protocols�
 
 ## T7 · Rolling vault — REDESIGN before building (review item #9)
 
-The naive roll (settle, re-enter 1:1) has a negative log drift: per-series wealth factor `2·g(X)` has E[log] < 0 and
+Design-stage delivery on `codex/rolling-design`: [T7_DESIGN.md](T7_DESIGN.md), [T7_REPORT.md](T7_REPORT.md).
+All 36 specified historical replay scenarios are recorded, including unpriced incomplete positions. The existing
+fixture provides only one full 4320-height series; shorter cases are hypothetical stress comparisons. 112 Solidity
+and 84 Node tests pass. The recommendation is to defer a rolling token; no application contract is implemented
+or approved. The next protocol task is T9, while any T7 implementation still requires design review.
+
+One-for-one conversion is an accounting error. Even **value-correct** full reinvestment at the hypothetical
+entry price N/2 has per-series wealth factor `2·g(X)`, negative expected log growth and, under the stated model,
 a nonzero probability of total loss. Any rolling product must (a) re-enter by **value** (0.8·N of old YANG buys 1.6
 new YANG at ½), (b) be documented as a rolled-derivative strategy with its NAV process stated, and (c) never be drawn
 as one continuous price history. Write the design note first (`docs/tasks/T7_DESIGN.md`) with the NAV math and a
