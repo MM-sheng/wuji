@@ -24,7 +24,15 @@ const expectedChain=Number(process.env.CHAIN_ID||97);
 const checkChain=()=>assertChain(cast('chain-id'),expectedChain);
 const send = (to, sig, gas, ...args) => {
  checkChain();
- return cast('send', to, sig, ...args, '--chain', String(expectedChain), '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', String(gas), ...gasOptions, '--json');
+ // Keep the per-operation ceiling, but do not reserve its full value for every small transaction.
+ // Estimate with the actual worker and fee options, then allow 25% execution headroom.
+ const estimate=BigInt(cast('estimate',to,sig,...args,'--from',workerAddress(),...gasOptions).split(/\s/)[0]);
+ const ceiling=BigInt(gas);
+ if(estimate<21000n)throw Error('invalid keeper gas estimate');
+ if(estimate>ceiling)throw Error('keeper gas estimate exceeds operation ceiling');
+ const padded=(estimate*125n+99n)/100n,limit=padded<ceiling?padded:ceiling;
+ checkChain(); // The provider may have changed during estimation; check again before signing.
+ return cast('send', to, sig, ...args, '--chain', String(expectedChain), '--account', KEYSTORE_ACCOUNT, '--password-file', PWFILE, '--gas-limit', limit.toString(), ...gasOptions, '--json');
 };
 let cachedWorker;
 const workerAddress=()=>cachedWorker ||= execFileSync(CAST,['wallet','address','--account',KEYSTORE_ACCOUNT,'--password-file',PWFILE],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();

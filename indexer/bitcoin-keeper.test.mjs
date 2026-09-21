@@ -9,7 +9,7 @@ const file=process.env.TEST_KEEPER_STATE,s=JSON.parse(fs.readFileSync(file)),a=p
 const save=()=>fs.writeFileSync(file,JSON.stringify(s));
 const fail=m=>{save();process.stderr.write('Error: execution reverted: '+m);process.exit(1);};
 const output=x=>process.stdout.write(String(x));
-if(a[0]==='chain-id'){output(s.mode==='wrong-chain'?1:97);process.exit(0);}
+if(a[0]==='chain-id'){output(s.mode==='wrong-chain'||(s.mode==='chain-changed'&&s.estimates>0)?1:97);process.exit(0);}
 if(a[0]==='wallet'){output(s.worker);process.exit(0);}
 const name=a[2].split('(')[0],stale=s.mode==='catchup'&&s.best<s.tip;
 const pending=()=>Math.max(0,s.best-6-s.folded);
@@ -26,7 +26,12 @@ if(a[0]==='call'){
   const end=s.best+(a[3].length-2)/160;s.simulations++;
   if(s.mode==='catchup'&&end<s.tip){s.staleSimulations++;fail('relay stale');}save();output(16);
  }else fail('unexpected read '+name);
+}else if(a[0]==='estimate'){
+ if(a[a.indexOf('--from')+1]!==s.worker)fail('gas estimate must use the actual worker');
+ if(s.mode==='catchup'&&(!a.includes('--legacy')||a[a.indexOf('--gas-price')+1]!=='0.1gwei'))fail('estimate must use selected fee options');
+ s.estimates++;save();output(s.mode==='over-cap'?9000000:s.mode==='zero-gas'?0:300000);
 }else if(a[0]==='send'){
+ if(a[a.indexOf('--gas-limit')+1]!=='375000')fail('reserve estimated gas plus headroom, not the fixed operation ceiling');
  if(s.mode==='catchup'){
   if(!a.includes('--legacy')||a[a.indexOf('--gas-price')+1]!=='0.1gwei')fail('missing explicit testnet gas price');
  }else if(a.includes('--legacy')||a.includes('--gas-price'))fail('automatic gas selection was overridden');
@@ -44,13 +49,13 @@ if(a[0]==='call'){
 }else fail('unexpected command');
 `;
 
-for(const mode of ['catchup','fresh','wrong-chain'])test(`keeper ${mode}: advance headers safely and simulate with the actual worker`,{timeout:30000},async()=>{
+for(const mode of ['catchup','fresh','wrong-chain','over-cap','zero-gas','chain-changed'])test(`keeper ${mode}: advance headers safely and simulate with the actual worker`,{timeout:30000},async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wuji-keeper-test-')),stateFile=path.join(dir,'state.json'),cast=path.join(dir,'cast.mjs');
  const cp=meta.checkpointHeight,headers={[cp]:meta.checkpointHeader},hashes={};
  for(let i=0;i<50;i++)headers[cp+1+i]=fixture.slice(i*160,(i+1)*160);
  for(const [h,raw] of Object.entries(headers))hashes[h]='0x'+step(raw).internalHash;
  const byHash=new Map(Object.values(headers).map(raw=>[step(raw).hash,raw]));
- const state={mode,checkpoint:cp,tip:cp+50,best:cp,folded:cp,headers,hashes,worker:'0x1111111111111111111111111111111111111111',sends:[],simulations:0,staleSimulations:0};
+ const state={mode,checkpoint:cp,tip:cp+50,best:cp,folded:cp,headers,hashes,worker:'0x1111111111111111111111111111111111111111',sends:[],simulations:0,staleSimulations:0,estimates:0};
  fs.writeFileSync(stateFile,JSON.stringify(state));fs.writeFileSync(cast,castDouble,{mode:0o755});
  const server=http.createServer((req,res)=>{
   if(req.url==='/blocks/tip/height')return res.end(String(state.tip));
@@ -63,9 +68,12 @@ for(const mode of ['catchup','fresh','wrong-chain'])test(`keeper ${mode}: advanc
  child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
  try{
   let result;
-  for(let i=0;i<600;i++){result=JSON.parse(fs.readFileSync(stateFile));if(result.folded===state.tip-6||(mode==='wrong-chain'&&log.includes('RPC chain mismatch')))break;if(child.exitCode!==null)break;await new Promise(r=>setTimeout(r,25));}
+  const expectedFailure={'over-cap':/gas estimate exceeds operation ceiling/,'zero-gas':/invalid keeper gas estimate/,'chain-changed':/RPC chain mismatch/}[mode];
+  for(let i=0;i<600;i++){result=JSON.parse(fs.readFileSync(stateFile));if(result.folded===state.tip-6||(mode==='wrong-chain'&&log.includes('RPC chain mismatch'))||(expectedFailure&&expectedFailure.test(log)))break;if(child.exitCode!==null)break;await new Promise(r=>setTimeout(r,25));}
   if(mode==='wrong-chain'){assert.equal(result.sends.length,0);assert.match(log,/RPC chain mismatch/);return;}
+  if(expectedFailure){assert.equal(result.sends.length,0);assert.ok(result.estimates>0);assert.match(log,expectedFailure);return;}
   assert.equal(result.folded,state.tip-6,log);
+  assert.equal(result.estimates,result.sends.length,'each transaction must first estimate its actual execution');
   if(mode==='catchup'){
    assert.deepEqual(result.sends,['submit','submit','submit','fold','fold','fold']);
    assert.equal(result.staleSimulations,1);assert.match(log,/headers retained, fold deferred/);

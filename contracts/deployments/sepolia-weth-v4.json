@@ -1,0 +1,120 @@
+{
+  "chainId": 11155111,
+  "source": "bitcoin",
+  "version": "bitcoin-sepolia-v4",
+  "frozenExitDelay": 144,
+  "rpc": "https://ethereum-sepolia.publicnode.com",
+  "explorer": "https://sepolia.etherscan.io",
+  "sourceCommit": "1b099529715874da35a1958bbde8afb5aabb6973",
+  "deployedAt": "2026-09-21T16:22:14.731Z",
+  "genesisHeight": 967826,
+  "checkpointInterval": 4320,
+  "confirmations": 6,
+  "unitWad": "12000000000000",
+  "maxFutureBlockTime": 7200,
+  "maxRelayAge": 10800,
+  "rewardBps": 10000,
+  "bountyDivisor": 10000,
+  "checkpoint": {
+    "genesisHeight": 967826,
+    "checkpointHeight": 967825,
+    "checkpointHeader": "00e002209464fca963f09ddc196e6eb6844cfa2fed64a4dd14b101000000000000000000fdd9cf69e83eb416d967e49f154e615184e4bb96cdd1fa3780e2eedd2e85e6a14ecfaf6ac51e02175137652d",
+    "checkpointHash": "00000000000000000000d67cbca716ef045392720cefb43e8287994ae216c06b",
+    "epochStartHeight": 967680,
+    "epochStartTime": 1789801745,
+    "checkpointChainWork": "570195989278543477056646",
+    "workConvention": "normalized to the checkpoint own work; common pre-checkpoint work is omitted for every branch",
+    "confirmations": 6,
+    "checkpointInterval": 4320,
+    "verifiedSources": [
+      "https://mempool.space/api",
+      "https://blockstream.info/api"
+    ],
+    "checkpointAncestors": "0000d423e7355f4edc1ac4e006778de24e9f6a8f3c5a30a72bcb000000000000000000009b8cc370c9b34c14a9b9180362c47b1b166911eac89f11c736fed4a5ebd3756605abaf6ac51e02179d369a9200a025284efd1829453209aea3e83adf3a4013398bfdc4d4b41101000000000000000000e2f83bb1c421aaf46bb1867b6e6287a8eacb040d4a73960bac4120b3a6f8124612acaf6ac51e0217316e655f0040c724d80be5f850e53068ba8c91de1844ba2a36a02843d95901000000000000000000bf1ef26df6acb880efd05c557e643f082fc8b74797208c0fc4db5a1cc5fd7f7b44b1af6ac51e02172232be5b00a05b255f1e7952b1242e5e7926fe04dce1ab25062c041c489c01000000000000000000e6f48ae948c16ced2266cb119ac7925eafde396440033f764cd61bc85006e59045b3af6ac51e0217cf3efb6a004006202422133d517d36cae6de0353a763ff15f79717a5853a0100000000000000000094e9c69302fe4ab6fc775c0cff74e7900e4fe6ebe288332bdc477aeeed816289abb4af6ac51e02179350474500a00420cc9d2431de7fe43e2adf382fc830cdd54db68cd0a8dc00000000000000000000d79ba7ff16262796d5bfeb275f8f72cb232b51eb87a73c66cb252e89646198ff55beaf6ac51e0217d43d92ce002040223ad6c55d56e84f5f7a22a866b8109b12139d78970a2f0000000000000000000048f93e60c52d23962f4dfdc429a01320197f5eb1ec21817d6a2812d1692a03da83c9af6ac51e0217a3bd043b00e0ff3f5f36938043d1d8a23e6cd63b4bdb59e5447c5766430100000000000000000000a08fb23bb6e6ee89d87f8529b212c4b6e8eeba284d99262ada9a6b1c28c58f154dcbaf6ac51e02171a8761850000ff3f0b70da3e2e3f5e950d28fe08ea448d55129f3d3dbe1900000000000000000000d8e57109029f687388b854212387e22e1c4757bb89d068ed15b5f94890aca952eecbaf6ac51e0217caebb43d000001203f0ad66756d3f3c7ecb45a15af65179e93a9868e1533000000000000000000007a32cb8b9eaf0e5b22575b6e8196703d24a92a1742274cc74cd6889dfc2c9acb71cdaf6ac51e0217d128edf70000412b69fae74d24d57e875e446425c0544a631cd557bb0bd900000000000000000000dff79a93b1729a041d9af1b9fbe7ecd3bf8a9f77f77fd223bdd3ad0d4bae691543ceaf6ac51e0217774c4577",
+    "historySource": "https://mempool.space/api",
+    "historyVerification": "Eleven linked raw headers authenticated by the unchanged, previously compared checkpoint parent hash. verifiedSources refers to the existing checkpoint and epoch, not a new two-source download of every ancestor."
+  },
+  "status": "confirmed",
+  "transactions": [
+    {
+      "hash": "0x385300a127e5e30b615522fa9f0eff26934737fa8534bfcc92706a392a1548cf",
+      "name": "RelayerRewards",
+      "operation": "CREATE",
+      "address": "0x7e8f7c0c781768881442bb4f1d34d68afa6f3db9",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 1009866
+    },
+    {
+      "hash": "0xb1387058b29c1e3b22d340543610f7215906952692757df95b2cfb5db8b2f55c",
+      "name": "BitcoinRelay",
+      "operation": "CREATE",
+      "address": "0xd10d08faf8cf4ca582319fe56df223203a852d02",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 2194271
+    },
+    {
+      "hash": "0x1ae2ce39776d565ee18e24c49b40cdeb6242408a5555543c2a80d73ca7f2b4b5",
+      "name": "WujiIndex",
+      "operation": "CREATE",
+      "address": "0x67a6ec0afa4f9b4dfe1d7d111a92302bd9e15e6e",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 1586620
+    },
+    {
+      "hash": "0xd425ae6cd4ecf8153bff2bfd66c4331129b19ee17cc01ce80854476c8d4277ff",
+      "name": "FeeRouter",
+      "operation": "CREATE",
+      "address": "0xfff2dd388e15d881f840502ae9e159e54fedb768",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 322014
+    },
+    {
+      "hash": "0x7cff437284fddc83217ab9ebfdef2d635518c520f24fc6d7e4bf9557ddde2377",
+      "name": "SeriesTokenDeployer",
+      "operation": "CREATE",
+      "address": "0x0d5a9b275b71de7a132ece0964ea3e937772f912",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 811758
+    },
+    {
+      "hash": "0xddfd173fe9ea2bb7a720de6ffdcec60a7c932e94d5e4abc42f15a6f416b20c0e",
+      "name": "WujiVaultFactory",
+      "operation": "CREATE",
+      "address": "0x878ff5f8f3b088401a7939221b60eefd3b84dd71",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 3653057
+    },
+    {
+      "hash": "0x27bc42a7e574781b2980c9b976c300bdfe934ba5f426e88f1b5e4e4b9200e384",
+      "name": "WujiVaultFactory",
+      "operation": "create(address,uint256)",
+      "address": "0x878ff5f8f3b088401a7939221b60eefd3b84dd71",
+      "status": "0x1",
+      "block": 11752027,
+      "gasUsed": 3537947
+    }
+  ],
+  "vaults": {
+    "WETH": {
+      "address": "0xC350b5b77E0Cc7853cCD3C1EDEC562DE09e98195",
+      "asset": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "notional": "1000000000000000"
+    }
+  },
+  "RelayerRewards": "0x7e8f7c0c781768881442bb4f1d34d68afa6f3db9",
+  "BitcoinRelay": "0xd10d08faf8cf4ca582319fe56df223203a852d02",
+  "WujiIndex": "0x67a6ec0afa4f9b4dfe1d7d111a92302bd9e15e6e",
+  "FeeRouter": "0xfff2dd388e15d881f840502ae9e159e54fedb768",
+  "SeriesTokenDeployer": "0x0d5a9b275b71de7a132ece0964ea3e937772f912",
+  "WujiVaultFactory": "0x878ff5f8f3b088401a7939221b60eefd3b84dd71",
+  "rewardTokens": [
+    "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+  ],
+  "treasury": "0xfff2dd388e15d881f840502ae9e159e54fedb768"
+}

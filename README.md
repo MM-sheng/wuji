@@ -47,8 +47,10 @@ cd contracts && ~/.foundry/bin/forge test # unit / fuzz / invariant suites
 ```
 
 Current timestamp-checking testnet manifest: `contracts/deployments/bsc-testnet-timestamps-v3.json` (port 8792).
-Sepolia/WETH manifest: `contracts/deployments/sepolia-weth-v3.json` (port 8793).
-Live verification and receipts: [T3 report](docs/tasks/T3_REPORT.md).
+Sepolia/WETH frozen-exit candidate: `contracts/deployments/sepolia-weth-v4.json` (port 8794),
+with [deployment evidence](docs/tasks/T9_SEPOLIA_V4_REPORT.md).
+The earlier Sepolia v3 remains `contracts/deployments/sepolia-weth-v3.json` (port 8793);
+its historical verification and receipts are in the [T3 report](docs/tasks/T3_REPORT.md).
 The earlier reserve manifest remains `contracts/deployments/bsc-testnet-reserve-v2.json` (port 8791).
 `bsc-testnet.json` is retained as the historical lifetime-points comparison manifest.
 
@@ -59,10 +61,11 @@ cross-checks, series solvency, wallet balances, paired minting, and paired redem
 
 ## Production status
 
-Current source includes the [T9 frozen-exit candidate](docs/tasks/T9_DESIGN.md). It is locally tested but **not
-deployed to the existing v3 addresses** below. Client integration and the local transaction exit drill are
-delivered ([integration report](docs/tasks/T9_INTEGRATION_REPORT.md)); the new public-testnet deployment and
-independent review remain pending. The 144-height wait and half-allocation fallback are candidate economic decisions,
+Current source includes the [T9 frozen-exit candidate](docs/tasks/T9_DESIGN.md), now deployed to **new Sepolia v4
+addresses**. Existing v3 addresses have no such exit path. Client integration and the local transaction exit
+drill are delivered ([integration report](docs/tasks/T9_INTEGRATION_REPORT.md)); public deployment acceptance
+is tracked in the [v4 report](docs/tasks/T9_SEPOLIA_V4_REPORT.md), and independent review remains pending.
+The 144-height wait and half-allocation fallback are candidate economic decisions,
 not proven attack deterrence. Use the original source revision (for example `c8ea538`) to reproduce old v3
 runtime bytecode; current source should not match those old runtimes.
 
@@ -151,10 +154,14 @@ Reserve manifests enable atomic submit/fold and the listed `rewardTokens`. `REWA
 assets; fees are collected and fixed bounties claimed every 144 folded heights by default. Override the cadence
 with `ROUTE_EVERY_HEIGHTS` / `CLAIM_EVERY_HEIGHTS`. These are keeper preferences; permissionless contract calls
 remain available. Plain folds or omitted assets forgo their bounty, and no reward covers gas by guarantee.
+Before signing, the keeper estimates gas with its actual sender and selected fees, adds 25% headroom within
+the existing operation ceiling, then checks the chain again. Invalid or over-ceiling estimates cannot send.
+This avoids reserving a multi-million-gas maximum for every small update; it does not lower actual gas usage.
 
 See [T1 reserve report](docs/tasks/T1_RESERVE_REPORT.md) for 92 Solidity tests, four Node tests, deployed bytecode
-checks, mock mint/redeem/route receipts and live bounty evidence. T2b header checks are delivered separately above. Independent review and T9
-frozen-state exits remain pending. Direct native-ETH vaults (T3 uses WETH), CREATE2 genesis and the ZK relay are later work.
+checks, mock mint/redeem/route receipts and live bounty evidence. T2b header checks are delivered separately above.
+The T9 exit candidate is available in the separate Sepolia v4 release; independent review remains pending.
+Direct native-ETH vaults (T3 uses WETH), CREATE2 genesis and the ZK relay are later work.
 
 ### Earlier reward testnet — comparison version, economics superseded
 
@@ -172,7 +179,7 @@ smallest units. Workers call `RelayerRewards.claim(token)` to withdraw; a long u
 may require repeated calls (128 new point lots per default call). Rewards are not guaranteed gas reimbursement.
 See [T1 review](docs/tasks/T1_REPORT.md) for this deployed version's accounting and finality rules.
 
-### Sepolia / WETH (T3)
+### Sepolia / WETH (T3 and the T9 v4 candidate)
 
 The same Bitcoin checkpoint and genesis are reused on Sepolia, chain 11155111. The example vault uses
 the [Sepolia WETH address listed by Uniswap](https://developers.uniswap.org/docs/protocols/v3/deployments/v3-ethereum-deployments)
@@ -182,23 +189,40 @@ Use a separate encrypted Foundry account. `contracts/.env.sepolia` contains only
 `PASSWORD_FILE`, `DEPLOYER` and `RPC`. Keep it and the password file local, mode 600; never paste a key
 into a command or a log. The deployment wrapper simulates by default; `--broadcast` submits to Sepolia only.
 
+The current v4 release already has confirmed receipts. Do not rebroadcast it. For read-only startup:
+
+```bash
+ENV_FILE="$PWD/contracts/.env.sepolia-v4" MANIFEST=contracts/deployments/sepolia-weth-v4.json RUN_KEEPER=0 bash scripts/bitcoin-testnet.sh
+```
+
+Prepare your own local encrypted-account configuration at that env path. To run a v4 keeper, fund a separate
+account and omit `RUN_KEEPER=0`; never share a signing account with a concurrently running v3 keeper.
+The v4 defaults are port 8794, its own cache, and `wuji-sepolia-v4` process names. Its deployment and verification
+evidence files are separate from v3. The old v3 startup/comparison examples below remain historical operations;
+the deployment commands are only for a deliberately new release and need a new output manifest.
+`RPC_OVERRIDE` selects an alternate runtime RPC without rewriting historical manifests; the existing chain-ID
+guards still run for reads and before each signature. Set it in the local env file or startup environment.
+
 ```bash
 node --test indexer/bitcoin*.test.mjs indexer/networks.test.mjs indexer/evm-rpc.test.mjs scripts/compare-chains.test.mjs apps/terminal/wallet.test.mjs
 bash contracts/scripts/deploy-sepolia.sh
 bash contracts/scripts/deploy-sepolia.sh --broadcast
-# After successful broadcast, set DEPLOYMENT_COMMIT to the full reviewed source commit:
+# For a new release only; the existing v4 manifest refuses overwrites:
 DEPLOYMENT_COMMIT=<full-commit> node scripts/record-sepolia-deployment.mjs
+# Historical v3 comparison commands (use the v3 source revision for its bytecode checks):
 MANIFEST=contracts/deployments/sepolia-weth-v3.json VERIFICATION_OUTPUT=contracts/deployments/sepolia-verification.json node scripts/verify-bitcoin-deployment.mjs
 ENV_FILE="$PWD/contracts/.env.sepolia" MANIFEST=contracts/deployments/sepolia-weth-v3.json bash scripts/bitcoin-testnet.sh
 node scripts/compare-chains.mjs
 READ_RPC=https://ethereum-sepolia.publicnode.com MANIFEST=contracts/deployments/sepolia-weth-v3.json INDEXER_URL=http://localhost:8793 OPERATION_OUTPUT=contracts/deployments/sepolia-operation.json node scripts/verify-reserve-operation.mjs
 ```
 
-The Sepolia terminal defaults to port 8793, a separate cache and `wuji-sepolia` process names. Its keeper uses
-automatic Ethereum fee selection, not the BSC-specific legacy gas override. Before starting the keeper,
+The historical v3 Sepolia terminal defaults to port 8793, a separate cache and `wuji-sepolia` process names. Its keeper uses
+automatic Ethereum fee selection, not the BSC-specific legacy gas override. Once the relay/index have caught up,
 `scripts/sepolia-smoke.mjs` can wrap 0.003 test ETH, donate 0.001 WETH to the operations reserve, mint and
 redeem one pair, then route its fees. Source the local Sepolia env first; the script records receipts and
-refuses to overwrite an existing smoke run. Donations are ordinary public funding, not a privilege.
+refuses to overwrite an existing smoke run. Set `MANIFEST` and a separate `SMOKE_OUTPUT` for v4, stop keepers
+sharing the smoke wallet, and pause v4 reserve claims until its exact balance assertions finish.
+Donations are ordinary public funding, not a privilege.
 
 The comparison pins reads to an EVM block on each chain, rejects differing parameters or a frozen folded
 hash, and compares exact integer S and Bitcoin hash at the lower folded height. A faster chain is reversed

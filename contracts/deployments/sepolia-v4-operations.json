@@ -1,0 +1,154 @@
+{
+  "status": "confirmed",
+  "chainId": 11155111,
+  "startedAt": "2026-09-21T16:22:03.195Z",
+  "sourceCommit": "1b099529715874da35a1958bbde8afb5aabb6973",
+  "faucet": {
+    "provider": "Google Cloud Sepolia faucet",
+    "hash": "0xc179740927706105ae818bba5c8df33c55ae2994c236fb1a201c6fa67fe5e0e3",
+    "recipient": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "valueWei": "50000000000000000",
+    "block": 11752011,
+    "status": "0x1"
+  },
+  "keeper": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+  "keeperFunding": {
+    "status": "0x1",
+    "from": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+    "to": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+    "valueWei": "40000000000000000",
+    "nonce": 77,
+    "balanceBeforeWei": "51406511022736335",
+    "hash": "0x4a3b3e98d5ff4779161b715d588e88b7f963d4af2935b49e99da5edddb92c4cd",
+    "block": 11752039,
+    "gasUsed": 21000
+  },
+  "deployment": {
+    "manifest": "contracts/deployments/sepolia-weth-v4.json",
+    "transactions": 7,
+    "gasUsed": "13115533",
+    "feeWei": "14274903426140085"
+  },
+  "firstKeeperSubmission": {
+    "fromHeight": 967826,
+    "toHeight": 967849,
+    "hash": "0xb52ab0a88f9e8805ba495bcddfd4cba6465e4dc5403802d2a9841681e9c946d7",
+    "status": "0x1",
+    "gasUsed": 2099945,
+    "feeWei": "2246476375472985",
+    "block": 11752057
+  },
+  "bootstrap": {
+    "evidence": "contracts/deployments/sepolia-v4-bootstrap.json",
+    "transactions": 9,
+    "gasUsed": "16407863",
+    "feeWei": "17597663744288783",
+    "lastHeight": 968013,
+    "S_wad": "-69744000000000000"
+  },
+  "smoke": {
+    "status": "confirmed",
+    "evidence": "contracts/deployments/sepolia-v4-smoke.json",
+    "transactions": 7,
+    "gasUsed": "573736",
+    "feeWei": "623381447834504"
+  },
+  "reconciliation": {
+    "status": "PASS",
+    "evidence": "contracts/deployments/sepolia-v4-live.json",
+    "height": 968013
+  },
+  "runtime": {
+    "rpc": "https://rpc.sepolia.ethpandaops.io",
+    "restartedAt": "2026-09-21T16:54:07Z",
+    "v4": {
+      "indexerPort": 8794,
+      "keeper": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+      "firstAutomaticUpdate": {
+        "hash": "0xa24e304deb83821ce4ff39b51db85afe4f2b8aba92cc09f32df55435ffe1f5a8",
+        "fromHeight": 968020,
+        "toHeight": 968021,
+        "status": "0x1",
+        "block": 11752225,
+        "nonce": 10,
+        "gasLimit": 511923,
+        "gasUsed": 403744,
+        "feeWei": "412838005356128"
+      },
+      "reconciliation": "contracts/deployments/sepolia-v4-live-after-resume.json",
+      "lastHeight": 968015,
+      "resumedAfterFuelTransferAt": "2026-09-21T17:04:53Z"
+    },
+    "v3": {
+      "indexerPort": 8793,
+      "keeper": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "fuelRebalance": {
+        "status": "0x1",
+        "from": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+        "to": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+        "valueWei": "6000000000000000",
+        "nonce": 11,
+        "chainId": 11155111,
+        "reason": "Existing v3 comparison keeper must catch up historical headers after its pause; preserve both test stacks.",
+        "hash": "0xc6d0858d46e0856a4e7679a12f1c3e29b482976f6e9694600a970d32124447a0",
+        "block": 11752236,
+        "gasUsed": 21000,
+        "feeWei": "22626957717000"
+      },
+      "firstResumedUpdate": {
+        "hash": "0x321fe54cd372e9916f95b94e11d3684137eaa31ec8dd2812c469665d48e373ac",
+        "status": "0x1",
+        "block": 11752228,
+        "fromHeight": 967921,
+        "toHeight": 967944,
+        "scope": "Headers submitted; stale relay catch-up gate still defers folding."
+      }
+    },
+    "scope": "Local background services on the current workstation; no independent-operator or long-duration acceptance claimed.",
+    "balanceSnapshot": {
+      "block": 11752239,
+      "blockHash": "0x751655a29b2316cd5a486d0d1384f35f94b4f1df379a93f89637d29b0411abbc",
+      "accounts": [
+        {
+          "address": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+          "nativeBalanceWei": "11310775217498743"
+        },
+        {
+          "address": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+          "nativeBalanceWei": "13720394917165104"
+        }
+      ]
+    },
+    "knownLimitation": "Foundry capability probes can make polling slow; a single read-only diagnostic took 27.431s with 0.635s in eth_call. No latency fix is claimed.",
+    "processSnapshot": {
+      "checkedAt": "2026-09-21T17:05:58.853Z",
+      "processes": [
+        {
+          "release": "v3",
+          "role": "indexer",
+          "pid": 18536,
+          "command": "node indexer/index.mjs"
+        },
+        {
+          "release": "v3",
+          "role": "keeper",
+          "pid": 18537,
+          "command": "node indexer/keeper.mjs"
+        },
+        {
+          "release": "v4",
+          "role": "indexer",
+          "pid": 16355,
+          "command": "node indexer/index.mjs"
+        },
+        {
+          "release": "v4",
+          "role": "keeper",
+          "pid": 19839,
+          "command": "node indexer/keeper.mjs"
+        }
+      ]
+    }
+  },
+  "completedAt": "2026-09-21T17:05:58.863Z"
+}

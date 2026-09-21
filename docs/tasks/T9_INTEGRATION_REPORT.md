@@ -4,10 +4,11 @@
 
 The source candidate from `42d61a6` now has an indexer reader, testnet keeper integration and a standalone
 browser exit path. No Solidity production contract, original invariant or fee/pair rule changed in this step.
-**A new public Sepolia v4 deployment has not been broadcast.** The existing immutable v3 releases and background
-processes are retained. Their addresses have not been relabelled as v4.
+**Sepolia v4 was deployed on September 22 (Asia/Shanghai).** Current public deployment status and receipts are
+in [T9_SEPOLIA_V4_REPORT.md](T9_SEPOLIA_V4_REPORT.md). The existing immutable v3 addresses have not been
+relabelled as v4. The following funding notes record the earlier pre-deployment state.
 
-Public deployment currently needs additional test ETH. The existing Sepolia deployment account
+Before deployment, additional test ETH was needed. The existing Sepolia deployment account
 `0x85967858e2464535A12031103ABA38f2795Fe8Fd` was observed with approximately 0.0156814 test ETH on 2026-09-21.
 A sampled Sepolia base fee was approximately 0.977 gwei. New deployment plus replay from the unchanged 967825
 anchor, smoke transactions and ongoing keepers need more headroom. These are observations, not a fee guarantee.
@@ -70,8 +71,8 @@ No new public deployment, signing transaction or funding claim was made in this 
   permits read-only startup. Docker derives exit support from the manifest; v3 cannot inherit it accidentally.
 - The recorder rejects a v3 broadcast relabelled as v4. `register-terminal-deployment.mjs` adds a v4 release
   to the browser registry only after a fresh full-metadata bytecode comparison and direct binding reads.
-  It preserves the v3 registry and refuses accidental v4 replacement. The production page currently publishes
-  only the actually deployed v3 addresses; no invented v4 address is shown.
+  It preserves the v3 registry and refuses accidental v4 replacement. The production page now publishes the
+  actual verified v4 addresses alongside v3; no invented address is shown.
 
 ## Local transaction drill
 
