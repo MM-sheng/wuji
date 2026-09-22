@@ -3,6 +3,11 @@
 Every item is required unless it is explicitly marked informational. Record links, hashes, addresses,
 and reviewer names in the release ticket; a checked box without evidence is insufficient.
 
+The target is Ethereum L1 with native ETH, as decided in `ARCHITECTURE.md`. The current Sepolia v4
+candidate uses WETH; the native-ETH vault and CREATE2 flow remain unimplemented. Older BSC checklists
+and internal audit notes are historical evidence, not production deployment instructions.
+The current review/operator entry point is [SEPOLIA_V4_HANDOFF.md](tasks/SEPOLIA_V4_HANDOFF.md).
+
 ## Protocol decision
 
 - [x] Replace timestamp/call-time settlement with a predetermined, recoverable settlement point.
@@ -25,14 +30,14 @@ and reviewer names in the release ticket; a checked box without evidence is insu
 ## Parameters and deployment
 
 - [ ] Tag the audited commit and build from that tag with the pinned compiler/toolchain.
-- [ ] Confirm `EXPECTED_CHAIN_ID=56` and independently read the RPC chain id.
-- [ ] Confirm `ASSET` is the canonical BSC collateral contract and record its code hash.
-- [ ] Confirm the collateral has ordinary non-rebasing, non-fee-on-transfer ERC-20 accounting.
+- [ ] Confirm the reviewed release targets Ethereum L1 (`EXPECTED_CHAIN_ID=1`) and independently read the RPC chain id.
+- [ ] Implement and independently review the native-ETH collateral path; choosing WETH instead requires an explicit architecture decision.
+- [ ] If an ERC-20 collateral release is selected, verify its exact address/code hash and ordinary non-rebasing, non-fee-on-transfer accounting.
 - [ ] Confirm `NOTIONAL` is expressed in the collateral's base units.
 - [ ] Confirm each vault treasury points to the immutable fee router/reserve, with no owner or rescue key.
-- [ ] Simulate the deployment against a BSC fork and review every constructor argument.
+- [ ] Implement/review the planned CREATE2 flow, preannounce genesis/anchor/parameters, and simulate deployment against an Ethereum fork with every constructor argument reviewed.
 - [ ] Broadcast from a dedicated hardware-backed deployer; do not paste its key into `.env`.
-- [ ] Verify source and constructor arguments on BscScan.
+- [ ] Verify source and constructor arguments on Ethereum Etherscan.
 - [ ] Compare deployed runtime bytecode with the audited local build.
 - [ ] Transfer no production collateral until verification is complete.
 

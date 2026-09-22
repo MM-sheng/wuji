@@ -7,6 +7,11 @@ The goal these serve: **the disappearance test** — if the authors vanish, the 
 There is no privileged contract operator, but economic liveness and one-sided exit after a deep reorg remain
 unresolved. The keeper, fees, indexer and front-end have not passed the full disappearance drill.
 
+2026-09-22 follow-up: [T8_RECOVERY_REPORT.md](T8_RECOVERY_REPORT.md) records a successful complete v4
+two-source replay, recovered wallet-owned test fuel and restored indexer reads. Fuel recovery is partial;
+the relay remains stale. [SEPOLIA_V4_HANDOFF.md](SEPOLIA_V4_HANDOFF.md) is ready for an independent
+reviewer/operator; the user has confirmed neither is available yet and requested continued local checks.
+
 ---
 
 ## T0 · Claims correction (docs + terminal wording) — implemented, awaiting review
@@ -114,8 +119,9 @@ account name).
 Implemented on `codex/independent-verification`: [T4_REPORT.md](T4_REPORT.md). Independent two-source
 reconstruction, read-only credential mounts, reproducible runtime checks and offline CI integration are delivered.
 112 Solidity tests and 58 Node tests passed, with invariants unchanged. Sepolia's seven runtimes match the fresh
-reproducible build. Live two-source reconstruction remains incomplete because public Bitcoin APIs returned 429;
-no successful live reconstruction is claimed. T5 is the next implementation task; retry T4's live check when sources are available.
+reproducible build. The original v3 live attempts failed on public-API 429s. A later complete v4 replay passed
+at pinned EVM block 11757099 ([recovery report](T8_RECOVERY_REPORT.md)); no checkpoint was due, and
+operator/audit acceptance remains open. T5's implementation followed this task.
 
 - `scripts/wuji-verify.mjs`: one command, no dependencies, that (a) fetches the headers from `GENESIS_HEIGHT` to the
   contract's `lastHeight` from two independent Bitcoin sources, (b) recomputes U/S exactly as the contract, (c) reads
@@ -131,7 +137,7 @@ no successful live reconstruction is claimed. T5 is the next implementation task
 Implemented on `codex/terminal-ipfs`: [T5_REPORT.md](T5_REPORT.md). Staircase view, persisted source selection,
 fresh browser RPC comparison, read-only CORS and verified single-file IPFS pinning are delivered. 112 Solidity
 and 74 Node tests pass. Live Sepolia snapshot comparison and the offline IPFS gateway flow were verified.
-Public persistent hosting/DNS remain unconfigured; T4's full live two-source reconstruction remains open.
+Public persistent hosting/DNS remain unconfigured; T4's full live two-source snapshot later passed for v4.
 T6's whitepaper and T7's design-stage delivery follow below.
 
 - The market now steps every ~10 min. Make that legible: last Bitcoin height and hash (→ mempool.space), time since

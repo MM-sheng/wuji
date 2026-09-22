@@ -1,0 +1,95 @@
+{
+  "chainId": 11155111,
+  "rpcHost": "rpc.sepolia.ethpandaops.io",
+  "startedAt": "2026-09-22T09:44:43.437Z",
+  "sourceCommit": "5bb128bdbd02a5f8c260177b2ca90a3c9a53a109",
+  "status": "confirmed",
+  "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "recipient": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+  "asset": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+  "beforeBlock": "0xb36624",
+  "before": {
+    "senderNative": "640180451620034",
+    "senderWeth": "4008456032569868",
+    "recipientNative": "342299413560457"
+  },
+  "scope": "Recover wallet-owned test WETH into native Sepolia ETH and transfer to the existing v4 keeper. No reserve or vault withdrawals.",
+  "transactions": [
+    {
+      "operation": "unwrap-wallet-WETH",
+      "to": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "data": "0x2e1a7d4d000000000000000000000000000000000000000000000000000e3dab65eb4a0c",
+      "value": "0",
+      "nonce": "101",
+      "gasLimit": "45234",
+      "gasPrice": "1205289949",
+      "status": "confirmed",
+      "hash": "0x538c2b59d902dacdbdfad01cc4ce2a4102ccc8d570783a81e012263fa998ae22",
+      "receipt": {
+        "blockHash": "0xd2de68bce0437d741addbeb7a065845675e8d258755c7461b35dfeb2cdd257e1",
+        "blockNumber": "0xb36626",
+        "contractAddress": null,
+        "cumulativeGasUsed": "0xa0f8e7",
+        "effectiveGasPrice": "0x47d743dd",
+        "from": "0x85967858e2464535a12031103aba38f2795fe8fd",
+        "gasUsed": "0x76d0",
+        "logs": [
+          {
+            "address": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+            "topics": [
+              "0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65",
+              "0x00000000000000000000000085967858e2464535a12031103aba38f2795fe8fd"
+            ],
+            "data": "0x000000000000000000000000000000000000000000000000000e3dab65eb4a0c",
+            "blockNumber": "0xb36626",
+            "transactionHash": "0x538c2b59d902dacdbdfad01cc4ce2a4102ccc8d570783a81e012263fa998ae22",
+            "transactionIndex": "0x58",
+            "blockHash": "0xd2de68bce0437d741addbeb7a065845675e8d258755c7461b35dfeb2cdd257e1",
+            "blockTimestamp": "0x6ab24e1c",
+            "logIndex": "0x66",
+            "removed": false
+          }
+        ],
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000040000000000000000000040000000000000000000010000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000002000000000200000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000",
+        "status": "0x1",
+        "to": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+        "transactionHash": "0x538c2b59d902dacdbdfad01cc4ce2a4102ccc8d570783a81e012263fa998ae22",
+        "transactionIndex": "0x58",
+        "type": "0x0"
+      }
+    },
+    {
+      "operation": "fund-existing-v4-worker",
+      "to": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+      "data": "0x",
+      "value": "4400000000000000",
+      "nonce": "102",
+      "gasLimit": "26250",
+      "gasPrice": "1311170707",
+      "status": "confirmed",
+      "hash": "0x326aae575eb519984fa903d5e399989b2034b624d39ba17fdb7fa95030bb0354",
+      "receipt": {
+        "blockHash": "0xdcf26c458ed24367df5caf6f067f54e5767772039f243518342130c745d890c8",
+        "blockNumber": "0xb36627",
+        "contractAddress": null,
+        "cumulativeGasUsed": "0x2ea612",
+        "effectiveGasPrice": "0x4e26e093",
+        "from": "0x85967858e2464535a12031103aba38f2795fe8fd",
+        "gasUsed": "0x5208",
+        "logs": [],
+        "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "status": "0x1",
+        "to": "0x2302992f8ef33a3561bf26e19994cf12e76f53e4",
+        "transactionHash": "0x326aae575eb519984fa903d5e399989b2034b624d39ba17fdb7fa95030bb0354",
+        "transactionIndex": "0x35",
+        "type": "0x0"
+      }
+    }
+  ],
+  "after": {
+    "senderNative": "184441800254118",
+    "senderWeth": "0",
+    "recipientNative": "4742299413560457"
+  },
+  "completedAt": "2026-09-22T09:45:16.521Z"
+}

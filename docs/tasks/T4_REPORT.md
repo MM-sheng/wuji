@@ -59,7 +59,20 @@ Evidence: [sepolia-reproducible-bytecode.json](../../contracts/deployments/sepol
 Masked bytecode equality does not check immutable values; the separate T3 deployment-binding evidence remains
 [sepolia-verification.json](../../contracts/deployments/sepolia-verification.json).
 
-## Live independent reconstruction: incomplete
+## Live independent reconstruction: Sepolia v4 snapshot passed on 2026-09-22
+
+The later v4 run completed with explicitly selected mempool.space + bitcoin.lu.ke sources. It recomputed
+all 248 folded heights (967826–968073), plus the anchor and six descendants, at pinned Sepolia block
+11757099. Both sources agreed on all raw headers; U = -8870 and S_wad = -106440000000000000 matched the
+contract. Each source received 511 requests. No indexer cache was used. Evidence and operator assumptions:
+[T8_RECOVERY_REPORT.md](T8_RECOVERY_REPORT.md) and
+[sepolia-v4-independent-verification.json](../../contracts/deployments/sepolia-v4-independent-verification.json).
+
+The relay was stale at this snapshot. This PASS verifies complete recorded history there, not catch-up,
+global synchronization, another person's operation or an independent audit. No live checkpoint was due.
+The earlier v3 failures below remain preserved; they are not retroactively successful.
+
+### Earlier attempts
 
 The first live attempt with mempool.space + Blockstream returned **HTTP 429**. A separately configured
 mempool.space + mempool.emzy.de attempt also returned **429** from the second endpoint. Neither produced a PASS.
@@ -83,5 +96,7 @@ suite. This distinction is intentional.
 - RPC responses, source operators and the chosen relay anchor remain trust assumptions; the CLI does not
   implement full Bitcoin consensus or prove a globally highest-work tip.
 - Containers make independent operation possible; they do not establish profitable keeper economics or
-  complete T8's 48-hour disappearance drill. T9 one-sided frozen exits are still unresolved.
-- T5 is next for implementation. The T4 live two-source check remains an explicit follow-up, not a completed gate.
+  complete T8's 48-hour disappearance drill. T9 has a separate v4 test candidate; its review and operational
+  acceptance remain open.
+- The original T4 implementation was followed by T5. The 2026-09-22 v4 live two-source snapshot now passes;
+  the first real checkpoint, independent operator drill and release audit remain separate gates.

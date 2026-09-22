@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-09-22T09:46:09.126Z",
+  "chainId": 11155111,
+  "index": "0x67a6ec0afa4f9b4dfe1d7d111a92302bd9e15e6e",
+  "evmBlock": 11757099,
+  "evmBlockHash": "0x000f57a384011c2a3f9dd2f42767c30277babcfc45114de8e358e3754f9ad472",
+  "sources": [
+    "https://mempool.space/api",
+    "https://bitcoin.lu.ke/api"
+  ],
+  "genesisHeight": 967826,
+  "anchorHeight": 967825,
+  "anchorHash": "0x6bc016e24a9987823eb4ef0c72925304ef16a7bc7cd600000000000000000000",
+  "lastHeight": 968073,
+  "relayHeight": 968079,
+  "relayFresh": false,
+  "checkpointInterval": 4320,
+  "status": "PASS",
+  "headersRecomputed": 248,
+  "confirmedThrough": 968079,
+  "lastHash": "0x94f2664f5cee2ced8d872730a6e441f4d66fa5ce97df00000000000000000000",
+  "U": "-8870",
+  "S_wad": "-106440000000000000",
+  "checkpoints": [],
+  "nextCheckpointHeight": 972145,
+  "scope": "Exact two-source header agreement, linkage and index/checkpoint arithmetic at this EVM snapshot. RPC responses, the trusted anchor and source operators remain trust assumptions; this is not a full Bitcoin consensus verifier, global synchronization proof or contract audit.",
+  "startedAt": "2026-09-22T09:46:03.181Z",
+  "requestCounts": {
+    "mempool.space": 511,
+    "bitcoin.lu.ke": 511
+  },
+  "completedAt": "2026-09-22T09:54:40.062Z"
+}

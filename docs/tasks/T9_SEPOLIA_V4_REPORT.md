@@ -2,6 +2,7 @@
 
 Later runtime follow-up: [T8_KEEPER_RUNTIME.md](T8_KEEPER_RUNTIME.md) records the direct-read fix and current
 process/funding status. The receipt and balance observations below describe the initial rollout.
+The latest recovery and two-source replay are in [T8_RECOVERY_REPORT.md](T8_RECOVERY_REPORT.md).
 
 ## Status
 

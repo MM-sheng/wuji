@@ -1,5 +1,9 @@
 # Keeper runtime follow-up · 2026-09-22
 
+Later the same day, [T8_RECOVERY_REPORT.md](T8_RECOVERY_REPORT.md) records partial fuel recovery,
+an explicit local fee cap, restored indexer reads and a full live two-source snapshot replay. The balances
+and process observations below describe this earlier runtime change.
+
 ## Delivered
 
 The Sepolia v4 keeper now reads and simulates through direct JSON-RPC. Foundry remains responsible for local

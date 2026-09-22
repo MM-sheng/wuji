@@ -4,6 +4,10 @@ Review date: 2026-09-19
 Scope: `WujiIndex.sol`, `WujiVault.sol`, `SeriesToken.sol`, deployment script, keeper assumptions  
 Status: internal review only; not a substitute for an independent audit
 
+Historical scope: these notes describe the earlier BSC-source implementation. They are not findings or
+clearance for the Bitcoin-source Sepolia v4 release. Current review scope and evidence are collected in
+[SEPOLIA_V4_HANDOFF.md](tasks/SEPOLIA_V4_HANDOFF.md); independent review is still pending.
+
 ## Findings
 
 ### WUJI-01 — High — Fixed, pending independent review — settlement-time optionality
