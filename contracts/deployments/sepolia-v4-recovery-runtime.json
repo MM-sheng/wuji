@@ -511,5 +511,39 @@
     "Relay remains stale and folding correctly defers. Remaining native balance cannot fund another normal 24-header batch.",
     "Indexer restarted after persistent transport errors. Restart restored reads; root cause of the old process connection failure is not established.",
     "This is author-operated testnet evidence; no independent operator or mainnet acceptance."
-  ]
+  ],
+  "sourceConfiguration": {
+    "updatedAt": "2026-09-22T10:07:14.760Z",
+    "explicitBitcoinSources": [
+      "https://mempool.space/api",
+      "https://bitcoin.lu.ke/api"
+    ],
+    "readRpcHost": "rpc.sepolia.ethpandaops.io",
+    "services": [
+      {
+        "port": 8794,
+        "indexHeight": 968124,
+        "sourceTip": 968130,
+        "observedEvmBlock": 11757202,
+        "contractHeight": 968073,
+        "relayHeight": 968103,
+        "relayFresh": false,
+        "agree": true,
+        "sourceError": null
+      },
+      {
+        "port": 8793,
+        "indexHeight": 968124,
+        "sourceTip": 968130,
+        "observedEvmBlock": 11757202,
+        "contractHeight": 968025,
+        "relayHeight": 968031,
+        "relayFresh": false,
+        "agree": true,
+        "sourceError": null
+      }
+    ],
+    "v3KeeperRunning": false,
+    "scope": "Recovery source configuration and local HTTP observations; a synced indexer does not imply the relay has caught up."
+  }
 }

@@ -62,6 +62,10 @@ ETH Faucet 的资格请求失败。没有轮换账户、地址或 IP 绕过限�
 这个绿色对账结果不代表中继已经追上最新 Bitcoin 链头。
 重启恢复了连接，但尚未确定旧进程长时间连接失败的根因，不能称为根因修复。
 
+随后把 v4 和 v3 对照进程的公开 Bitcoin 来源明确配置为 `mempool.space` + `bitcoin.lu.ke`，
+用刚完成重算的来源替换本轮持续限流的备用接口。重启前检查 v4 没有待确认交易；重启后两套 `/head`
+均无来源错误、同步到 968124（来源 tip 968130），同高整数一致。此时各自中继依旧过时。
+
 v4 当前为 :8794；v3 :8793 继续只读，旧 keeper 仍停止。与运行记录对应的链上状态、回执、
 余额和限制见 [sepolia-v4-recovery-runtime.json](../../contracts/deployments/sepolia-v4-recovery-runtime.json)。
 
