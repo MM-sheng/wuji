@@ -545,5 +545,39 @@
     ],
     "v3KeeperRunning": false,
     "scope": "Recovery source configuration and local HTTP observations; a synced indexer does not imply the relay has caught up."
+  },
+  "finalReadCheck": {
+    "checkedAt": "2026-09-22T10:31:48.720Z",
+    "services": [
+      {
+        "port": 8794,
+        "synced": true,
+        "height": 968126,
+        "error": null,
+        "chainError": null,
+        "agree": true,
+        "observedEvmBlock": 11757321,
+        "relayHeight": 968103,
+        "relayFresh": false
+      },
+      {
+        "port": 8793,
+        "synced": true,
+        "height": 968126,
+        "error": null,
+        "chainError": null,
+        "agree": true,
+        "observedEvmBlock": 11757321,
+        "relayHeight": 968031,
+        "relayFresh": false
+      }
+    ],
+    "keeperBalanceWei": "1946161913560457",
+    "keeperNonce": 63,
+    "pendingTransactions": false,
+    "v3ReadRpcHost": "ethereum-sepolia.publicnode.com",
+    "v4ReadRpcHost": "rpc.sepolia.ethpandaops.io",
+    "v3IndexRuntimeSha256AtBothProviders": "e624b21dd8cb13dd6ece22c7c39821933855bf21a0ca111758dded77211df410",
+    "notes": "v3 long-running RPC reads failed again while fresh probes succeeded. Switched only its read-only runtime to PublicNode after matching chain id and full index runtime hash at both providers. This restores current reads, not a proven root-cause fix."
   }
 }

@@ -69,6 +69,12 @@ ETH Faucet 的资格请求失败。没有轮换账户、地址或 IP 绕过限�
 v4 当前为 :8794；v3 :8793 继续只读，旧 keeper 仍停止。与运行记录对应的链上状态、回执、
 余额和限制见 [sepolia-v4-recovery-runtime.json](../../contracts/deployments/sepolia-v4-recovery-runtime.json)。
 
+扩展测试结束后的复查发现 v3 的长期 RPC 连接再次失败，而新进程向两家提供商的探测均正常。
+在 PublicNode 与 ethpandaops 核对 Sepolia 链号及 v3 完整 index runtime SHA256 一致后，
+只把 v3 的只读运行配置切到 `ethereum-sepolia.publicnode.com`；v4 保持 ethpandaops。
+最后在 10:31:48 UTC 复查，两套接口均无错误且同高一致，没有 v4 待确认交易。连接失败的根因仍未确定，
+本次恢复不构成长期稳定性验收。余额不足时 RPC 也可能在估算阶段直接报 Gas 不够；这些失败没有付费发送交易。
+
 ## 扩展资金性质测试
 
 源码为 `5bb128bdbd02a5f8c260177b2ca90a3c9a53a109`；测试前后 `contracts/src`、`contracts/test`
