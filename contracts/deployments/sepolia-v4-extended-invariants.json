@@ -1,0 +1,2412 @@
+{
+  "status": "PASS",
+  "sourceCommit": "5bb128bdbd02a5f8c260177b2ca90a3c9a53a109",
+  "sourceTree": "3eae755a2a87f637504c2712565db449175f9196",
+  "startedAt": "2026-09-22T10:17:23.381Z",
+  "completedAt": "2026-09-22T10:25:54.156Z",
+  "toolchain": "forge Version: 1.8.3\nCommit SHA: cae51ad458f6abb64852b7709eb784352429825d\nBuild Timestamp: 2026-09-15T10:34:23.361078000Z (1789468463)\nBuild Profile: dist",
+  "configuration": {
+    "runsPerShard": 100,
+    "shardsPerTest": 10,
+    "totalRunsPerTest": 1000,
+    "depth": 100,
+    "failOnRevert": true,
+    "parallelProcesses": 8,
+    "contractFilter": "^(WujiVaultInvariants|RelayerRewardsInvariants|FrozenExitInvariants)$"
+  },
+  "invocation": "FOUNDRY_INVARIANT_RUNS=100 FOUNDRY_INVARIANT_DEPTH=100 FOUNDRY_INVARIANT_FAIL_ON_REVERT=true FOUNDRY_INVARIANT_FAILURE_PERSIST_DIR=<per-shard-directory> forge test --root contracts --match-contract ^(WujiVaultInvariants|RelayerRewardsInvariants|FrozenExitInvariants)$ --fuzz-seed <recorded-seed> -j 1 --json",
+  "uniqueRandomizedHandlerCalls": 300000,
+  "deterministicTraversalExecutions": 10,
+  "distinctSubstantivePredicates": 9,
+  "diagnosticPredicates": [
+    "invariant_callSummary"
+  ],
+  "aggregateCampaigns": {
+    "test/WujiVault.invariant.t.sol:WujiVaultInvariants": {
+      "runs": 1000,
+      "calls": 100000,
+      "reverts": 0,
+      "predicates": [
+        "invariant_callSummary",
+        "invariant_feesOnlyGoToTreasury",
+        "invariant_oneOpenSeries",
+        "invariant_openSeriesIsPaired",
+        "invariant_pairIsWhole",
+        "invariant_solvent"
+      ]
+    },
+    "test/FrozenExit.invariant.t.sol:FrozenExitInvariants": {
+      "runs": 1000,
+      "calls": 100000,
+      "reverts": 0,
+      "predicates": [
+        "invariant_openOrTerminalAndAlwaysPaired",
+        "invariant_solventAndConserved",
+        "invariant_terminalStateCannotAdvance"
+      ]
+    },
+    "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants": {
+      "runs": 1000,
+      "calls": 100000,
+      "reverts": 0,
+      "predicates": [
+        "invariant_reserveClaimsAndPaymentsConserveAllFunding"
+      ]
+    }
+  },
+  "shards": [
+    {
+      "id": 1,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003e9",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.417Z",
+      "pid": 41076,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:21:59.690Z",
+      "rawOutputBytes": 42521367,
+      "rawOutputSha256": "05faa0d35d84b26b438972c1ed53817740eb9f1257c9bc09b01330270fe8f8d5",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 448ms 703\u00b5s",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1203,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1233,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1271,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1235,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1263,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1239,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1278,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1278,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 446ms 71\u00b5s 84ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "631\u00b5s 666ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 100ms 502\u00b5s 667ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2533,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2488,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2564,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2415,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 99ms 946\u00b5s 750ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 32s 245ms 137\u00b5s 167ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1693,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1697,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1660,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1655,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1627,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1668,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 32s 242ms 771\u00b5s 833ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003ea",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.418Z",
+      "pid": 41077,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:22:08.767Z",
+      "rawOutputBytes": 112420337,
+      "rawOutputSha256": "b38a53010edaea4bd9201ac833913f14fe4068fa724539c993c62923153032bc",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 434ms 230\u00b5s 583ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1244,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1197,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1205,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1266,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1270,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1302,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1208,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1308,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 431ms 740\u00b5s 375ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "586\u00b5s 375ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 120ms 708\u00b5s 250ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2507,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2522,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2531,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2440,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 120ms 228\u00b5s 42ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 41s 205ms 404\u00b5s 208ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1681,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1623,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1655,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1672,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1680,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1689,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 41s 203ms 55\u00b5s 209ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003eb",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.419Z",
+      "pid": 41078,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:22:06.749Z",
+      "rawOutputBytes": 172306491,
+      "rawOutputSha256": "b4ec276637170506f0c0414ca9ec0f07536ad30ae87fb80bb407fc11a454071a",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 447ms 883\u00b5s 417ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1266,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1262,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1243,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1287,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1266,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1228,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1248,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1200,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 445ms 340\u00b5s 875ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "645\u00b5s 625ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 88ms 834\u00b5s 334ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2534,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2505,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2485,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2476,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 88ms 307\u00b5s 750ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 39s 23ms 4\u00b5s 208ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1664,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1670,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1630,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1713,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1673,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1650,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 39s 20ms 493\u00b5s 834ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003ec",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.419Z",
+      "pid": 41079,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:21:57.402Z",
+      "rawOutputBytes": 79575143,
+      "rawOutputSha256": "7c3b9ea944458349f2ed0979badb2e1f6f29778671e9e3e9d60e38ca7fba982c",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 434ms 385\u00b5s",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1253,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1242,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1252,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1276,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1227,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1262,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1224,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1264,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 431ms 786\u00b5s 84ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "644\u00b5s 791ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 118ms 454\u00b5s",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2495,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2549,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2445,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2511,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 117ms 753\u00b5s 834ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 29s 716ms 690\u00b5s 167ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1626,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1630,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1673,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1682,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1687,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1702,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 29s 714ms 90\u00b5s 83ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003ed",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.419Z",
+      "pid": 41080,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:22:03.664Z",
+      "rawOutputBytes": 191876873,
+      "rawOutputSha256": "c4c631dbefcf8f8fd53ad2284b2148f240e0190d6d962e090e11f2949dd4e0f8",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 484ms 431\u00b5s 125ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1251,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1270,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1201,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1227,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1244,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1226,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1295,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1286,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 481ms 831\u00b5s"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "627\u00b5s 291ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 109ms 595\u00b5s 792ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2466,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2562,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2479,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2493,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 109ms 84\u00b5s"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 35s 690ms 178\u00b5s 375ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1687,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1693,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1706,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1696,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1645,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1573,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 35s 687ms 556\u00b5s 917ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003ee",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.420Z",
+      "pid": 41081,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:22:10.379Z",
+      "rawOutputBytes": 101571667,
+      "rawOutputSha256": "72c2b514b514831f407835897b397645bf6316254017ada6e9c8fa071869ac83",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 402ms 919\u00b5s 83ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1178,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1254,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1252,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1260,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1290,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1255,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1293,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1218,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 400ms 267\u00b5s 875ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "632\u00b5s 708ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 85ms 538\u00b5s 875ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2498,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2477,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2544,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2481,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 84ms 906\u00b5s 667ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 42s 933ms 491\u00b5s 250ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1669,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1617,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1628,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1697,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1676,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1713,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 42s 931ms 8\u00b5s 250ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003ef",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.420Z",
+      "pid": 41082,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:22:11.909Z",
+      "rawOutputBytes": 23417231,
+      "rawOutputSha256": "a5dc2d804987f148eb16fe7863d679107efb8a9d395a20ca3803fc2102793591",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 453ms 519\u00b5s 250ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1227,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1334,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1251,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1206,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1264,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1285,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1238,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1195,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 451ms 43\u00b5s 792ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "639\u00b5s 542ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 106ms 432\u00b5s 709ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2494,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2505,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2488,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2513,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 105ms 932\u00b5s 917ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 44s 626ms 52\u00b5s 416ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1660,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1623,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1652,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1704,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1671,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1690,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 44s 623ms 360\u00b5s 625ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003f0",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:17:23.420Z",
+      "pid": 41083,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:22:10.187Z",
+      "rawOutputBytes": 135997958,
+      "rawOutputSha256": "a9fc4be8af67af40ffc42e2e84c75581b127948d133e8077d3d015745e3e4866",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "1s 470ms 806\u00b5s 667ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1224,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1221,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1332,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1241,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1231,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1300,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1179,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1272,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "1s 467ms 904\u00b5s 334ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "608\u00b5s 500ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 126ms 285\u00b5s 667ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2572,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2478,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2465,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2485,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 125ms 772\u00b5s 917ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "4m 42s 566ms 325\u00b5s 375ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1632,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1663,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1707,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1667,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1664,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1667,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "4m 42s 563ms 573\u00b5s 917ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003f1",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:21:57.408Z",
+      "pid": 41650,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:25:54.156Z",
+      "rawOutputBytes": 51706764,
+      "rawOutputSha256": "e3e935cbc5037f0e36f2814716d893ff443c8831d3d2db2b392ccd0182342a4b",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "2s 686ms 563\u00b5s 83ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1246,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1287,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1222,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1311,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1194,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1310,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1246,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1184,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 682ms 258\u00b5s 834ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "964\u00b5s 875ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 849ms 129\u00b5s 875ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2552,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2531,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2411,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2506,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 848ms 109\u00b5s 458ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "3m 50s 824ms 270\u00b5s 875ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1625,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1656,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1694,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1698,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1689,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1638,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "3m 50s 821ms 437\u00b5s 291ns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "seed": "0x00000000000000000000000000000000000000000000000000000000000003f2",
+      "status": "completed",
+      "startedAt": "2026-09-22T10:21:59.692Z",
+      "pid": 41663,
+      "exitCode": 0,
+      "finishedAt": "2026-09-22T10:25:38.997Z",
+      "rawOutputBytes": 79552370,
+      "rawOutputSha256": "74cfd5367ec05b566dd72ddde56ab1479ae812cc15e41be538e976d6c9ea689b",
+      "suites": [
+        {
+          "suite": "test/FrozenExit.invariant.t.sol:FrozenExitInvariants",
+          "duration": "2s 258ms 728\u00b5s 125ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_openOrTerminalAndAlwaysPaired()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 3,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_openOrTerminalAndAlwaysPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solventAndConserved",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_terminalStateCannotAdvance",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.mint": {
+                      "calls": 1229,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.switchBranch": {
+                      "calls": 1289,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.settle": {
+                      "calls": 1322,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.redeem": {
+                      "calls": 1229,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.transfer": {
+                      "calls": 1223,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.finishExit": {
+                      "calls": 1244,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.progress": {
+                      "calls": 1259,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/FrozenExit.invariant.t.sol:FrozenExitHandler.observe": {
+                      "calls": 1205,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 255ms 228\u00b5s 458ns"
+            },
+            {
+              "name": "test_handlerTraversesTerminalStateWithUnmatchedExits()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Unit": {
+                  "gas": 1851442
+                }
+              },
+              "duration": "738\u00b5s 41ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants",
+          "duration": "2s 362ms 726\u00b5s 166ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_reserveClaimsAndPaymentsConserveAllFunding()",
+              "status": "Success",
+              "reason": null,
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.claim": {
+                      "calls": 2441,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.fee": {
+                      "calls": 2527,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.donation": {
+                      "calls": 2522,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/RelayerRewards.invariant.t.sol:RewardHandler.credit": {
+                      "calls": 2510,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "2s 362ms 64\u00b5s 250ns"
+            }
+          ]
+        },
+        {
+          "suite": "test/WujiVault.invariant.t.sol:WujiVaultInvariants",
+          "duration": "3m 34s 259ms 280\u00b5s 625ns",
+          "warnings": [],
+          "results": [
+            {
+              "name": "invariant_callSummary()",
+              "status": "Success",
+              "reason": null,
+              "invariant_count": 6,
+              "invariant_predicate_results": [
+                {
+                  "name": "invariant_callSummary",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_feesOnlyGoToTreasury",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_oneOpenSeries",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_openSeriesIsPaired",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_pairIsWhole",
+                  "status": "Success"
+                },
+                {
+                  "name": "invariant_solvent",
+                  "status": "Success"
+                }
+              ],
+              "counterexample": null,
+              "kind": {
+                "Invariant": {
+                  "runs": 100,
+                  "calls": 10000,
+                  "reverts": 0,
+                  "workers": 1,
+                  "metrics": {
+                    "test/WujiVault.invariant.t.sol:Handler.redeemSettled": {
+                      "calls": 1697,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.redeemPair": {
+                      "calls": 1696,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.mint": {
+                      "calls": 1638,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.moveIndex": {
+                      "calls": 1632,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.transferHalf": {
+                      "calls": 1651,
+                      "reverts": 0,
+                      "discards": 0
+                    },
+                    "test/WujiVault.invariant.t.sol:Handler.settle": {
+                      "calls": 1686,
+                      "reverts": 0,
+                      "discards": 0
+                    }
+                  },
+                  "failed_corpus_replays": 0,
+                  "optimization_best_value": null
+                }
+              },
+              "duration": "3m 34s 256ms 301\u00b5s 417ns"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scope": "Ten independent recorded seeds, each with 100 runs at depth 100, for each of three original handler suites. All original predicates are retained; Foundry groups predicates into shared campaigns, so calls are counted once per campaign, not once per predicate. Fail-on-revert is enabled; every target metric has nonzero calls and zero reverts/discards. No financial tests or protocol source were edited. Synthetic Bitcoin feeders remain test-only; this is local verification, not a contract audit or full Bitcoin consensus test.",
+  "rawOutputRetention": "Full verbose JSON outputs remain locally under /tmp/wuji-v4-extended-shards/shard-N.json. Their SHA256 and size are recorded; this committed summary retains all result statuses, predicate results, run/call/revert counts, per-target metrics and durations, while omitting verbose decoded logs/traces and local labels.",
+  "excludedAttempt": "An unfinished serial 1000-run invocation was interrupted to run the bounded parallel shards. None of its work is counted as a passed run."
+}

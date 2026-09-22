@@ -21,7 +21,7 @@ The current review/operator entry point is [SEPOLIA_V4_HANDOFF.md](tasks/SEPOLIA
 - [ ] Independent smart-contract review completed against the exact release commit.
 - [ ] All high/critical findings fixed and the reviewer has checked the fixes.
 - [ ] `forge fmt --check`, `forge build --sizes`, `forge lint`, and `forge test -vvv` pass.
-- [ ] Run extended invariants with at least 1,000 runs and 100 depth on the release commit.
+- [ ] Run extended invariants with at least 1,000 runs and 100 depth on the audited production release commit. The v4 test candidate passed [10 seeded 100-run shards at depth 100](tasks/T8_RECOVERY_REPORT.md), with original predicates intact; that does not clear a later native-ETH/production release.
 - [ ] Run a static analyzer such as Slither and triage every result.
 - [x] Reproduce Bitcoin raw-hash/R/S fixtures: 6060 headers, four retargets, 345 Core-derived timestamp vectors ([T2b report](tasks/T2B_REPORT.md)); independent release review is separate.
 - [ ] Review rounding at minimum units and maximum intended TVL.

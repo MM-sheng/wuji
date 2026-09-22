@@ -11,6 +11,8 @@ unresolved. The keeper, fees, indexer and front-end have not passed the full dis
 two-source replay, recovered wallet-owned test fuel and restored indexer reads. Fuel recovery is partial;
 the relay remains stale. [SEPOLIA_V4_HANDOFF.md](SEPOLIA_V4_HANDOFF.md) is ready for an independent
 reviewer/operator; the user has confirmed neither is available yet and requested continued local checks.
+The original three financial/state handlers then passed ten seeded shards of 100 runs at depth 100 each
+(1000 runs per handler, 300000 unique randomized calls), with all original predicates and fail-on-revert intact.
 
 ---
 

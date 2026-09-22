@@ -13,6 +13,7 @@
 | 地址及构造参数 | [sepolia-weth-v4.json](../../contracts/deployments/sepolia-weth-v4.json) |
 | 初次部署与 WETH 往返回执 | [T9_SEPOLIA_V4_REPORT.md](T9_SEPOLIA_V4_REPORT.md) |
 | Keeper 后续修改与测试 | [T8_KEEPER_RUNTIME.md](T8_KEEPER_RUNTIME.md) |
+| 最新本地验收 | [T8_RECOVERY_REPORT.md](T8_RECOVERY_REPORT.md)：完整双源重算、资金回执、分批累计 1000 × 100 的资金性质测试 |
 
 上述两个提交之间没有生产 Solidity 变更；审阅人应自己运行以下比较确认。后续如果修改合约或部署参数，
 必须重新确定审阅对象，不能沿用旧审计结论。当前本地入口为 `http://localhost:8794`，它不是别人可访问的公网服务。
