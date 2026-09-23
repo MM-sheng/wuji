@@ -1,0 +1,13 @@
+[package]
+name = "wuji-zk-script"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sp1-sdk = "6.0.0"
+wuji-header-core = { path = "../wuji-header-core" }
+alloy-sol-types = "0.8"
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+
+[workspace]

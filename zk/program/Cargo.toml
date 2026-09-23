@@ -1,0 +1,11 @@
+[package]
+name = "wuji-zk-program"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = "6.0.0"
+wuji-header-core = { path = "../wuji-header-core" }
+alloy-sol-types = "0.8"
+
+[workspace]

@@ -231,38 +231,36 @@ The v3 comparison keeper is currently stopped for insufficient test fuel; its re
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.
 - Then: independent audit of the exact release commit; bug bounty; `docs/MAINNET_CHECKLIST.md` fully ticked.
 
-## T10 · ZK-SPV relay — verify a month of Bitcoin headers in one proof (after T2b; makes Ethereum L1 affordable)
+## T10 · ZK relay — in progress (Claude, 2026-09-23/24)
 
-Goal: replace per-header on-chain verification (≈16.6M gas/day, ~$50/day on L1 at 1 gwei) with one succinct proof
-per batch (≈300k gas regardless of batch size, ~$1/month). This is what makes the target stack (Bitcoin source,
-Ethereum L1 settlement, ETH collateral) run on zero budget.
+Design: [T10_DESIGN.md](T10_DESIGN.md). The decision that shapes it: the guest proves **the index
+increment**, not only chain validity, so `submit` and `fold` collapse into one call whose cost does not
+grow with the batch.
 
-Design (write `docs/tasks/T10_DESIGN.md` first, build after review):
-- **Guest program** (zkVM: SP1 or RISC Zero — pick by proving cost, verifier gas and audit surface; cite the existing
-  Bitcoin header-chain examples/ZeroSync as prior art) that takes a starting header state (hash, height, bits,
-  epoch-start time, cumulative work) and N raw headers, and re-implements **exactly** `BitcoinRelay`'s rules: sha256d
-  ≤ target, parent linkage, retarget with clamp and compact encoding, MTP and future-time limits (from T2b), work
-  accumulation. Output: final state + a commitment to every header hash in the batch (Merkle root, so `/proof` and
-  `fold` can address individual heights).
-- **`ZkBitcoinRelay` contract**: stores the trusted checkpoint state; `submitProof(proof, newState, headersRoot)`
-  verifies with the zkVM's on-chain verifier and advances the main chain. Fork choice stays work-based: a proof
-  extending an older state with more cumulative work replaces the tip; six-deep folding unchanged. Individual
-  header hashes become available to `WujiIndex` via Merkle proofs (or the proof output includes the hashes for the
-  finalised range directly — measure calldata cost vs storage).
-- **Fallback path**: keep the per-header `submit` as an escape hatch so liveness never depends on any prover; both
-  paths must yield identical state (differential test).
-- **Prover**: off-chain, anyone; the keeper generates the proof on a normal machine (report CPU time and RAM for a
-  4320-header batch) or uses a prover network. No trusted setup beyond the zkVM's; document the zkVM's own trust
-  assumptions (circuit soundness, verifier contract immutability) in THREAT_MODEL — this is the one new trust
-  element and must be stated plainly.
-- Tests: the existing real-header fixtures through both paths; retarget inside a batch; a batch that crosses a
-  checkpoint height; invalid header inside a batch must fail to prove.
-- Report: gas per batch, proving time/cost, and the new monthly cost table for Ethereum L1, BSC and one L2.
+Done:
+- `zk/wuji-header-core` — rules + accumulator in Rust, no zkVM dependency. 6060 real mainnet headers over
+  4 retargets reproduce `U = 6888` and `S_wad = 82656000000000000`, identical to Solidity and JS.
+- `contracts/src/ZkWujiIndex.sol` — `foldProof` (one proof per batch) and `foldHeaders` (raw headers in
+  Solidity, the escape hatch) advancing one state machine. 10 differential tests: both paths reach the
+  same S, height, hash, work and median-time-past window over real headers, and interleave freely.
+  Measured: 99k gas **per header** on the header path vs **86k for 256 heights** on the proof path
+  (verifier excluded). Runtime size 10,779 bytes.
+- `zk/program`, `zk/script` — SP1 guest and host written.
 
-Zero-budget path until T10 lands: stay on BSC testnet; first mainnet on a cheap venue (BSC or an Ethereum L2 —
-with Bitcoin as the source a sequencer can only delay, not bias) paid by volunteer keepers; move the canonical
-deployment to Ethereum L1 once T10 makes it ~$1/month.
+Two design corrections found while building, both now in the code and its comments:
+1. Continuity is carried from `tip − CONFIRMATIONS`, never from the validated tip. Otherwise a reorg
+   shallower than the confirmation depth orphans the committed state and the index is stuck — the exact
+   failure confirmations exist to prevent.
+2. Solidity memory structs alias on assignment; the snapshot is copied field by field. An aliased
+   snapshot would silently have committed the tip and defeated the confirmation depth.
 
+Remaining:
+- Build the guest with the SP1 toolchain; report cycles, proving time and real verifier gas.
+- Interop test: decode a host-produced journal in Foundry to prove the ABI encodings agree.
+- Keeper: prove and submit, falling back to `foldHeaders` when proving is unavailable.
+- THREAT_MODEL: the zkVM verifier joins the trusted base — state it plainly. A broken *prover* cannot
+  stop the protocol (escape hatch); a broken *verifier* could corrupt it.
+- Deploy to a testnet and reconcile against the non-ZK deployment.
 ---
 
 ## Explicitly not now
