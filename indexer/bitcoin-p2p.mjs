@@ -294,7 +294,7 @@ export class BitcoinP2P {
         peer.close();
         if (this.chain.height > before || this.chain.height > 0) {
           if (this.chain.height > before) this.chain.save(this.file);
-          this.log(`headers: tip ${this.chain.height} via ${host}`);
+          if (this.chain.height > before) this.log(`headers: tip ${this.chain.height} (+${this.chain.height - before}) via ${host}`);
           return this.chain.height;
         }
       } catch (e) {
