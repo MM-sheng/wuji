@@ -16,6 +16,14 @@ jobs:
       - run: forge test --root contracts
       - run: forge build --root contracts --sizes
       - run: node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs
+      # The zk crate is the single source of truth for the guest's rules; it must be as green as the
+      # Solidity it mirrors. The example regenerates the journal fixture, so a drift in either the rules
+      # or the ABI encoding fails here rather than at proof-submission time.
+      - run: cargo test --release --manifest-path zk/wuji-header-core/Cargo.toml
+      - run: cargo run --release --manifest-path zk/wuji-header-core/Cargo.toml --example journal -- 100 contracts/test/fixtures/zk-journal.hex
+      - run: cargo run --release --manifest-path zk/wuji-header-core/Cargo.toml --example journal -- 200 contracts/test/fixtures/zk-journal-checkpoints.hex 100
+      - run: git diff --exit-code contracts/test/fixtures/zk-journal.hex contracts/test/fixtures/zk-journal-checkpoints.hex
+      - run: forge test --root contracts --mc ZkWujiIndexTest
       - run: node scripts/test-bytecode.mjs
       - run: node scripts/test-frozen-exit.mjs
       - run: docker compose config --quiet
