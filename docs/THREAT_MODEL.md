@@ -50,7 +50,10 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
   its own project, the verifying key is fixed at deployment, the guest and the Solidity path are
   differential-tested over real mainnet headers, and the journal's configuration and future-time bound are
   checked by the contract rather than chosen by the prover. A deployment that wants no new trust at all
-  should simply not set a verifier and use the header path only.
+  should simply not set a verifier and use the header path only — `foldProof` then reverts, and the
+  constructor rejects any verifier address that holds no code, because `verifyProof` returns nothing and
+  Solidity emits no extcodesize check for such a call: a misconfigured verifier would otherwise accept
+  every proof silently.
 - **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
   height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
   local Core/Esplora. HTTP success is not proof of Bitcoin consensus. `BITCOIN_SOURCE=p2p` removes the HTTP

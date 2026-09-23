@@ -300,6 +300,26 @@ contract ZkWujiIndexTest is Test {
         assertEq(proved.S(), small.S());
     }
 
+    /// A verifier with no code would accept anything: `verifyProof` returns nothing, so Solidity emits
+    /// no extcodesize check and a call to an empty address succeeds. Both ways in are closed.
+    function test_aCodelessVerifierCannotBeInstalledOrUsed() public {
+        bytes memory anchor = vm.parseBytes(string.concat("0x", vm.parseJsonString(meta, ".checkpointHeader")));
+        uint32[11] memory times;
+        vm.expectRevert(ZkWujiIndex.NoVerifier.selector);
+        new ZkWujiIndex(
+            ISP1Verifier(address(0xdead)), bytes32(uint256(1)), RelayerRewards(address(0)), anchor,
+            anchorHeight, 1, times, 0, genesis, 4320
+        );
+
+        // address(0) is allowed, and means "header path only"
+        ZkWujiIndex headerOnly = _deploy(ISP1Verifier(address(0)));
+        ZkWujiIndex.Journal memory j = _journal(headerOnly, 0, 100);
+        vm.expectRevert(ZkWujiIndex.NoVerifier.selector);
+        headerOnly.foldProof(hex"00", abi.encode(j), new address[](0));
+        headerOnly.foldHeaders(_slice(0, 100), new address[](0));
+        assertEq(headerOnly.lastHeight(), genesis + 100 - 1 - 6, "the header path still works");
+    }
+
     function test_gas() public {
         uint256 g = gasleft();
         idx.foldHeaders(_slice(0, 262), new address[](0));

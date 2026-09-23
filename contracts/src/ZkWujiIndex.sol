@@ -70,6 +70,7 @@ contract ZkWujiIndex {
     error Discontinuous();
     error ConfigMismatch();
     error TooManyHeaders();
+    error NoVerifier();
 
     /// @param anchorHeader the 80-byte header at `anchorHeight`; an immutable, publicly auditable starting point
     /// @param ancestorTimes timestamps of the 11 headers ending at `anchorHeight`, oldest first
@@ -87,6 +88,11 @@ contract ZkWujiIndex {
     ) {
         if (anchorHeader.length != 80) revert BadLength();
         if (checkpointInterval == 0 || genesisHeight == 0) revert ConfigMismatch();
+        // A verifier with no code would make `verifyProof` succeed silently: Solidity only emits an
+        // extcodesize check before external calls that expect return data, and this one returns none.
+        // Either point at a real verifier or deploy header-path-only with address(0), which `foldProof`
+        // then refuses outright.
+        if (address(verifier_) != address(0) && address(verifier_).code.length == 0) revert NoVerifier();
         if (address(rewards_) != address(0)) {
             require(rewards_.index() == address(this) && rewards_.GENESIS_HEIGHT() == genesisHeight, "reward index mismatch");
         }
@@ -245,6 +251,7 @@ contract ZkWujiIndex {
         external
         returns (uint64 folded)
     {
+        if (address(verifier) == address(0)) revert NoVerifier(); // header-path-only deployment
         Journal memory j = abi.decode(publicValues, (Journal));
 
         // The prover never chooses the configuration or what "now" is.
