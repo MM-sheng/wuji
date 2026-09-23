@@ -306,12 +306,17 @@ pub struct Checkpoint {
 }
 
 /// What a proof commits to.
+///
+/// `folded` is the state at `end.height − confirmations`, **not** at the validated tip. Continuity is
+/// carried forward from there so a reorg shallower than `confirmations` can never orphan the committed
+/// state — which is exactly what the confirmation rule is for. The last `confirmations` headers are
+/// validated only to demonstrate that the folded tip has that many descendants.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BatchOutput<const MAX_CHECKPOINTS: usize> {
+    /// State at the validated tip; useful for diagnostics, never used for continuity.
     pub end: ChainState,
-    /// Highest height with `confirmations` descendants inside this batch.
-    pub folded_height: u64,
-    pub folded_u: i64,
+    /// State carried forward: the batch's tip minus `confirmations`.
+    pub folded: ChainState,
     pub checkpoints: [Checkpoint; MAX_CHECKPOINTS],
     pub checkpoint_count: usize,
 }
@@ -340,7 +345,7 @@ pub fn verify_batch<const MAX_CHECKPOINTS: usize>(
     let mut checkpoints = [Checkpoint { height: 0, u: 0 }; MAX_CHECKPOINTS];
     let mut checkpoint_count = 0usize;
     let folded_target = start.height + count - confirmations;
-    let mut folded_u = start.u;
+    let mut folded = start;
 
     for i in 0..count as usize {
         let raw = &headers[i * HEADER_LEN..(i + 1) * HEADER_LEN];
@@ -388,7 +393,7 @@ pub fn verify_batch<const MAX_CHECKPOINTS: usize>(
         }
 
         if height <= folded_target {
-            folded_u = state.u;
+            folded = state;
             if height >= genesis_height
                 && (height + 1 - genesis_height) % checkpoint_interval == 0
                 && checkpoint_count < MAX_CHECKPOINTS
@@ -399,13 +404,8 @@ pub fn verify_batch<const MAX_CHECKPOINTS: usize>(
         }
     }
 
-    Ok(BatchOutput {
-        end: state,
-        folded_height: folded_target,
-        folded_u,
-        checkpoints,
-        checkpoint_count,
-    })
+    debug_assert_eq!(folded.height, folded_target);
+    Ok(BatchOutput { end: state, folded, checkpoints, checkpoint_count })
 }
 
 /// `S` in wad, as the contract stores it.

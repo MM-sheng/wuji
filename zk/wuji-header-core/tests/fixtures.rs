@@ -63,7 +63,10 @@ fn reproduces_the_index_over_6060_real_headers_and_four_retargets() {
         "S in wad must equal what the contract stores"
     );
     assert_eq!(out.end.time, meta["lastTimestamp"].as_u64().unwrap() as u32);
-    assert_eq!(out.folded_height, meta["start"].as_u64().unwrap() + count - 1 - 6);
+    assert_eq!(out.folded.height, meta["start"].as_u64().unwrap() + count - 1 - 6);
+    // continuity is carried from the folded height, so a reorg shallower than 6 cannot orphan it
+    assert!(out.folded.height < out.end.height);
+    assert_ne!(out.folded.hash, out.end.hash);
     assert!(out.end.work > U256::ZERO);
 }
 
