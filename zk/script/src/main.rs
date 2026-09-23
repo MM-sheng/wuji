@@ -8,11 +8,12 @@
 //! Solidity and JS tests.
 use alloy_sol_types::{sol, SolValue};
 use clap::{Parser, Subcommand};
-use sp1_sdk::{include_elf, ProverClient, SP1Stdin};
+use sp1_sdk::blocking::{Elf, ProveRequest, Prover, ProverClient};
+use sp1_sdk::{include_elf, HashableKey, ProvingKey, SP1Stdin};
 use std::time::Instant;
 use wuji_header_core::{sha256d, verify_batch, ChainState, U256};
 
-pub const ELF: &[u8] = include_elf!("wuji-zk-program");
+pub const ELF: Elf = include_elf!("wuji-zk-program");
 
 sol! {
     struct Journal {
@@ -161,10 +162,9 @@ fn main() {
             println!("newHeight={} newU={}", expected.newHeight, expected.newU);
         }
         Command::Execute => {
-            sp1_sdk::utils::setup_logger();
             let client = ProverClient::from_env();
             let started = Instant::now();
-            let (public_values, report) = client.execute(ELF, &stdin_for(&inputs)).run().unwrap();
+            let (public_values, report) = client.execute(ELF, stdin_for(&inputs)).run().unwrap();
             println!("headers      : {}", cli.headers);
             println!("cycles       : {}", report.total_instruction_count());
             println!("execute time : {:?}", started.elapsed());
@@ -172,17 +172,17 @@ fn main() {
             println!("journal      : matches the host computation exactly");
         }
         Command::Prove => {
-            sp1_sdk::utils::setup_logger();
             let client = ProverClient::from_env();
-            let (pk, vk) = client.setup(ELF);
+            let pk = client.setup(ELF).expect("setup");
+            let vk = pk.verifying_key();
             let started = Instant::now();
-            let proof = client.prove(&pk, &stdin_for(&inputs)).groth16().run().unwrap();
+            let proof = client.prove(&pk, stdin_for(&inputs)).groth16().run().expect("prove");
             println!("headers    : {}", cli.headers);
             println!("prove time : {:?}", started.elapsed());
             println!("vkey       : {}", vk.bytes32());
             println!("journal    : 0x{}", hex(proof.public_values.as_slice()));
             println!("proof      : 0x{}", hex(&proof.bytes()));
-            client.verify(&proof, &vk).expect("proof must verify");
+            client.verify(&proof, vk, None).expect("proof must verify");
             println!("verified   : yes");
         }
     }
