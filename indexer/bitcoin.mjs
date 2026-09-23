@@ -83,7 +83,14 @@ export class BitcoinAPI {
         return result;
       } catch (error) {
         // Do not echo a configured URL: private node URLs may contain credentials.
-        lastError = Error(`Bitcoin source ${source.host}: ${error.retryable === undefined ? error.name : error.message}`);
+        // Surface the transport cause (e.g. ECONNRESET) — a bare "TypeError" hides why a source failed.
+        // Never echo a configured URL: private node URLs may contain credentials; a short code is safe.
+        // Append only the transport cause code (ECONNRESET, ETIMEDOUT, …). Never the message: a fetch
+        // TypeError's message can contain the configured URL, and private node URLs carry credentials.
+        const detail = error.retryable === undefined
+          ? `${error.name}${typeof error.cause?.code === 'string' ? ` ${error.cause.code}` : ''}`
+          : error.message;
+        lastError = Error(`Bitcoin source ${source.host}: ${detail}`);
         if (error.retryable === false) {
           attempts.set(source, 4); // A permanent HTTP error is tried once, then use another source.
         } else {
