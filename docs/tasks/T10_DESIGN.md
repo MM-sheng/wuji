@@ -83,6 +83,25 @@ and audited by its own project; the escape hatch means a broken prover cannot st
 broken *verifier* could corrupt it; and the guest is byte-for-byte differential-tested against the Solidity
 implementation over real mainnet headers.
 
+## What is proven, and what is not (2026-09-24)
+
+Proven here, with numbers in `docs/tasks/NEXT.md`:
+
+- the rules crate reproduces `U` over 6060 real mainnet headers, identical to Solidity and JS;
+- the guest compiles to RISC-V, executes, and commits a journal **byte-identical** to the host's;
+- a real proof (`compressed`) generates and verifies locally — 44.4 s for 100 headers;
+- Rust's `abi_encode` and Solidity's `abi.decode` agree on the journal, checked with real bytes;
+- `ZkWujiIndex` reaches the same state through a proof journal as through raw headers.
+
+**Not proven here: the Groth16 wrap.** SP1 downloads a 6.2 GB circuit-artifact tarball for it
+(`sp1-circuits.s3-us-east-2.amazonaws.com/v6.1.0-groth16.tar.gz`), needs roughly that much again to
+extract, and its installer deletes the staging directory on any interruption. This machine had 6.3 GB
+free, so the download cannot complete, and two attempts failed at 140–225 MB with `artifact not found`.
+Nothing about it is blocked in principle: Groth16 changes only the wrapper around the same execution the
+compressed proof already verifies, and the verifier's on-chain cost is a published SP1 constant. It has
+to be run somewhere with ~15 GB free and a stable connection before any deployment claims a real
+verifier gas figure.
+
 ## Build order
 
 1. `zk/wuji-header-core` — the rules and the index accumulator as a plain `no_std`-friendly Rust crate with

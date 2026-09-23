@@ -267,9 +267,11 @@ Solidity path is differential-tested against. A compressed proof verifies locall
 `0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8` for the current guest.
 
 Remaining:
-- Groth16 wrap (the on-chain format): SP1's circuit artifacts failed to download here ("artifact not
-  found" after 225 MB). The proving pipeline itself is proven by the compressed run; this step only
-  changes the wrapper. Report real verifier gas once it lands.
+- Groth16 wrap (the on-chain format). Root cause of the two failures: SP1 fetches a **6.2 GB** artifact
+  tarball and needs about as much again to extract it; this machine had 6.3 GB free, and SP1's installer
+  deletes its staging directory on any interruption, so it can never make progress. Run it somewhere with
+  ~15 GB free and a stable link, then record the real verifier gas. The proving pipeline itself is already
+  demonstrated by the compressed proof; Groth16 changes only the wrapper.
 - Interop test: decode a host-produced journal in Foundry to prove the ABI encodings agree.
 - Keeper: prove and submit, falling back to `foldHeaders` when proving is unavailable.
 - THREAT_MODEL: the zkVM verifier joins the trusted base — state it plainly. A broken *prover* cannot
