@@ -37,7 +37,12 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     Execute,
-    Prove,
+    Prove {
+        /// core | compressed | groth16. groth16 is the on-chain format and needs SP1's circuit
+        /// artifacts; the others prove the same execution without that download.
+        #[arg(long, default_value = "compressed")]
+        mode: String,
+    },
     Journal {
         #[arg(long)]
         out: String,
@@ -171,17 +176,29 @@ fn main() {
             assert_eq!(public_values.as_slice(), expected.abi_encode(), "guest journal must equal the host's");
             println!("journal      : matches the host computation exactly");
         }
-        Command::Prove => {
+        Command::Prove { mode } => {
             let client = ProverClient::from_env();
             let pk = client.setup(ELF).expect("setup");
             let vk = pk.verifying_key();
             let started = Instant::now();
-            let proof = client.prove(&pk, stdin_for(&inputs)).groth16().run().expect("prove");
+            let request = client.prove(&pk, stdin_for(&inputs));
+            let proof = match mode.as_str() {
+                "core" => request.core(),
+                "compressed" => request.compressed(),
+                "groth16" => request.groth16(),
+                other => panic!("unknown mode {other}"),
+            }
+            .run()
+            .expect("prove");
+            println!("mode       : {mode}");
             println!("headers    : {}", cli.headers);
             println!("prove time : {:?}", started.elapsed());
             println!("vkey       : {}", vk.bytes32());
             println!("journal    : 0x{}", hex(proof.public_values.as_slice()));
-            println!("proof      : 0x{}", hex(&proof.bytes()));
+            assert_eq!(proof.public_values.as_slice(), expected.abi_encode(), "proof journal");
+            if mode == "groth16" {
+                println!("proof      : 0x{}", hex(&proof.bytes()));
+            }
             client.verify(&proof, vk, None).expect("proof must verify");
             println!("verified   : yes");
         }

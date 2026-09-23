@@ -254,8 +254,22 @@ Two design corrections found while building, both now in the code and its commen
 2. Solidity memory structs alias on assignment; the snapshot is copied field by field. An aliased
    snapshot would silently have committed the tip and defeated the confirmation depth.
 
+Measured (SP1 v6.8, 14-core M-series, 64 GB):
+
+| headers | cycles | cycles/header | execute | compressed proof |
+|---:|---:|---:|---:|---:|
+| 100 | 2,833,099 | 28.3k | 46 ms | 44.4 s |
+| 500 | 13,769,507 | 27.5k | 199 ms | — |
+
+Cycles are linear at ~27.5k per header, so a 4320-header month is ≈119M cycles. In every run the
+guest's committed journal is byte-identical to the host's, computed by the same `wuji-header-core` the
+Solidity path is differential-tested against. A compressed proof verifies locally; `vkey`
+`0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8` for the current guest.
+
 Remaining:
-- Build the guest with the SP1 toolchain; report cycles, proving time and real verifier gas.
+- Groth16 wrap (the on-chain format): SP1's circuit artifacts failed to download here ("artifact not
+  found" after 225 MB). The proving pipeline itself is proven by the compressed run; this step only
+  changes the wrapper. Report real verifier gas once it lands.
 - Interop test: decode a host-produced journal in Foundry to prove the ABI encodings agree.
 - Keeper: prove and submit, falling back to `foldHeaders` when proving is unavailable.
 - THREAT_MODEL: the zkVM verifier joins the trusted base — state it plainly. A broken *prover* cannot
