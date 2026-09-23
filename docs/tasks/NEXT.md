@@ -209,6 +209,12 @@ probes, checks pending work and fuel before signing, and records a live v4 updat
 author-operated evidence; the independent-machine, 48-hour and first-settlement requirements below remain open.
 The v3 comparison keeper is currently stopped for insufficient test fuel; its read-only indexer remains available.
 
+- **Run our own Bitcoin node** (pruned, ~10 GB, `BITCOIN_API_KIND=bitcoind-rest` is already supported) and make it
+  the keeper's primary source with public Esplora only as fallback. Evidence this is required, not optional: on
+  2026-09-23 the keeper stalled for an hour because blockstream.info was hard rate-limited and mempool.space had
+  entered backoff after transient network errors — both cooldowns exceeded the per-request budget, so every poll
+  gave up. Public APIs are the protocol's only remaining liveness single point. Document the node setup in the
+  "run your own" section (T4) so any independent keeper starts with its own source.
 - Second keeper on a different machine and RPC provider (T4's Docker makes this trivial).
 - **Disappearance drill** (review item #14): switch off every author-run node, RPC, keeper and front-end for 48 h on
   testnet; record whether independent participants take over profitably and whether a one-sided holder can exit.
