@@ -209,12 +209,16 @@ probes, checks pending work and fuel before signing, and records a live v4 updat
 author-operated evidence; the independent-machine, 48-hour and first-settlement requirements below remain open.
 The v3 comparison keeper is currently stopped for insufficient test fuel; its read-only indexer remains available.
 
-- **Run our own Bitcoin node** (pruned, ~10 GB, `BITCOIN_API_KIND=bitcoind-rest` is already supported) and make it
-  the keeper's primary source with public Esplora only as fallback. Evidence this is required, not optional: on
-  2026-09-23 the keeper stalled for an hour because blockstream.info was hard rate-limited and mempool.space had
-  entered backoff after transient network errors — both cooldowns exceeded the per-request budget, so every poll
-  gave up. Public APIs are the protocol's only remaining liveness single point. Document the node setup in the
-  "run your own" section (T4) so any independent keeper starts with its own source.
+- ✅ **Own Bitcoin source, no third party** (2026-09-23): `indexer/bitcoin-p2p.mjs` syncs the header chain
+  straight from the Bitcoin P2P network (DNS seeds, version/verack handshake, `getheaders`), validating every
+  header locally with the same rules as `BitcoinRelay.sol` — PoW against nBits, parent linkage, retarget with
+  the ×4/÷4 clamp — and choosing forks by cumulative work. 968,277 headers, 77 MB, 24 minutes; height 800000's
+  hash/R/delta and all 2028 committed fixture headers matched byte for byte. Enable with `BITCOIN_SOURCE=p2p`.
+  This replaces the plan to run a pruned Bitcoin Core node: a pruned node still downloads ~700 GB to validate
+  blocks we never look at, while the protocol only ever reads headers.
+  Evidence it was needed: on 2026-09-23 the keeper stalled for an hour because blockstream.info was hard
+  rate-limited and mempool.space had entered backoff — both cooldowns exceeded the per-request budget.
+  Remaining: run the live stack on it, and document it in the "run your own" section (T4).
 - Second keeper on a different machine and RPC provider (T4's Docker makes this trivial).
 - **Disappearance drill** (review item #14): switch off every author-run node, RPC, keeper and front-end for 48 h on
   testnet; record whether independent participants take over profitably and whether a one-sided holder can exit.

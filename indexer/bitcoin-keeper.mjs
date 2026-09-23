@@ -1,4 +1,5 @@
-import { BitcoinAPI, step } from './bitcoin.mjs';
+import { step } from './bitcoin.mjs';
+import { createBitcoinSource } from './bitcoin-source.mjs';
 import { assertChain } from './networks.mjs';
 import { rpcRequest } from './evm-rpc.mjs';
 import { maintainFrozenExit } from './frozen-keeper.mjs';
@@ -91,7 +92,7 @@ async function claimBounties(last){
   }catch(e){log('bounty claim:',redact(e.stderr||e.message));}
  }
 }
-const api=new BitcoinAPI();
+const api=createBitcoinSource();
 const RELAY=process.env.RELAY;
 if(!RELAY)throw Error('RELAY required');
 const frozenExitMode=process.env.FROZEN_EXIT==='1';
