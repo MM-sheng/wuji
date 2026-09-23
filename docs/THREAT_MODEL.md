@@ -40,9 +40,23 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
 - **Collateral:** issuer freezes, blacklisting, proxy upgrades, rebasing, dishonest balances and transfer fees can
   break availability or accounting assumptions. Collateral units do not insure dollar purchasing power or BNB
   exposure. The factory is permissionless and offers no equal-safety promise for arbitrary-token vaults.
+- **Succinct proof verification (T10, not yet deployed):** `ZkWujiIndex.foldProof` accepts a batch on the
+  word of a zkVM verifier contract and an immutable verifying key. That verifier and the proof system
+  behind it join the trusted base, which today is only the EVM plus the header rules written in Solidity.
+  This is a real increase and is not offset by any argument about succinctness. Its shape:
+  a broken *prover* cannot stop the protocol — `foldHeaders` validates raw 80-byte headers in Solidity with
+  the identical rules and is always callable — but a broken *verifier* could admit a false index increment,
+  and nothing downstream would detect it. Mitigations are partial: the verifier is immutable and audited by
+  its own project, the verifying key is fixed at deployment, the guest and the Solidity path are
+  differential-tested over real mainnet headers, and the journal's configuration and future-time bound are
+  checked by the contract rather than chosen by the prover. A deployment that wants no new trust at all
+  should simply not set a verifier and use the header path only.
 - **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
   height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
-  local Core/Esplora. HTTP success is not proof of Bitcoin consensus.
+  local Core/Esplora. HTTP success is not proof of Bitcoin consensus. `BITCOIN_SOURCE=p2p` removes the HTTP
+  dependency entirely: the keeper speaks the Bitcoin wire protocol, validates every header from the genesis
+  block with the relay's own rules, and trusts no API operator. A peer can still stall or withhold; it cannot
+  fabricate a chain without the corresponding proof of work.
 - **Indexer/UI and markets:** caches can lie without changing contract state. Match `S_wad` at the same height
   and verify its header proof. Displayed settlement shares and simulated order books are not executable quotes;
   before expiry even an idealized price depends on the remaining payoff distribution.
