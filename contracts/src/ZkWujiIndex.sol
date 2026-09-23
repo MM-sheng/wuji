@@ -51,6 +51,7 @@ contract ZkWujiIndex {
     Continuity public tip;
     /// @notice Timestamps of the 11 headers ending at `tip.height`, oldest first (median-time-past).
     uint32[11] public recentTimes;
+    /// @notice Cumulative work since the anchor (not since the Bitcoin genesis); only differences matter.
     uint256 public chainWork;
     uint64 public nextCheckpointHeight;
     mapping(uint64 => int256) public checkpointS;
@@ -80,7 +81,7 @@ contract ZkWujiIndex {
         uint64 anchorHeight,
         uint32 anchorEpochStart,
         uint32[11] memory ancestorTimes,
-        uint256 anchorWork,
+        uint256 anchorWork, // cumulative work is measured *from this anchor*; the guest starts at 0 too
         uint64 genesisHeight,
         uint64 checkpointInterval
     ) {

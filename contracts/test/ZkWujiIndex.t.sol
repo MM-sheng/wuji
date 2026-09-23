@@ -47,7 +47,7 @@ contract ZkWujiIndexTest is Test {
             anchorHeight,
             uint32(vm.parseJsonUint(meta, ".epochStartTime")),
             times,
-            1e30,
+            0,
             genesis,
             4320
         );
@@ -150,7 +150,7 @@ contract ZkWujiIndexTest is Test {
         }
         return new ZkWujiIndex(
             new AcceptingVerifier(), bytes32(uint256(1)), RelayerRewards(address(0)), anchor, anchorHeight,
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 1e30, genesis, interval
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, genesis, interval
         );
     }
 
@@ -248,6 +248,56 @@ contract ZkWujiIndexTest is Test {
         // the escape hatch still works with a broken prover
         strict.foldHeaders(_slice(0, 100), new address[](0));
         assertEq(strict.lastHeight(), genesis + 100 - 1 - 6);
+    }
+
+    // ---------------------------------------------------------------- Rust <-> Solidity interop
+
+    /// The journal is produced by `zk/wuji-header-core/examples/journal.rs` with alloy's `abi_encode`.
+    /// If that disagrees with Solidity's `abi.decode`, a real proof would be rejected on chain for a
+    /// reason no unit test on either side would reveal — so decode the actual bytes and drive the
+    /// contract with them.
+    function test_rustEncodedJournalDecodesAndAdvancesTheIndex() public {
+        bytes memory pv = vm.parseBytes(vm.readFile("test/fixtures/zk-journal.hex"));
+        ZkWujiIndex.Journal memory j = abi.decode(pv, (ZkWujiIndex.Journal));
+
+        ZkWujiIndex viaHeaders = _deploy(new AcceptingVerifier());
+        viaHeaders.foldHeaders(_slice(0, 100), new address[](0));
+
+        assertEq(j.prevHeight, anchorHeight, "prev height");
+        assertEq(j.newHeight, viaHeaders.lastHeight(), "folded height agrees with the header path");
+        assertEq(j.newHash, viaHeaders.lastHash(), "folded hash agrees");
+        assertEq(int256(j.newU) * viaHeaders.UNIT(), viaHeaders.S(), "U agrees");
+        assertEq(j.newWork, viaHeaders.chainWork(), "work agrees");
+        (, uint32[11] memory times,) = viaHeaders.continuity();
+        for (uint256 i = 0; i < 11; i++) {
+            assertEq(j.newTimes[i], times[i], "median-time-past window agrees");
+        }
+
+        // and the contract accepts it as a proof journal, reaching the identical state
+        ZkWujiIndex viaProof = _deploy(new AcceptingVerifier());
+        j.maxTime = uint32(block.timestamp);
+        viaProof.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        assertEq(viaProof.S(), viaHeaders.S());
+        assertEq(viaProof.lastHash(), viaHeaders.lastHash());
+    }
+
+    function test_rustEncodedJournalCarriesCheckpoints() public {
+        bytes memory pv = vm.parseBytes(vm.readFile("test/fixtures/zk-journal-checkpoints.hex"));
+        ZkWujiIndex.Journal memory j = abi.decode(pv, (ZkWujiIndex.Journal));
+        assertEq(j.checkpointInterval, 100);
+        assertEq(j.checkpointHeights.length, 1, "one boundary inside 200 folded headers");
+        assertEq(j.checkpointHeights[0], genesis + 99);
+
+        ZkWujiIndex small = _deployWithInterval(100);
+        small.foldHeaders(_slice(0, 200), new address[](0));
+        assertEq(int256(j.checkpointU[0]) * small.UNIT(), small.checkpointS(genesis + 99), "checkpoint S agrees");
+
+        ZkWujiIndex proved = _deployWithInterval(100);
+        j.maxTime = uint32(block.timestamp);
+        proved.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        assertTrue(proved.checkpointed(genesis + 99), "the proof records the boundary");
+        assertEq(proved.checkpointS(genesis + 99), small.checkpointS(genesis + 99));
+        assertEq(proved.S(), small.S());
     }
 
     function test_gas() public {
