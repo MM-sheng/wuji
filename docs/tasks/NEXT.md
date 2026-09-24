@@ -291,3 +291,10 @@ Remaining:
 - Any governance, multisig, timelock or "emergency" function. The answer to "what if X" is a rule in the contract
   or a documented accepted risk, never a key.
 - Renaming: WUJI / μ are final (`docs/NAMING.md`).
+
+## T11 · Perpetual accounts — design written, not built
+
+The answer to "a holding that never expires". Fixed principal, additive P&L recorded on chain
+(`principal·ΔS/k`, floor 0, ceiling 2×), fixed vol-tier menu, entry/exit priced at a not-yet-mined Bitcoin
+block, ETH and wstETH/rETH vaults, frozen exit on deep reorg. Supersedes T7 (rolling vault). Full design:
+`docs/tasks/T11_PERPETUAL_ACCOUNTS.md`.
