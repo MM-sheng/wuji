@@ -1,6 +1,6 @@
 # T11 design: perpetual accounts (只押本金、链上记账)
 
-Status: design, 2026-09-24. Nothing here is implemented. It is a **new contract** beside the existing series
+Status: step 1 built 2026-09-24 (see end); steps 2–5 not started. It is a **new contract** beside the existing series
 vaults; it reuses `WujiIndex` / `ZkWujiIndex`, `BitcoinRelay`, `RelayerRewards` and the P2P source unchanged.
 
 ## Why
