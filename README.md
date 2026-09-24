@@ -91,7 +91,21 @@ Deployment requires exclusive use of the deployer's transaction nonce: pause kee
 wait for in-flight transactions to confirm, and resume them afterwards. The deploy script rejects known active
 local comparison keepers before reading credentials; it cannot detect signers on other machines.
 
-For a local Bitcoin source: set `BITCOIN_API=http://127.0.0.1:8332` and
+**Recommended: take the third party out of the data path.** `BITCOIN_SOURCE=p2p` talks to the Bitcoin
+network directly — DNS seeds, the wire handshake, `getheaders` — and validates every header locally with the
+same rules the relay contract applies: proof of work against nBits, parent linkage, retarget with the ×4/÷4
+clamp, fork choice by cumulative work. The whole chain is 80 bytes per block (~77 MB, ~25 minutes) and is
+cached in `BITCOIN_P2P_DIR`, so later starts are instant. No API key, no rate limit, nobody to trust for
+liveness. A pruned Bitcoin Core node would download ~700 GB to validate blocks this protocol never reads.
+
+```bash
+BITCOIN_SOURCE=p2p BITCOIN_P2P_DIR=$PWD/indexer/data/headers \
+SOURCE=bitcoin GENESIS_HEIGHT=967826 PORT=8789 node indexer/index.mjs
+```
+
+`BITCOIN_P2P_PEERS=host:port,...` pins specific peers; `BITCOIN_P2P_TIMEOUT_MS` bounds each one.
+
+For a local Bitcoin source over HTTP instead: set `BITCOIN_API=http://127.0.0.1:8332` and
 `BITCOIN_API_KIND=bitcoind-rest` (Core REST enabled), or point BITCOIN_API at a local Esplora API.
 `SOURCE=bitcoin GENESIS_HEIGHT=... PORT=8789 node indexer/index.mjs` also runs standalone without contracts.
 It stays at 100 until the genesis height has six descendants. Averages are not block countdown guarantees.
@@ -288,6 +302,11 @@ docker compose --env-file .env.docker logs -f indexer
 
 Open **http://localhost:8794**. The default is the Sepolia/WETH v3 deployment; choose
 `contracts/deployments/bsc-testnet-timestamps-v3.json` and the matching RPC for BSC testnet.
+
+Deployments differ in what they carry. Only `sepolia-weth-v4` has the T9 frozen-state exit
+(`observeReorg` / `freeze` / `settleFrozen`); the BSC `timestamps-v3` stack predates it and is kept running
+unchanged because it is mid-series — its first real settlement is at Bitcoin height 972145, and redeploying
+would restart that clock. Check a manifest's `version` and `frozenExitDelay` before relying on either.
 The named data volume survives restarts. “Five minutes” covers startup, not a guaranteed history-sync time.
 HTTP health only indicates that the server responds: check `/head` for `err`, `behind` and `chain.reconciliation`.
 The container uses Node and Foundry images pinned by digest, runs as uid 1000, and has a read-only root filesystem.
