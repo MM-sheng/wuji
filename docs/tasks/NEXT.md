@@ -226,8 +226,14 @@ The v3 comparison keeper is currently stopped for insufficient test fuel; its re
   a stated **value-at-risk cap**: with s = 0.5 %/block, a feasible withholding strategy profits once net one-sided
   exposure A > ≈ 501 · c_b in its simplified model (c_b = attacker's private cost per discarded block). Publish
   assumptions and a conservative exposure policy; this is not a proven safe TVL cap (review items #5, #6, #16).
-- Alerts: relay lag > 3 Bitcoin blocks, index backlog, keeper errors, `liabilities > balance` (should be impossible —
-  alert anyway), settlement overdue.
+- ✅ **Watchdog and alerts** (2026-09-24): `scripts/watchdog.mjs` restarts an unreachable indexer or a silent
+  keeper (rate limited to 4/hour), and alerts on: the indexer falling behind the Bitcoin tip, a source error,
+  a halt after a deep reorg, `liabilities > balance`, an overdue settlement, and — the one that is never
+  normal — contract `S` disagreeing with the locally recomputed `S` at the same height. `ALERT_COMMAND`
+  receives the message on stdin. Five tests drive it against a fake `/head`.
+  The protocol does not need this; *observing* a stack for weeks does. Both outages it exists for were real:
+  an hour stalled behind rate-limited APIs (2026-09-23) and a process killed by one silent Bitcoin peer
+  (2026-09-24).
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.
 - Then: independent audit of the exact release commit; bug bounty; `docs/MAINNET_CHECKLIST.md` fully ticked.
 
