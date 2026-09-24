@@ -185,10 +185,15 @@ class Peer {
   }
   send(command, payload) { this.socket.write(frame(command, payload)); }
   expect(command, timeout = this.timeout) {
-    return new Promise((resolve, reject) => {
+    const pending = new Promise((resolve, reject) => {
       const timer = setTimeout(() => { this.waiters.delete(command); reject(Error(`no ${command} from peer`)); }, timeout);
       this.waiters.set(command, payload => { clearTimeout(timer); resolve(payload); });
     });
+    // A handshake creates the `verack` waiter before awaiting `version`; if `version` times out first,
+    // nothing ever awaits `verack` and its rejection would take the whole process down. Mark it handled
+    // here — callers that do await still see the rejection.
+    pending.catch(() => {});
+    return pending;
   }
   async handshake(startHeight = 0) {
     const p = Buffer.alloc(86);
@@ -234,7 +239,8 @@ class Peer {
 
 /// Drop-in replacement for BitcoinAPI backed by the P2P network.
 export class BitcoinP2P {
-  constructor({ peers, dir, log = () => {} } = {}) {
+  constructor({ peers, dir, log = () => {}, peerTimeout } = {}) {
+    this.peerTimeout = peerTimeout ?? +(process.env.BITCOIN_P2P_TIMEOUT_MS || 20000);
     this.configured = peers ?? (process.env.BITCOIN_P2P_PEERS || '').split(',').map(s => s.trim()).filter(Boolean);
     this.file = path.join(dir ?? process.env.BITCOIN_P2P_DIR ?? 'indexer/data/headers', 'mainnet.bin');
     this.chain = new HeaderChain();
@@ -267,7 +273,7 @@ export class BitcoinP2P {
     }
     let lastError;
     for (const [host, port] of await this.peerList()) {
-      const peer = new Peer(host, port);
+      const peer = new Peer(host, port, { timeout: this.peerTimeout });
       try {
         await peer.connect();
         await peer.handshake(Math.max(0, this.chain.height));

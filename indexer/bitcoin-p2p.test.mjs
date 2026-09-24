@@ -80,3 +80,30 @@ test('a synced header file validates from genesis and matches every fixture head
     assert.equal(chain.headers[798336 + i].toString('hex'), buf.subarray(i * 80, (i + 1) * 80).toString('hex'));
   }
 });
+
+test('a peer that never completes the handshake cannot crash the process', async () => {
+  // Regression: the handshake creates the `verack` waiter before awaiting `version`. When `version`
+  // timed out first, nothing awaited `verack`, and Node killed the indexer on the unhandled rejection.
+  const net = await import('node:net');
+  const server = net.createServer(socket => socket.on('data', () => {})); // accept, then stay silent
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+
+  const rejections = [];
+  const onUnhandled = reason => rejections.push(reason);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const { BitcoinP2P } = await import('./bitcoin-p2p.mjs');
+    const api = new BitcoinP2P({ peers: [`127.0.0.1:${port}`], dir: '/tmp/wuji-p2p-test-' + port, peerTimeout: 300 });
+    api.chain.append(Buffer.from(
+      '0100000000000000000000000000000000000000000000000000000000000000000000003ba3edfd7a7b12b27ac72c3e'
+      + '67768f617fc81bc3888a51323a9fb8aa4b1e5e4a29ab5f49ffff001d1dac2b7c', 'hex'));
+    api.chain.headers.length = 1;
+    await assert.rejects(() => api.sync({ force: true }), /no (version|verack|headers) from peer|peer timeout/);
+    await new Promise(resolve => setTimeout(resolve, 50)); // let any orphaned rejection surface
+    assert.deepEqual(rejections, [], 'no unhandled rejection escaped');
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+    server.close();
+  }
+});
