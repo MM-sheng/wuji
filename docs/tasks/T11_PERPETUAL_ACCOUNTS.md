@@ -136,3 +136,22 @@ protocol owner, no fee switch, no token. Parameters (tiers, D, fee, ε, bounty) 
 3. wstETH/rETH vault; invariant 7.
 4. Indexer/UI: show value, pending requests, matched/idle split.
 5. Testnet (Sepolia) beside the existing series vault; then external audit before mainnet.
+
+## Step 1 as built (2026-09-24) — `contracts/src/WujiAccounts.sol`
+
+- **Pricing at an exact height without changing the index.** `WujiIndex` only stores the current S and
+  series checkpoints. `mark(h, from)` recomputes `S(h)` by walking relay headers back from the index's last
+  folded height (or an earlier mark), at most 1024 heights. So an executor cannot pick a favourable later S:
+  every request is priced at exactly its epoch height.
+- **Epochs.** Pricing heights are multiples of `EPOCH` (6 in tests ≈ 1h) at least `DELAY` above the relay's
+  best height. Epochs are processed strictly in order; the pool only moves at processed epochs.
+- **Rounding** always floors both sides' accumulators (1e27 precision), so dust stays in the pool.
+- **Floor overshoot is measured, not hidden.** A loser that crosses 0 between epochs still credits the
+  winner. `badDebt` records every such loss when the account is retired or claimed; `rawValueOf` shows the
+  unrecorded ones. The fuzz test asserts `balance + badDebt + unretired ≥ Σ values`. At the 10% tier one
+  epoch moves at most ≈ 6·0.049/11.5 ≈ 2.6% of principal, so overshoot needs an account to be left sitting
+  at its floor; step 2 adds the retirement bounty and a fee buffer that absorbs `badDebt`.
+- **Frozen state.** `freezePool` prices queued epochs at their own S while markable, then at the frozen S;
+  entries priced above the last folded height are refunded in full.
+- Not yet: fees, bounties, tier menu, yield collateral, ZkWujiIndex (it does not keep per-height headers,
+  so `mark` needs another source there — to be solved in step 3/4).
