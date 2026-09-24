@@ -1,6 +1,6 @@
 # T11 design: perpetual accounts (只押本金、链上记账)
 
-Status: step 1 built 2026-09-24 (see end); steps 2–5 not started. It is a **new contract** beside the existing series
+Status: steps 1–2 built 2026-09-24 (see end); steps 3–5 not started. It is a **new contract** beside the existing series
 vaults; it reuses `WujiIndex` / `ZkWujiIndex`, `BitcoinRelay`, `RelayerRewards` and the P2P source unchanged.
 
 ## Why
@@ -155,3 +155,14 @@ protocol owner, no fee switch, no token. Parameters (tiers, D, fee, ε, bounty) 
   entries priced above the last folded height are refunded in full.
 - Not yet: fees, bounties, tier menu, yield collateral, ZkWujiIndex (it does not keep per-height headers,
   so `mark` needs another source there — to be solved in step 3/4).
+
+## Step 2 as built (2026-09-24) — fees, buffer, bounties, fixed menu
+
+- **Fee** `FEE_BPS` (≤1%) taken from the deposit on entry and from the payout on a normal exit; none on
+  frozen-state withdrawals. Refunded entries (priced after a freeze) return principal; the entry fee stays.
+- **Buffer.** Fees stay in the pool first. Floor overshoot is charged to the buffer before it can become
+  `badDebt`. Bounties (`BOUNTY`, paid per processed epoch and per retirement) come only from the buffer, so a
+  keeper can never be paid out of anyone's principal. Buffer above `BUFFER_BPS` of live principal is
+  `sweep`-able to the treasury (the FeeRouter → RelayerRewards).
+- **Menu.** `WujiAccountsFactory` holds the three tiers as constants (K = 23 / 11.5 / 4.6 → 5% / 10% / 25%)
+  and creates them once per collateral, by anyone. No new tier can ever be added to an existing factory.

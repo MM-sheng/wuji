@@ -4,8 +4,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {WujiIndex} from "./WujiIndex.sol";
 
-/// @notice T11 step 1: perpetual accounts. Fixed principal, additive P&L = principal·side·ΔS/k, value in
-/// [0, 2·principal], no expiry. One collateral, one tier. See docs/tasks/T11_PERPETUAL_ACCOUNTS.md.
+/// @notice T11 perpetual accounts. Fixed principal, additive P&L = principal·side·ΔS/k, value in
+/// [0, 2·principal], no expiry. One collateral and one tier per pool; `WujiAccountsFactory` fixes the menu.
+/// See docs/tasks/T11_PERPETUAL_ACCOUNTS.md. No owner, no pause, no upgrade; every parameter is immutable.
 /// @dev Every entry and exit is priced at an epoch height that was not yet mined when it was requested.
 /// Epochs are processed strictly in order; between processed epochs the pool does not move.
 contract WujiAccounts {
@@ -20,6 +21,15 @@ contract WujiAccounts {
     int256 public immutable K;          // wad; annual vol ≈ 115% / K
     uint64 public immutable EPOCH;      // pricing heights are multiples of EPOCH
     uint64 public immutable DELAY;      // pricing height ≥ relay best + DELAY
+    address public immutable treasury;  // FeeRouter: surplus fees go to the relayers' operations reserve
+    uint256 public immutable FEE_BPS;   // charged on entry and on normal exit
+    uint256 public immutable BOUNTY;    // paid from the buffer per processed epoch and per retirement
+    uint256 public immutable BUFFER_BPS; // buffer kept against floor overshoot, relative to live principal
+
+    struct Config {
+        IERC20 asset; WujiIndex index; int256 k; uint64 epoch; uint64 delay;
+        address treasury; uint256 feeBps; uint256 bounty; uint256 bufferBps;
+    }
 
     struct Account {
         address owner;
@@ -49,9 +59,11 @@ contract WujiAccounts {
     bool public started;
     bool public frozen;
     bool internal afterFallback;
-    /// @notice Losses beyond the floor that no account paid: an account that crossed 0 before it was retired
-    /// or exited. Winners are still credited those amounts, so this is the pool's only possible shortfall.
-    /// Keeping it at zero is what `retire` (and, in step 2, its bounty and the fee buffer) is for.
+    /// @notice Fees held in the pool: pays bounties and absorbs floor overshoot before anything else.
+    uint256 public buffer;
+    /// @notice Losses beyond the floor that neither the losing account nor the buffer paid. Winners are still
+    /// credited those amounts, so this is the pool's only possible shortfall. It stays zero while the buffer
+    /// covers overshoot, which is what `retire` and its bounty are for.
     uint256 public badDebt;
 
     // Index value at arbitrary folded heights, recomputed from relay headers.
@@ -65,11 +77,16 @@ contract WujiAccounts {
     event Retired(uint256 indexed id);
     event Transfer(uint256 indexed id, address indexed from, address indexed to);
     event PoolFrozen(int256 S);
+    event Bounty(address indexed to, uint256 amount);
+    event BadDebt(uint256 debt, uint256 absorbed);
+    event Swept(uint256 amount);
 
-    constructor(IERC20 asset_, WujiIndex index_, int256 k, uint64 epoch, uint64 delay) {
-        require(address(asset_).code.length > 0 && address(index_).code.length > 0, "not contract");
-        require(k > 0 && epoch > 0 && delay >= 1, "params");
-        asset = asset_; index = index_; K = k; EPOCH = epoch; DELAY = delay;
+    constructor(Config memory c) {
+        require(address(c.asset).code.length > 0 && address(c.index).code.length > 0, "not contract");
+        require(c.k > 0 && c.epoch > 0 && c.delay >= 1, "params");
+        require(c.treasury != address(0) && c.feeBps <= 100 && c.bufferBps <= 10_000, "fees");
+        asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay;
+        treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY = c.bounty; BUFFER_BPS = c.bufferBps;
     }
 
     // ---------------------------------------------------------------- requests
@@ -88,14 +105,18 @@ contract WujiAccounts {
         if (n == 0 || queue[n - 1] != e) queue.push(e);
     }
 
+    /// @notice Deposit `amount`; the principal is `amount` minus the entry fee.
     function requestEnter(bool yang, uint128 amount) external returns (uint256 id) {
-        require(amount > 0, "zero");
+        uint128 fee = uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
+        require(amount > fee, "zero");
+        uint128 principal = amount - fee;
         uint64 e = _schedule();
         asset.safeTransferFrom(msg.sender, address(this), amount);
+        buffer += fee;
         id = nextId++;
-        accounts[id] = Account(msg.sender, yang, e, 0, amount);
-        epochs[e].enterIn[yang ? 1 : 0] += amount;
-        emit EnterRequested(id, msg.sender, yang, amount, e);
+        accounts[id] = Account(msg.sender, yang, e, 0, principal);
+        epochs[e].enterIn[yang ? 1 : 0] += principal;
+        emit EnterRequested(id, msg.sender, yang, principal, e);
     }
 
     /// @notice Irrevocable. Exposure continues until the pricing epoch.
@@ -150,6 +171,7 @@ contract WujiAccounts {
             mark(e, last);
         }
         _advance(e, sAt[e]);
+        _payBounty(msg.sender);
         return true;
     }
 
@@ -208,7 +230,29 @@ contract WujiAccounts {
 
     function _recordBadDebt(Account storage a) internal {
         int256 v = _raw(a.principal, _endAcc(a) - _entryAcc(a));
-        if (v < 0) badDebt += uint256(-v);
+        if (v >= 0) return;
+        uint256 debt = uint256(-v);
+        uint256 absorbed = debt < buffer ? debt : buffer;
+        buffer -= absorbed; badDebt += debt - absorbed;
+        emit BadDebt(debt, absorbed);
+    }
+
+    function _payBounty(address to) internal {
+        uint256 amount = BOUNTY < buffer ? BOUNTY : buffer;
+        if (amount == 0) return;
+        buffer -= amount;
+        asset.safeTransfer(to, amount);
+        emit Bounty(to, amount);
+    }
+
+    /// @notice Send buffer above its target to the treasury (FeeRouter → RelayerRewards). Anyone may call.
+    function sweep() external returns (uint256 amount) {
+        uint256 target = (uint256(principalOf[0]) + principalOf[1]) * BUFFER_BPS / 10_000;
+        if (buffer <= target) return 0;
+        amount = buffer - target;
+        buffer = target;
+        asset.safeTransfer(treasury, amount);
+        emit Swept(amount);
     }
 
     /// @notice Unclamped value; negative means the account crossed its floor and is not yet retired.
@@ -236,6 +280,8 @@ contract WujiAccounts {
         } else if (a.exitEpoch != 0 && epochs[a.exitEpoch].processed) {
             amount = valueOf(id);
             _recordBadDebt(a);
+            uint256 fee = amount * FEE_BPS / 10_000;
+            buffer += fee; amount -= fee;
         } else {
             require(frozen && enter.processed, "not claimable");
             amount = valueOf(id);
@@ -259,6 +305,7 @@ contract WujiAccounts {
         principalOf[a.yang ? 1 : 0] -= a.principal;
         delete accounts[id];
         emit Retired(id);
+        _payBounty(msg.sender);
     }
 
     // ---------------------------------------------------------------- frozen state

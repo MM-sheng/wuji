@@ -4,6 +4,7 @@ import {Test} from "forge-std/Test.sol";
 import {BitcoinRelay} from "../src/BitcoinRelay.sol";
 import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiAccounts} from "../src/WujiAccounts.sol";
+import {WujiAccountsFactory} from "../src/WujiAccountsFactory.sol";
 import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 import {FrozenExitRelayMock} from "./mocks/FrozenExitRelayMock.sol";
@@ -19,6 +20,9 @@ contract WujiAccountsTest is Test {
     int256 constant K = 11.5e18;
     uint64 constant EPOCH = 6;
     uint64 constant DELAY = 2;
+    address treasury = address(0xFEE);
+    uint256 FEE = 0;          // most tests check the pure mechanism; fee tests set it
+    uint256 BOUNTY = 0;
 
     function setUp() public {
         vm.warp(1_800_000_000);
@@ -29,7 +33,7 @@ contract WujiAccountsTest is Test {
     }
 
     function make(int256 k) internal returns (WujiAccounts p) {
-        p = new WujiAccounts(asset, idx, k, EPOCH, DELAY);
+        p = new WujiAccounts(WujiAccounts.Config(asset, idx, k, EPOCH, DELAY, treasury, FEE, BOUNTY, 1_000));
         address[3] memory users = [alice, bob, carol];
         for (uint256 i; i < 3; i++) {
             asset.mint(users[i], 1_000_000e18);
@@ -234,8 +238,69 @@ contract WujiAccountsTest is Test {
         assertLe(asset.balanceOf(address(pool)), 10); // only rounding dust
     }
 
+    function test_feesBufferBountiesAndSweep() public {
+        FEE = 30; BOUNTY = 0.05e18;
+        WujiAccounts p = make(K);
+        advance(10);
+        (uint256 a, uint64 e0) = enter(p, alice, true, 100e18);
+        (uint256 b,) = enter(p, bob, false, 100e18);
+        (,,,, uint128 principal) = p.accounts(a);
+        assertEq(principal, 100e18 - 0.3e18);
+        assertEq(p.buffer(), 0.6e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        uint256 carolBefore = asset.balanceOf(carol);
+        vm.prank(carol);
+        p.processMany(10);
+        assertEq(asset.balanceOf(carol) - carolBefore, BOUNTY, "processing pays a bounty");
+        assertEq(p.buffer(), 0.55e18);
+        // Buffer above 10% of principal is swept; here it is below target.
+        assertEq(p.sweep(), 0);
+        uint64 e1 = exit(p, alice, a);
+        if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
+        p.processMany(10);
+        uint256 v = p.valueOf(a);
+        uint256 before = asset.balanceOf(alice);
+        vm.prank(alice); p.claim(a);
+        assertEq(asset.balanceOf(alice) - before, v - v * 30 / 10_000);
+        b;
+    }
+
+    function test_badDebtAbsorbedByBufferFirst() public {
+        FEE = 100; BOUNTY = 0;
+        WujiAccounts p = make(0.001e18);
+        advance(10);
+        (uint256 a, uint64 e0) = enter(p, alice, true, 10e18);
+        (uint256 b,) = enter(p, bob, false, 10e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        p.processMany(10);
+        advance(60);
+        (, uint64 e1) = enter(p, carol, true, 1e18);
+        if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
+        p.processMany(10);
+        uint256 loser = p.valueOf(a) == 0 ? a : b;
+        int256 raw = p.rawValueOf(loser);
+        uint256 bufferBefore = p.buffer();
+        p.retire(loser);
+        uint256 debt = uint256(-raw);
+        uint256 absorbed = debt < bufferBefore ? debt : bufferBefore;
+        assertEq(p.buffer(), bufferBefore - absorbed);
+        assertEq(p.badDebt(), debt - absorbed);
+    }
+
+    function test_factoryFixesTheMenu() public {
+        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30, 1_000);
+        WujiAccounts[3] memory pools = f.create(asset, 0.01e18);
+        assertEq(pools[0].K(), 23e18);
+        assertEq(pools[1].K(), 11.5e18);
+        assertEq(pools[2].K(), 4.6e18);
+        assertEq(address(f.pool(address(asset), 1)), address(pools[1]));
+        vm.expectRevert("exists");
+        f.create(asset, 0);
+    }
+
     /// Random walks with high leverage: the pool always covers every claim.
     function testFuzz_solvency(uint256 seed) public {
+        FEE = 30; BOUNTY = 0.01e18;
         WujiAccounts p = make(0.05e18);
         advance(10);
         address[3] memory users = [alice, bob, carol];
@@ -278,7 +343,7 @@ contract WujiAccountsTest is Test {
             if (raw < 0) unretired += uint256(-raw);
         }
         // The only shortfall is losses past the floor: recorded ones plus those of accounts not yet retired.
-        assertGe(asset.balanceOf(address(p)) + p.badDebt() + unretired, owed, "insolvent beyond floor overshoot");
+        assertGe(asset.balanceOf(address(p)) + p.badDebt() + unretired, owed + p.buffer(), "insolvent beyond floor overshoot");
     }
 
     function _enterEpoch(WujiAccounts p, uint256 id) internal view returns (uint64 e) {
