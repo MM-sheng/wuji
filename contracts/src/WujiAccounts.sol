@@ -68,6 +68,9 @@ contract WujiAccounts {
     bool internal afterFallback;
     /// @notice Fees held in the pool: pays bounties and absorbs floor overshoot before anything else.
     uint256 public buffer;
+    /// @notice Principal of entries requested but not yet priced. Counted in the buffer target so fees are not
+    /// swept away before the accounts they protect have joined the pool.
+    uint256 public pendingPrincipal;
     /// @notice Losses beyond the floor that neither the losing account nor the buffer paid. Winners are still
     /// credited those amounts, so this is the pool's only possible shortfall. It stays zero while the buffer
     /// covers overshoot, which is what `retire` and its bounty are for.
@@ -139,6 +142,7 @@ contract WujiAccounts {
         id = nextId++;
         accounts[id] = Account(msg.sender, yang, e, 0, principal);
         epochs[e].enterIn[yang ? 1 : 0] += principal;
+        pendingPrincipal += principal;
         emit EnterRequested(id, msg.sender, yang, principal, e);
     }
 
@@ -264,6 +268,7 @@ contract WujiAccounts {
         }
         started = true; lastS = s;
         principalOf[0] -= ep.exitOut[0]; principalOf[1] -= ep.exitOut[1];
+        pendingPrincipal -= uint256(ep.enterIn[0]) + ep.enterIn[1];
         if (!ep.frozenRefund) { principalOf[0] += ep.enterIn[0]; principalOf[1] += ep.enterIn[1]; }
         ep.acc = acc; ep.processed = true;
         head++;
@@ -317,7 +322,7 @@ contract WujiAccounts {
 
     /// @notice Send buffer above its target to the treasury (FeeRouter → RelayerRewards). Anyone may call.
     function sweep() external returns (uint256 amount) {
-        uint256 target = (uint256(principalOf[0]) + principalOf[1]) * BUFFER_BPS / 10_000;
+        uint256 target = (uint256(principalOf[0]) + principalOf[1] + pendingPrincipal) * BUFFER_BPS / 10_000;
         if (buffer <= target) return 0;
         amount = buffer - target;
         buffer = target;

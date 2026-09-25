@@ -206,9 +206,9 @@
     "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15"
   ],
   "accounts": {
-    "version": "t11-accounts-v2",
+    "version": "t11-accounts-v3",
     "deployedAt": "2026-09-25T10:35:21.773316+00:00",
-    "WujiAccountsFactory": "0x951874083da9f350AC3621C7b8Eb61F5d3B124De",
+    "WujiAccountsFactory": "0xe611399b885dd5fAE78c999174aEf9Bc27d4997b",
     "treasury": "0xeea9c3f9bfd7f1b2420bdbd1bc31d225e98e5c43",
     "epoch": 6,
     "delay": 16,
@@ -217,7 +217,7 @@
     "pools": [
       {
         "tier": 0,
-        "address": "0xffDB37b81edd55b979C0048343C53Ebc5d2E75d6",
+        "address": "0xD918c63AD7E1E71ef5c0822538A6715580B4c03e",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "23000000000000000000",
@@ -226,7 +226,7 @@
       },
       {
         "tier": 1,
-        "address": "0x5c8Bb54CE44d1381959728079AC0bcf6603C53A2",
+        "address": "0x2f1BD256267b2738C49CF16F68Ab413B62139791",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "11500000000000000000",
@@ -235,7 +235,7 @@
       },
       {
         "tier": 2,
-        "address": "0x1b07bb9532266cA0967AD28D70a4D528FaC85073",
+        "address": "0x346321B1D1F780f5D31A632D92AD3D5AbD4B8218",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "4600000000000000000",
@@ -243,14 +243,27 @@
         "bounty": "100000000000000"
       }
     ],
-    "abandoned": {
-      "WujiAccountsFactory": "0x7B990957f79313dc4aFC6B63e5adee5648671395",
-      "pools": [
-        "0x978bACFfA0d1e80183D87121B0E7D62A40F005A0",
-        "0x84af77ebe9443C86aD06d02d2F6d8dfe5FB0ae1D",
-        "0x70259CF1513eD3fc756cFD7EB90dd7dc87a6a944"
-      ],
-      "reason": "v1 pools called index.frozen()/historyConsistent(), which this v3 index lacks: every request reverted. No deposits were ever accepted."
-    }
+    "previous": [
+      {
+        "version": "t11-accounts-v1",
+        "WujiAccountsFactory": "0x7B990957f79313dc4aFC6B63e5adee5648671395",
+        "pools": [
+          "0x978bACFfA0d1e80183D87121B0E7D62A40F005A0",
+          "0x84af77ebe9443C86aD06d02d2F6d8dfe5FB0ae1D",
+          "0x70259CF1513eD3fc756cFD7EB90dd7dc87a6a944"
+        ],
+        "reason": "v1 pools called index.frozen()/historyConsistent(), which this v3 index lacks: every request reverted. No deposits were ever accepted."
+      },
+      {
+        "version": "t11-accounts-v2",
+        "WujiAccountsFactory": "0x951874083da9f350AC3621C7b8Eb61F5d3B124De",
+        "pools": [
+          "0xffDB37b81edd55b979C0048343C53Ebc5d2E75d6",
+          "0x5c8Bb54CE44d1381959728079AC0bcf6603C53A2",
+          "0x1b07bb9532266cA0967AD28D70a4D528FaC85073"
+        ],
+        "reason": "v2 sweep() ignored pending entries, so fees could be swept to the treasury before the accounts they protect joined; the 10% pool lost its whole buffer that way. Holds two deployer test accounts (0.997 WBNB each); no longer maintained by the keeper."
+      }
+    ]
   }
 }

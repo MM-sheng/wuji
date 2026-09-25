@@ -344,6 +344,23 @@ contract WujiAccountsTest is Test {
         b;
     }
 
+    /// Found live on BSC testnet: a sweep between request and pricing took every fee, leaving no buffer.
+    function test_sweepKeepsBufferForPendingEntries() public {
+        FEE = 30; BOUNTY = 0;
+        WujiAccounts p = make(K);
+        advance(10);
+        (, uint64 e0) = enter(p, alice, true, 100e18);
+        enter(p, bob, false, 100e18);
+        assertEq(p.pendingPrincipal(), 2 * (100e18 - 0.3e18));
+        assertEq(p.sweep(), 0, "buffer 0.6 is below 10% of pending principal");
+        assertEq(p.buffer(), 0.6e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        p.processMany(10);
+        assertEq(p.pendingPrincipal(), 0);
+        assertEq(p.sweep(), 0);
+        assertEq(p.buffer(), 0.6e18);
+    }
+
     function test_badDebtAbsorbedByBufferFirst() public {
         FEE = 100; BOUNTY = 0;
         WujiAccounts p = make(0.001e18);

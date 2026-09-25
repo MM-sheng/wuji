@@ -249,3 +249,13 @@ addresses are recorded under `accounts.abandoned`; they never accepted a deposit
 
 Smoke test: yang 1 WBNB and yin 1 WBNB into the 10% pool, priced at Bitcoin height 968556 (requested at relay
 best 968539).
+
+**Second finding from live operation (2026-09-25).** Between the smoke-test requests and their pricing, the
+10% pool's live principal was 0, so the buffer target was 0 and the keeper's routine `sweep()` sent both entry
+fees to the treasury. The pool then had no buffer for bounties or floor overshoot. Fix: `pendingPrincipal`
+(requested, not yet priced) counts toward the buffer target; `test_sweepKeepsBufferForPendingEntries`.
+Redeployed as v3 (`accounts.version = t11-accounts-v3`); v1 and v2 are listed under `accounts.previous`.
+The v2 10% pool still holds the two first smoke-test accounts (0.997 WBNB each), unmaintained.
+
+v3 smoke test: yang 1 and yin 1 WBNB into the 10% pool, priced at Bitcoin height 968580; with both entries
+pending, `buffer = 0.006` and `sweep()` takes 0.
