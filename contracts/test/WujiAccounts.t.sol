@@ -34,7 +34,7 @@ contract WujiAccountsTest is Test {
     }
 
     function make(int256 k) internal returns (WujiAccounts p) {
-        p = new WujiAccounts(WujiAccounts.Config(asset, idx, k, EPOCH, DELAY, treasury, FEE, BOUNTY, 1_000));
+        p = new WujiAccounts(WujiAccounts.Config(asset, idx, k, EPOCH, DELAY, 30 minutes, treasury, FEE, BOUNTY, 1_000));
         address[3] memory users = [alice, bob, carol];
         for (uint256 i; i < 3; i++) {
             asset.mint(users[i], 1_000_000e18);
@@ -94,6 +94,48 @@ contract WujiAccountsTest is Test {
         assertEq(s2, pool.sAt(h2));
     }
 
+    /// Raw headers for heights with the relay mock's hashes are not available, so this test builds a
+    /// linked header chain, folds it through a real WujiIndex, and marks from the headers alone.
+    function test_markWithHeadersNeedsOnlyTheTipHash() public {
+        advance(10);
+        uint64 base = idx.lastHeight();
+        bytes32 prev = r.headerAt(base);
+        bytes memory all;
+        for (uint64 h = base + 1; h <= base + 30; h++) {
+            bytes memory raw = abi.encodePacked(uint32(0x20000000), prev, keccak256(abi.encode(h)), uint32(h), uint32(0x1d00ffff), uint32(h));
+            prev = sha256(abi.encodePacked(sha256(raw)));
+            r.put(h, prev);
+            all = abi.encodePacked(all, raw);
+        }
+        for (uint64 h = base + 31; h <= base + 36; h++) r.put(h, keccak256(abi.encode(h, "later")));
+        r.tip(base + 36, keccak256(abi.encode(base + 36, "later")), false);
+        idx.fold(12);                       // folds base+1 .. base+12
+        int256 s12 = idx.S(); uint64 h12 = idx.lastHeight();
+        idx.fold(18);                       // folds to base+30
+        assertEq(idx.lastHash(), prev);
+        // Mark base+12 from the 18 headers above it, anchored on the index's lastHash only.
+        bytes memory upper = _slice(all, 12 * 80, 18 * 80);
+        assertEq(pool.markWithHeaders(h12, base + 30, upper), s12);
+        assertEq(pool.hashAt(h12), r.headerAt(h12));
+        // Chained from that mark down to base+4, and equal to the relay-walk result.
+        int256 s4 = pool.markWithHeaders(base + 4, h12, _slice(all, 4 * 80, 8 * 80));
+        WujiAccounts other = make(K);
+        assertEq(other.mark(base + 4, idx.lastHeight()), s4);
+        // One altered byte anywhere breaks the linkage.
+        bytes memory bad = _slice(all, 12 * 80, 18 * 80);
+        bad[100] = bytes1(uint8(bad[100]) ^ 1);
+        WujiAccounts third = make(K);
+        vm.expectRevert("linkage");
+        third.markWithHeaders(h12, base + 30, bad);
+        vm.expectRevert("headers");
+        third.markWithHeaders(h12, base + 31, upper);
+    }
+
+    function _slice(bytes memory b, uint256 from, uint256 len) internal pure returns (bytes memory out) {
+        out = new bytes(len);
+        for (uint256 i; i < len; i++) out[i] = b[from + i];
+    }
+
     function test_pricingHeightIsNotYetMined() public {
         advance(10);
         for (uint256 i; i < 7; i++) {
@@ -111,6 +153,16 @@ contract WujiAccountsTest is Test {
         vm.prank(alice);
         vm.expectRevert("relay stale");
         pool.requestEnter(true, 1e18);
+    }
+
+    /// The index would still fold with a 2h-old relay tip; the pool refuses to price against it.
+    function test_poolFreshnessIsTighterThanTheIndex() public {
+        advance(10);
+        r.setAge(31 minutes);
+        vm.prank(alice); vm.expectRevert("relay stale"); pool.requestEnter(true, 1e18);
+        assertTrue(idx.relayFresh());
+        r.setAge(29 minutes);
+        vm.prank(alice); pool.requestEnter(true, 1e18);
     }
 
     function test_matchedPairIsZeroSumAndAdditive() public {
@@ -289,7 +341,7 @@ contract WujiAccountsTest is Test {
     }
 
     function test_factoryFixesTheMenu() public {
-        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30, 1_000);
+        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000);
         WujiAccounts[3] memory pools = f.create(asset, 0.01e18);
         assertEq(pools[0].K(), 23e18);
         assertEq(pools[1].K(), 11.5e18);
@@ -302,7 +354,7 @@ contract WujiAccountsTest is Test {
     /// Invariant 7: yield accrues to holders through the token's own NAV and never enters the bet.
     function test_yieldTokenNavAccruesOutsideTheBet() public {
         MockWstETH w = new MockWstETH();
-        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(w, idx, K, EPOCH, DELAY, treasury, 0, 0, 1_000));
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(w, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000));
         w.mint(alice, 100e18); w.mint(bob, 100e18);
         vm.prank(alice); w.approve(address(p), type(uint256).max);
         vm.prank(bob); w.approve(address(p), type(uint256).max);

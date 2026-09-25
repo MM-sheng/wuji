@@ -21,13 +21,17 @@ contract WujiAccounts {
     int256 public immutable K;          // wad; annual vol ≈ 115% / K
     uint64 public immutable EPOCH;      // pricing heights are multiples of EPOCH
     uint64 public immutable DELAY;      // pricing height ≥ relay best + DELAY
+    /// @notice Requests revert unless the relay's best header is at most this old. Together with DELAY it bounds
+    /// the chance that the pricing block already exists when a request lands: at most P(≥ DELAY blocks mined in
+    /// MAX_TIP_AGE). 30 min with DELAY 16 gives ≈1e-7 in the worst case (docs/tasks/T11 §Entry and exit timing).
+    uint256 public immutable MAX_TIP_AGE;
     address public immutable treasury;  // FeeRouter: surplus fees go to the relayers' operations reserve
     uint256 public immutable FEE_BPS;   // charged on entry and on normal exit
     uint256 public immutable BOUNTY;    // paid from the buffer per processed epoch and per retirement
     uint256 public immutable BUFFER_BPS; // buffer kept against floor overshoot, relative to live principal
 
     struct Config {
-        IERC20 asset; WujiIndex index; int256 k; uint64 epoch; uint64 delay;
+        IERC20 asset; WujiIndex index; int256 k; uint64 epoch; uint64 delay; uint256 maxTipAge;
         address treasury; uint256 feeBps; uint256 bounty; uint256 bufferBps;
     }
 
@@ -69,6 +73,8 @@ contract WujiAccounts {
     // Index value at arbitrary folded heights, recomputed from relay headers.
     mapping(uint64 => int256) public sAt;
     mapping(uint64 => bool) public marked;
+    /// @notice Bitcoin header hash (raw sha256d digest order) at a height marked from supplied headers.
+    mapping(uint64 => bytes32) public hashAt;
 
     event EnterRequested(uint256 indexed id, address indexed owner, bool yang, uint128 principal, uint64 epoch);
     event ExitRequested(uint256 indexed id, uint64 epoch);
@@ -83,9 +89,9 @@ contract WujiAccounts {
 
     constructor(Config memory c) {
         require(address(c.asset).code.length > 0 && address(c.index).code.length > 0, "not contract");
-        require(c.k > 0 && c.epoch > 0 && c.delay >= 1, "params");
+        require(c.k > 0 && c.epoch > 0 && c.delay >= 1 && c.maxTipAge > 0 && c.maxTipAge <= 2 hours, "params");
         require(c.treasury != address(0) && c.feeBps <= 100 && c.bufferBps <= 10_000, "fees");
-        asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay;
+        asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay; MAX_TIP_AGE = c.maxTipAge;
         treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY = c.bounty; BUFFER_BPS = c.bufferBps;
     }
 
@@ -99,7 +105,10 @@ contract WujiAccounts {
 
     function _schedule() internal returns (uint64 e) {
         require(!frozen && !index.frozen() && index.historyConsistent(), "pool frozen");
-        require(index.relayFresh(), "relay stale");
+        // The index's own freshness bound (3h) is for folding, far too loose for pricing: a relay that lags
+        // lets a requester see the pricing block before asking. Use this pool's tighter bound instead.
+        uint256 t = index.relay().timestampOf(index.relay().bestHash());
+        require(block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours, "relay stale");
         e = nextPricingHeight();
         uint256 n = queue.length;
         if (n == 0 || queue[n - 1] != e) queue.push(e);
@@ -153,11 +162,48 @@ contract WujiAccounts {
         for (uint64 h = from; h > height; h--) {
             bytes32 hash = index.relay().headerAt(h);
             require(hash != bytes32(0), "header unavailable");
-            value -= index.increment(sha256(abi.encodePacked(hash)));
+            value -= _increment(sha256(abi.encodePacked(hash)));
         }
         sAt[height] = value; marked[height] = true;
         return value;
     }
+
+    /// @notice Record S at `height` from raw 80-byte headers `height+1 .. to`, where `to` is either the index's
+    /// last folded height (its `lastHash` anchors the chain) or a height already marked this way. Needs no
+    /// relay history, so it works for an index that keeps only its tip (ZkWujiIndex). Headers are bound by
+    /// hash linkage alone: supplying a different chain would require a sha256 second preimage.
+    function markWithHeaders(uint64 height, uint64 to, bytes calldata headers) public returns (int256 value) {
+        if (marked[height]) return sAt[height];
+        uint256 n = headers.length / 80;
+        require(headers.length == n * 80 && n > 0 && n <= MAX_WALK && to == height + n, "headers");
+        bytes32 anchor;
+        if (to == index.lastHeight()) { value = index.S(); anchor = index.lastHash(); }
+        else { require(marked[to] && hashAt[to] != bytes32(0), "unknown base"); value = sAt[to]; anchor = hashAt[to]; }
+        bytes32 expect = anchor;
+        for (uint256 i = n; i > 0; i--) {
+            bytes calldata raw = headers[(i - 1) * 80:i * 80];
+            bytes32 hash = sha256(abi.encodePacked(sha256(raw)));
+            require(hash == expect, "linkage");
+            value -= _increment(sha256(abi.encodePacked(hash)));
+            expect = bytes32(raw[4:36]);
+        }
+        sAt[height] = value; marked[height] = true; hashAt[height] = expect;
+    }
+
+    /// @dev Identical to WujiIndex.increment (tested), kept local so an index that only exposes its tip works.
+    function _byteSum(bytes32 h) internal pure returns (uint256 x) {
+        x = uint256(h);
+        x = (x & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF)
+            + ((x >> 8) & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF);
+        x = (x & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF)
+            + ((x >> 16) & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF);
+        x = (x & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF)
+            + ((x >> 32) & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF);
+        x = (x & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF)
+            + ((x >> 64) & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF);
+        x = (x & 0x00000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) + (x >> 128);
+    }
+    function _increment(bytes32 R) internal pure returns (int256) { return (int256(_byteSum(R)) - 4080) * 1.2e13; }
 
     // ---------------------------------------------------------------- epoch processing
 

@@ -18,8 +18,14 @@ contract FrozenExitRelayMock {
         return h > bestHeight ? bytes32(0) : headers[h];
     }
 
+    uint256 public age; // how far the best header's timestamp lags block time
+
     function timestampOf(bytes32) external view returns (uint32) {
-        return uint32(stale ? block.timestamp - 4 hours : block.timestamp);
+        return uint32(stale ? block.timestamp - 4 hours : block.timestamp - age);
+    }
+
+    function setAge(uint256 value) external {
+        age = value;
     }
 
     function setStale(bool value) external {

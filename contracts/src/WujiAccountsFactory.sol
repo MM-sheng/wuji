@@ -17,14 +17,16 @@ contract WujiAccountsFactory {
     address public immutable treasury;
     uint64 public immutable EPOCH;
     uint64 public immutable DELAY;
+    uint256 public immutable MAX_TIP_AGE;
     uint256 public immutable FEE_BPS;
     uint256 public immutable BUFFER_BPS;
 
     mapping(address => WujiAccounts[3]) internal pools;
     event Created(address indexed asset, uint256 tier, int256 k, address pool, uint256 bounty);
 
-    constructor(WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 feeBps, uint256 bufferBps) {
-        index = index_; treasury = treasury_; EPOCH = epoch; DELAY = delay; FEE_BPS = feeBps; BUFFER_BPS = bufferBps;
+    constructor(WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps, uint256 bufferBps) {
+        index = index_; treasury = treasury_; EPOCH = epoch; DELAY = delay; MAX_TIP_AGE = maxTipAge;
+        FEE_BPS = feeBps; BUFFER_BPS = bufferBps;
     }
 
     function kOf(uint256 tier) public pure returns (int256) {
@@ -37,7 +39,7 @@ contract WujiAccountsFactory {
         require(address(pools[address(asset)][0]) == address(0), "exists");
         for (uint256 t; t < TIERS; t++) {
             created[t] = new WujiAccounts(WujiAccounts.Config(
-                asset, index, kOf(t), EPOCH, DELAY, treasury, FEE_BPS, bounty, BUFFER_BPS));
+                asset, index, kOf(t), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, bounty, BUFFER_BPS));
             pools[address(asset)][t] = created[t];
             emit Created(address(asset), t, kOf(t), address(created[t]), bounty);
         }

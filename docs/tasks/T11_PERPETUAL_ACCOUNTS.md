@@ -99,6 +99,21 @@ the last folded `S` would see the next several moves in advance. Therefore:
 
 This applies to every design, with or without a token.
 
+**How fresh the tip must be (found while building, 2026-09-25).** "Not yet mined" is only as good as the
+relay's view of the tip. The index accepts a relay tip up to 3 h old for folding; used for pricing, that would
+let a requester see the pricing block whenever keepers lag. So each pool has its own `MAX_TIP_AGE` and the
+risk is bounded by P(≥ DELAY blocks mined within MAX_TIP_AGE), worst case (tip exactly at the bound):
+
+| max tip age | D = 8  | D = 12 | D = 16 | D = 20 |
+|------------:|-------:|-------:|-------:|-------:|
+| 20 min      | 1.1e-3 | 1.4e-6 | 5e-10  | 6e-14  |
+| 30 min      | 1.2e-2 | 7.1e-5 | 1.2e-7 | 8e-11  |
+| 60 min      | 0.26   | 2.0e-2 | 5.1e-4 | 5.2e-6 |
+
+Recommended: **30 min, D = 16** (entry/exit ≈ (16+6)·10 min ≈ 3.7 h). Residual: a relay tip whose Bitcoin
+timestamp is set in the future (allowed up to 2 h) looks fresher than it is; honest headers are close to real
+time, and producing a future-stamped tip costs a real block.
+
 ## Reorgs and the frozen state
 
 - Reorgs shallower than 6 (1-block ≈ monthly, 2-block rare) never reach folded `S`: no effect.
@@ -193,3 +208,26 @@ Rebasing tokens (stETH) must not be used: their balance changes would be mistake
   wallet's own RPC and stops if they differ from the release entry. The account id is taken from the
   `EnterRequested` log and remembered in this browser only. No pool is released yet, so today every pool
   shows read-only.
+
+## Step 4b (2026-09-25) — pricing without relay history, and the tip-age hole
+
+- `markWithHeaders(height, to, headers)`: anyone supplies the raw headers `height+1..to`; the pool checks they
+  link by hash to the index's `lastHash` (or to an earlier mark) and subtracts their increments. No relay
+  history, no PoW check needed (linkage to an already-accepted tip is enough), so it works with an index that
+  keeps only its tip. `hashAt` stores the anchor so marks can chain downwards. The increment is computed
+  locally (same byteSum as the index).
+- `MAX_TIP_AGE` (see the table above) replaces the index's 3 h freshness for requests. This was a real hole in
+  step 1, now covered by `test_poolFreshnessIsTighterThanTheIndex`.
+
+### Still open for ZkWujiIndex: where does "best height" come from?
+
+Marking is solved; request scheduling is not. `ZkWujiIndex` stores only its folded tip: `foldHeaders` validates
+6 headers beyond it and discards them, and the proof journal does not output them. Options:
+
+1. **Record the seen tip in ZkWujiIndex** (`seenHeight`, `seenTime` = the last validated header in
+   `foldHeaders`; `newHeight + 6` and a new journal field for `foldProof`). Cleanest; changes the guest's
+   journal, so a new vkey — acceptable while nothing is on mainnet. *Recommended.*
+2. **Price from the folded tip**: `pricing = lastHeight + 6 + D`, with MAX_TIP_AGE applied to the folded tip's
+   time. Folded tips are ≥ 1 h old by construction, so D must be ≈ 24 (60–90 min row), i.e. ≈ 5 h per entry
+   or exit. No index change.
+3. Keep a thin header relay only for the best tip. Brings back the per-header gas ZK was built to remove.
