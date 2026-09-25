@@ -8,6 +8,7 @@ import {WujiAccountsFactory} from "../src/WujiAccountsFactory.sol";
 import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 import {MockWstETH} from "./mocks/MockWstETH.sol";
+import {LegacyIndexMock} from "./mocks/LegacyIndexMock.sol";
 import {FrozenExitRelayMock} from "./mocks/FrozenExitRelayMock.sol";
 
 contract WujiAccountsTest is Test {
@@ -163,6 +164,31 @@ contract WujiAccountsTest is Test {
         assertTrue(idx.relayFresh());
         r.setAge(29 minutes);
         vm.prank(alice); pool.requestEnter(true, 1e18);
+    }
+
+    /// BSC testnet v3 has no frozen exit. A pool on it must still take requests and price epochs.
+    function test_worksOnAnIndexWithoutFrozenExit() public {
+        LegacyIndexMock legacy = new LegacyIndexMock(idx);
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(asset, WujiIndex(address(legacy)), K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000));
+        assertFalse(p.INDEX_CAN_FREEZE());
+        assertTrue(pool.INDEX_CAN_FREEZE());
+        vm.prank(alice); asset.approve(address(p), type(uint256).max);
+        vm.prank(bob); asset.approve(address(p), type(uint256).max);
+        advance(10);
+        assertTrue(p.acceptingRequests());
+        (uint256 a, uint64 e0) = enter(p, alice, true, 10e18);
+        enter(p, bob, false, 10e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        assertEq(p.processMany(10), 1);
+        (,, bool processed) = p.epochAcc(e0);
+        assertTrue(processed);
+        vm.expectRevert("index live");
+        p.freezePool(10);
+        // A deep reorg still stops new requests, through the pool's own consistency check.
+        r.put(idx.lastHeight(), keccak256("replacement"));
+        assertFalse(p.acceptingRequests());
+        vm.prank(alice); vm.expectRevert("pool frozen"); p.requestEnter(true, 1e18);
+        a;
     }
 
     function test_matchedPairIsZeroSumAndAdditive() public {

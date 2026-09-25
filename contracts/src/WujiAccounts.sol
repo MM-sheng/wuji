@@ -25,6 +25,9 @@ contract WujiAccounts {
     /// the chance that the pricing block already exists when a request lands: at most P(≥ DELAY blocks mined in
     /// MAX_TIP_AGE). 30 min with DELAY 16 gives ≈1e-7 in the worst case (docs/tasks/T11 §Entry and exit timing).
     uint256 public immutable MAX_TIP_AGE;
+    /// @notice Whether the index implements the T9 frozen exit. Older indexes (BSC testnet v3) do not; there the
+    /// pool simply has no frozen state, and a deep reorg stops new requests and epoch processing instead.
+    bool public immutable INDEX_CAN_FREEZE;
     address public immutable treasury;  // FeeRouter: surplus fees go to the relayers' operations reserve
     uint256 public immutable FEE_BPS;   // charged on entry and on normal exit
     uint256 public immutable BOUNTY;    // paid from the buffer per processed epoch and per retirement
@@ -91,6 +94,8 @@ contract WujiAccounts {
         require(address(c.asset).code.length > 0 && address(c.index).code.length > 0, "not contract");
         require(c.k > 0 && c.epoch > 0 && c.delay >= 1 && c.maxTipAge > 0 && c.maxTipAge <= 2 hours, "params");
         require(c.treasury != address(0) && c.feeBps <= 100 && c.bufferBps <= 10_000, "fees");
+        (bool ok, bytes memory ret) = address(c.index).staticcall(abi.encodeWithSignature("frozen()"));
+        INDEX_CAN_FREEZE = ok && ret.length == 32;
         asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay; MAX_TIP_AGE = c.maxTipAge;
         treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY = c.bounty; BUFFER_BPS = c.bufferBps;
     }
@@ -103,12 +108,21 @@ contract WujiAccounts {
         return ((h + EPOCH - 1) / EPOCH) * EPOCH;
     }
 
+    /// @notice Whether a request made now would be accepted (UI, deploy checks). Same conditions as `_schedule`.
+    function acceptingRequests() external view returns (bool) {
+        return !frozen && !_indexFrozen() && _historyConsistent() && _tipFresh();
+    }
+
+    function _tipFresh() internal view returns (bool) {
+        uint256 t = index.relay().timestampOf(index.relay().bestHash());
+        return block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours;
+    }
+
     function _schedule() internal returns (uint64 e) {
-        require(!frozen && !index.frozen() && index.historyConsistent(), "pool frozen");
+        require(!frozen && !_indexFrozen() && _historyConsistent(), "pool frozen");
         // The index's own freshness bound (3h) is for folding, far too loose for pricing: a relay that lags
         // lets a requester see the pricing block before asking. Use this pool's tighter bound instead.
-        uint256 t = index.relay().timestampOf(index.relay().bestHash());
-        require(block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours, "relay stale");
+        require(_tipFresh(), "relay stale");
         e = nextPricingHeight();
         uint256 n = queue.length;
         if (n == 0 || queue[n - 1] != e) queue.push(e);
@@ -150,11 +164,21 @@ contract WujiAccounts {
 
     // ---------------------------------------------------------------- index history
 
+    function _indexFrozen() internal view returns (bool) {
+        return INDEX_CAN_FREEZE && index.frozen();
+    }
+
+    /// @dev Same definition as WujiIndex.historyConsistent, from functions every index version has.
+    function _historyConsistent() internal view returns (bool) {
+        bytes32 h = index.lastHash();
+        return h == bytes32(0) || index.relay().headerAt(index.lastHeight()) == h;
+    }
+
     /// @notice Record S at a folded height by walking relay headers back from `from`, which is either the
     /// index's last folded height or an already marked height.
     function mark(uint64 height, uint64 from) public returns (int256 s) {
         if (marked[height]) return sAt[height];
-        require(index.historyConsistent(), "deep Bitcoin reorg");
+        require(_historyConsistent(), "deep Bitcoin reorg");
         int256 value;
         if (from == index.lastHeight()) value = index.S();
         else { require(marked[from], "unknown base"); value = sAt[from]; }
@@ -359,7 +383,7 @@ contract WujiAccounts {
     /// @notice After the index freezes, price every queued epoch: those already folded and markable at their
     /// own S, the rest at the frozen S with their entries refunded. Then the pool stops.
     function freezePool(uint256 max) external {
-        require(index.frozen(), "index live");
+        require(_indexFrozen(), "index live");
         require(!frozen, "pool frozen");
         int256 s = index.S();
         uint64 last = index.lastHeight();

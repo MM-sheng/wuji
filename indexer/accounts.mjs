@@ -76,7 +76,8 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
   const state = await readPool(read, pool);
   const done = [];
   if (state.frozen) return { state, done, cursor };
-  const indexFrozen = uint(await read(state.index, SEL.frozen)) === 1n;
+  // Older indexes have no frozen exit (the call reverts); for them the pool can never freeze.
+  const indexFrozen = await read(state.index, SEL.frozen).then(v => uint(v) === 1n, () => false);
   if (indexFrozen) {
     await send(pool, 'freezePool(uint256)', 3_000_000, '50'); done.push('freezePool');
     return { state, done, cursor };

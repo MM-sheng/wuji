@@ -75,6 +75,13 @@ test('keeper processes ready epochs, retires floored accounts, sweeps surplus', 
   assert.deepEqual(r.done, ['processMany', 'retire 1', 'sweep']);
 });
 
+test('keeper works with an index that has no frozen exit', async () => {
+  const f = fixture();
+  const read = async (to, data) => { if (to === index && data === '0x054f7d9c') throw Error('execution reverted'); return f.read(to, data); };
+  await maintainPool({ ...f, read, pool });
+  assert.deepEqual(f.sends.map(s => s[0]), ['processMany(uint256)']);
+});
+
 test('keeper does nothing when idle, and freezes after the index does', async () => {
   const idle = fixture({ folded: 1007 });
   await maintainPool({ ...idle, pool });

@@ -231,3 +231,21 @@ Marking is solved; request scheduling is not. `ZkWujiIndex` stores only its fold
    time. Folded tips are ≥ 1 h old by construction, so D must be ≈ 24 (60–90 min row), i.e. ≈ 5 h per entry
    or exit. No index change.
 3. Keep a thin header relay only for the best tip. Brings back the per-header gas ZK was built to remove.
+
+## Step 5 (2026-09-25) — live on BSC testnet
+
+Deployed against the running BSC testnet stack (index `0xe26b…d19b`, timestamps-v3, P2P source, keeper live)
+rather than Sepolia: the Sepolia deployer had 0.00018 ETH and the Sepolia relay was three days stale.
+Collateral: the testnet mock WBNB. Addresses and parameters are in
+`contracts/deployments/bsc-testnet-timestamps-v3.json` → `accounts`, and registered in the terminal's
+`RELEASES.bsc.accountPools`; `scripts/bitcoin-testnet.sh` passes them to indexer and keeper as `ACCOUNTS`.
+
+**First attempt was unusable, and why.** v1 pools called `index.frozen()` and `index.historyConsistent()`,
+which exist only on indexes with the T9 frozen exit. On this v3 index every request reverted. The deploy
+simulation did not catch it because it only deployed. Fixes: the pool probes `frozen()` once
+(`INDEX_CAN_FREEZE`), checks history consistency itself from `lastHash`/`relay.headerAt`, exposes
+`acceptingRequests()`, and the deploy script now requires it for every pool before finishing. The v1
+addresses are recorded under `accounts.abandoned`; they never accepted a deposit.
+
+Smoke test: yang 1 WBNB and yin 1 WBNB into the 10% pool, priced at Bitcoin height 968556 (requested at relay
+best 968539).
