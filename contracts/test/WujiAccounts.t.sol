@@ -7,6 +7,7 @@ import {WujiAccounts} from "../src/WujiAccounts.sol";
 import {WujiAccountsFactory} from "../src/WujiAccountsFactory.sol";
 import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
+import {MockWstETH} from "./mocks/MockWstETH.sol";
 import {FrozenExitRelayMock} from "./mocks/FrozenExitRelayMock.sol";
 
 contract WujiAccountsTest is Test {
@@ -296,6 +297,38 @@ contract WujiAccountsTest is Test {
         assertEq(address(f.pool(address(asset), 1)), address(pools[1]));
         vm.expectRevert("exists");
         f.create(asset, 0);
+    }
+
+    /// Invariant 7: yield accrues to holders through the token's own NAV and never enters the bet.
+    function test_yieldTokenNavAccruesOutsideTheBet() public {
+        MockWstETH w = new MockWstETH();
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(w, idx, K, EPOCH, DELAY, treasury, 0, 0, 1_000));
+        w.mint(alice, 100e18); w.mint(bob, 100e18);
+        vm.prank(alice); w.approve(address(p), type(uint256).max);
+        vm.prank(bob); w.approve(address(p), type(uint256).max);
+        advance(10);
+        (uint256 a, uint64 e0) = enter(p, alice, true, 100e18);
+        (uint256 b,) = enter(p, bob, false, 100e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        p.processMany(10);
+        int256 s0 = p.sAt(e0);
+        advance(150);
+        w.accrue(300); // a year of ~3% staking yield
+        uint64 e1 = exit(p, alice, a);
+        uint64 e2 = exit(p, bob, b);
+        assertEq(e1, e2);
+        if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
+        p.processMany(10);
+        int256 dS = p.sAt(e1) - s0;
+        // P&L is in token units and ignores the NAV change entirely.
+        assertApproxEqAbs(p.valueOf(a), expected(100e18, 1, dS, K), 1);
+        vm.prank(alice); p.claim(a);
+        vm.prank(bob); p.claim(b);
+        uint256 ta = w.balanceOf(alice); uint256 tb = w.balanceOf(bob);
+        assertLe(ta + tb, 200e18);
+        assertGe(ta + tb, 200e18 - 2);
+        // Both sides earned the 3% on what they hold, in ETH terms.
+        assertEq(w.getStETHByWstETH(ta), ta * 10_300 / 10_000);
     }
 
     /// Random walks with high leverage: the pool always covers every claim.

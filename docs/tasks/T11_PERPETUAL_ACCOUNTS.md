@@ -1,6 +1,6 @@
 # T11 design: perpetual accounts (只押本金、链上记账)
 
-Status: steps 1–2 built 2026-09-24 (see end); steps 3–5 not started. It is a **new contract** beside the existing series
+Status: steps 1–3 built (see end); steps 4–5 not started. It is a **new contract** beside the existing series
 vaults; it reuses `WujiIndex` / `ZkWujiIndex`, `BitcoinRelay`, `RelayerRewards` and the P2P source unchanged.
 
 ## Why
@@ -166,3 +166,11 @@ protocol owner, no fee switch, no token. Parameters (tiers, D, fee, ε, bounty) 
   `sweep`-able to the treasury (the FeeRouter → RelayerRewards).
 - **Menu.** `WujiAccountsFactory` holds the three tiers as constants (K = 23 / 11.5 / 4.6 → 5% / 10% / 25%)
   and creates them once per collateral, by anyone. No new tier can ever be added to an existing factory.
+
+## Step 3 (2026-09-25) — yield collateral needs no new code
+
+Principal and P&L are counted in token units. A non-rebasing yield token (wstETH, rETH) never changes
+balances; its ETH value per token rises. So yield reaches every holder through the token itself and never
+touches the bet. `test_yieldTokenNavAccruesOutsideTheBet` checks it with a mock whose NAV rises 3%: P&L is
+unchanged and token payouts sum to deposits. Deploying the yield pools is one `factory.create(wstETH, …)`.
+Rebasing tokens (stETH) must not be used: their balance changes would be mistaken for pool money.
