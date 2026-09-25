@@ -7,6 +7,7 @@ import { createBitcoinSource } from './bitcoin-source.mjs';
 import { network, assertChain } from './networks.mjs';
 import { rpcRequest } from './evm-rpc.mjs';
 import { readFrozenExit } from './frozen-exit.mjs';
+import { readPool, readAccount } from './accounts.mjs';
 const api=createBitcoinSource();
 const genesis=Number(process.env.GENESIS_HEIGHT), port=Number(process.env.PORT||8789);
 if(!Number.isSafeInteger(genesis)||genesis<1) throw Error('GENESIS_HEIGHT required');
@@ -20,6 +21,7 @@ const hex=n=>'0x'+n.toString(16);
 const RPC=(process.env.RPC||'https://bsc-testnet-rpc.publicnode.com').split(',')[0];
 const CONTRACT=process.env.CONTRACT, FACTORY=process.env.FACTORY;
 const CHAIN_ID=Number(process.env.CHAIN_ID||97);
+const ACCOUNTS=(process.env.ACCOUNTS||'').split(',').map(s=>s.trim().toLowerCase()).filter(a=>/^0x[0-9a-f]{40}$/.test(a));
 const NETWORK=network(CHAIN_ID);
 const rpc=(method,params)=>rpcRequest(RPC,method,params);
 const call=async(to,data,block='latest')=>rpc('eth_call',[{to,data},block]);
@@ -62,6 +64,7 @@ async function pollChain(){
    c.relay={address:relayAddress,fresh:BigInt(fresh)===1n,maxAge:Number(BigInt(maxAge)),height:Number(BigInt(height)),timestamp:Number(BigInt(time))};
   }
   if(FACTORY){const count=Number(BigInt(await call(FACTORY,'0x06661abd',at)));c.vaults=[];for(let i=0;i<count;i++){const v='0x'+(await call(FACTORY,'0x8c64ea4a'+i.toString(16).padStart(64,'0'),at)).slice(26);c.vaults.push(await readVault(v,at));}c.vault=c.vaults[0];}
+  if(ACCOUNTS.length)c.accountPools=await Promise.all(ACCOUNTS.map(p=>readPool((to,data)=>call(to,data,at),p)));
   if(process.env.FROZEN_EXIT==='1')c.frozenExit=await readFrozenExit((to,data)=>call(to,data,at),CONTRACT,c.relay.address);
   if((await rpc('eth_getBlockByNumber',[at,false]))?.hash!==block.hash)throw Error('EVM reorg during snapshot');
   c.observedHash=block.hash;chain=c;
@@ -112,6 +115,9 @@ http.createServer(async(req,res)=>{
   }
   if(u.pathname==='/blockAt'){const r=rows[at(Number(q.get('ts')))];return json(r?{block:r.height,hash:r.hash,ts:r.ts,url:'https://mempool.space/block/'+r.hash}:{error:'before first final height'});}
   if(u.pathname==='/blocks'){return json(rows.filter(r=>r.height>=Number(q.get('from'))&&r.height<=Number(q.get('to'))));}
+  const acct=u.pathname.match(/^\/account\/(0x[0-9a-fA-F]{40})\/(\d{1,12})$/);
+  if(acct){const pool=acct[1].toLowerCase();if(!ACCOUNTS.includes(pool))return json({error:'unknown pool'},404);
+   return json(await readAccount((to,data)=>call(to,data,'latest'),pool,Number(acct[2])));}
   const match=u.pathname.match(/^\/proof\/(\d+)$/);
   if(match){const row=rows[Number(match[1])-genesis];if(!row)return json({error:'height not finalized'},404);const s=step(row.header);return json({...row,block:row.height,R_h:s.R,S:row.U*1.2e-5,S_wad:(BigInt(row.U)*12000000000000n).toString(),price:price(row.U),confirmations:6,confirmedAt:row.ts,url:'https://mempool.space/block/'+row.hash,byteOrder:'R = SHA256(raw SHA256d(header)); explorer hash reverses raw digest'});}
   const p=path.resolve(staticDir,'.'+(u.pathname==='/'?'/index.html':u.pathname));

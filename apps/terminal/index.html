@@ -290,6 +290,7 @@
       <button data-p="liqs">Liquidations<em id="cLiqs">0</em></button>
       <button data-p="verdict">Verdict</button>
       <button data-p="taiji">两仪 · On-chain<em id="cChain"></em></button>
+      <button data-p="perp">永续账户<em id="cPerp"></em></button>
       <button data-p="data">数据源 · 核验</button>
       <button data-p="about">About</button>
       <span class="sp"></span>
@@ -325,6 +326,23 @@
           <label for="rpcURL">独立 RPC URL</label><input id="rpcURL" type="url" spellcheck="false">
           <button id="saveRPC">保存 RPC</button><button id="verifyNow">立即核验</button><div class="muted">公共服务需 HTTPS 与 CORS。切换来源会重载页面，模拟账户按来源分开保存。</div></div>
         <div id="directResult" role="status"></div>
+      </div>
+    </div>
+    <div class="pane" id="p-perp">
+      <div class="taiji">
+        <div>
+          <h4>Pools · 档位</h4>
+          <div id="pjPools"><div class="empty">这个索引器没有配置永续账户池（ACCOUNTS）。</div></div>
+        </div>
+        <div>
+          <h4>Account · 账户</h4>
+          <div class="qty" style="margin-bottom:8px"><select id="pjPool"></select><input id="pjId" type="number" min="1" placeholder="账户编号"><button id="pjLook">查询</button></div>
+          <div id="pjAcct"><div class="msg2">输入账户编号查看价值与状态。价值以最近一次已定价的比特币高度为准。</div></div>
+        </div>
+        <div>
+          <h4>规则</h4>
+          <div style="color:var(--muted);font-size:11px;line-height:1.7">本金固定，盈亏按 本金·ΔS/K 累加，最低 0、最高 2 倍，没有到期日。<br>进出场按一个申请时还没挖出的比特币高度定价（约 1–4 小时后），申请后不能撤销。<br>对面本金更少时，多出的一侧闲置，不涨不跌。<br>合约整数为准，这里只是显示。</div>
+        </div>
       </div>
     </div>
     <div class="pane" id="p-taiji">
@@ -496,6 +514,20 @@ function exitActionAllowed(state, action) {
     if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,safeHead(v)]));
     return value;
   }
+  const WAD_STR=/^-?\d{1,78}$/;
+  function validatePool(p){
+    for(const k of ['address','asset','index'])if(!ADDRESS.test(p[k]))throw Error('Invalid pool address');
+    for(const k of ['k_wad','yin_wad','yang_wad','matched_wad','idle_wad','buffer_wad','badDebt_wad','balance_wad','lastS_wad'])if(!WAD_STR.test(p[k]))throw Error('Invalid pool amount');
+    for(const k of ['epoch','delay','feeBps','pendingEpochs','nextPricingHeight','accountsCreated'])if(!Number.isSafeInteger(p[k]))throw Error('Invalid pool number');
+    if(!(p.annualVol>0)||![null,'yin','yang'].includes(p.idleSide))throw Error('Invalid pool');
+  }
+  function validateAccount(a){
+    if(a.closed)return {closed:true};
+    if(!ADDRESS.test(a.owner)||!['yin','yang'].includes(a.side)||!['entering','open','exiting','claimable'].includes(a.status))throw Error('Invalid account');
+    for(const k of ['principal_wad','value_wad','pnl_wad','overshoot_wad'])if(!WAD_STR.test(a[k]))throw Error('Invalid account amount');
+    if(!Number.isSafeInteger(a.enterEpoch)||(a.exitEpoch!==null&&!Number.isSafeInteger(a.exitEpoch))||!Number.isFinite(a.multiple))throw Error('Invalid account');
+    return a;
+  }
   function validateHead(h){
     if(!Number.isSafeInteger(h.ts)||!Number.isSafeInteger(h.genesisTs)||h.genesisTs<0||h.ts<h.genesisTs||Math.abs(Date.now()/1000-h.ts)>90)throw Error('Invalid or stale indexer clock');
     for(const k of ['tipHash','hash'])if(h[k]&&!/^[0-9a-f]{64}$/i.test(h[k]))throw Error('Invalid Bitcoin hash');
@@ -505,6 +537,7 @@ function exitActionAllowed(state, action) {
         for(const k of ['address','asset','yang','yin'])if(!ADDRESS.test(v[k]))throw Error('Invalid vault address');
         v.explorer=Number(v.chainId)===11155111?'https://sepolia.etherscan.io':Number(v.chainId)===97?'https://testnet.bscscan.com':'https://bscscan.com';
       }
+      for(const p of c.accountPools||[])validatePool(p);
     }
     return safeHead(h);
   }
@@ -909,6 +942,51 @@ function exitActionAllowed(state, action) {
   const ago=s=>{s=Math.max(0,s|0);if(s<60)return s+'s';if(s<3600)return (s/60|0)+'m '+(s%60)+'s';const d=s/86400|0,h=(s%86400)/3600|0,m=(s%3600)/60|0;return (d?d+'d ':'')+h+'h '+m+'m';};
   let vaultIdx=+(prefs.vault||0);
   const curVault=()=>{const c=HEAD.chain; if(!c)return null; const list=c.vaults||(c.vault?[c.vault]:[]); if(!list.length)return null; if(vaultIdx>=list.length)vaultIdx=0; return list[vaultIdx];};
+  // ================= 永续账户 · T11 =================
+  const wad=v=>Number(BigInt(v))/1e18;
+  const fmtW=v=>fmtAmount(wad(v));
+  function renderPerp(){
+    const pools=HEAD.chain?.accountPools||[];
+    if(!pools.length||!healthyHead(HEAD,headReceived)){
+      // Never leave old numbers on screen when the snapshot is missing or stale.
+      $('cPerp').textContent=pools.length?'⚠':'';
+      $('pjPools').innerHTML=pools.length?'<div class="empty">索引数据不可用或已过期，等待更新</div>':'<div class="empty">这个索引器没有配置永续账户池（ACCOUNTS）。</div>';
+      return;
+    }
+    $('cPerp').textContent=pools.length;
+    const sel=$('pjPool');
+    if(sel.options.length!==pools.length)sel.innerHTML=pools.map((p,i)=>`<option value="${p.address}">${(p.annualVol*100).toFixed(0)}% · ${short(p.address)}</option>`).join('');
+    $('pjPools').innerHTML=pools.map(p=>{
+      const y=wad(p.yang_wad),n=wad(p.yin_wad),t=y+n||1;
+      return `<div style="margin-bottom:12px">
+      <div class="kv"><span>年化波动 · K</span><b>${(p.annualVol*100).toFixed(1)}% · ${wad(p.k_wad)}</b></div>
+      <div class="yy"><div class="yang" style="width:${100*y/t}%">阳 ${fmtAmount(y)}</div><div class="yin">${fmtAmount(n)} 阴</div></div>
+      <div class="kv"><span>在押 · 闲置</span><b>${fmtW(p.matched_wad)} · ${p.idleSide?(p.idleSide==='yang'?'阳':'阴')+' '+fmtW(p.idle_wad):'无'}</b></div>
+      <div class="kv"><span>排队中的定价</span><b>${p.pendingEpochs?p.pendingEpochs+' 个 · 下一个 #'+p.nextEpoch+(p.nextEpochReady?' · 可处理':''):'无'}</b></div>
+      <div class="kv"><span>新申请将定价于</span><b>#${p.nextPricingHeight.toLocaleString()}</b></div>
+      <div class="kv"><span>缓冲金 · 未覆盖亏空</span><b class="${BigInt(p.badDebt_wad)>0n?'bad':'ok'}">${fmtW(p.buffer_wad)} · ${fmtW(p.badDebt_wad)}</b></div>
+      <div class="kv"><span>手续费 · 账户数</span><b>${p.feeBps/100}% · ${p.accountsCreated}</b></div>
+      <div class="kv"><span>池子</span><b>${p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
+  }
+  async function lookAccount(){
+    const pool=$('pjPool').value,id=+$('pjId').value;if(!pool||!id)return;
+    const el=$('pjAcct');el.textContent='读取中…';
+    try{
+      if(!ADDRESS.test(pool)||!Number.isSafeInteger(id)||id<1)throw Error('invalid input');
+      const raw=await (await fetch(API+'/account/'+pool+'/'+id)).json();
+      if(raw.error)throw Error(esc(String(raw.error)));
+      const a=validateAccount(raw);
+      if(a.closed){el.innerHTML='<div class="msg2">账户 #'+id+' 不存在或已结清。</div>';return;}
+      const st={entering:'等待进场定价',open:'持有中',exiting:'等待退出定价',claimable:'可领取'}[a.status];
+      el.innerHTML=`<div class="kv"><span>方向 · 状态</span><b>${a.side==='yang'?'阳':'阴'} · ${st}</b></div>
+      <div class="kv"><span>本金</span><b>${fmtW(a.principal_wad)}</b></div>
+      <div class="kv"><span>当前价值</span><b class="${cls(wad(a.pnl_wad))}">${fmtW(a.value_wad)} · ${a.multiple.toFixed(4)}×</b></div>
+      <div class="kv"><span>进场高度${a.exitEpoch?' · 退出高度':''}</span><b>#${a.enterEpoch}${a.exitEpoch?' · #'+a.exitEpoch:''}</b></div>
+      <div class="kv"><span>持有人</span><b>${short(a.owner)}</b></div>
+      ${a.atFloor?'<div class="msg2">已触底，任何人都可以清退这个账户。</div>':''}`;
+    }catch(e){el.textContent='读取失败：'+e.message;}
+  }
+  $('pjLook').onclick=lookAccount;
   function renderTaiji(){
     renderExit();
     const c=HEAD.chain; const wrap=$('tYYwrap'); const v0=curVault();
@@ -1099,7 +1177,7 @@ function exitActionAllowed(state, action) {
   function renderAll(force){
     const now=viewTick(); if(!force&&now===lastTick)return; lastTick=now; const price=priceAt(now);
     if(replayT===null)checkLiq(now);
-    draw();renderTop(now,price);renderAcct(price);renderBook(now,price);renderLead(now,price);renderVerdict(now,price);renderNews(now);renderMode(now);renderLiqs();renderTaiji();
+    draw();renderTop(now,price);renderAcct(price);renderBook(now,price);renderLead(now,price);renderVerdict(now,price);renderNews(now);renderMode(now);renderLiqs();renderTaiji();renderPerp();
   }
   function setReplay(t){ const real=nowTick(); replayT=(t===null||t>=real)?null:Math.max(0,t|0);
     const hash=replayT===null?'':'#t='+new Date((GENESIS+replayT)*1000).toISOString().slice(0,19)+'Z';

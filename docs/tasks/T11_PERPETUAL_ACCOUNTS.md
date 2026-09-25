@@ -1,6 +1,6 @@
 # T11 design: perpetual accounts (只押本金、链上记账)
 
-Status: steps 1–3 built (see end); steps 4–5 not started. It is a **new contract** beside the existing series
+Status: steps 1–4 built (see end; wallet actions pending); step 5 not started. It is a **new contract** beside the existing series
 vaults; it reuses `WujiIndex` / `ZkWujiIndex`, `BitcoinRelay`, `RelayerRewards` and the P2P source unchanged.
 
 ## Why
@@ -174,3 +174,16 @@ balances; its ETH value per token rises. So yield reaches every holder through t
 touches the bet. `test_yieldTokenNavAccruesOutsideTheBet` checks it with a mock whose NAV rises 3%: P&L is
 unchanged and token payouts sum to deposits. Deploying the yield pools is one `factory.create(wstETH, …)`.
 Rebasing tokens (stETH) must not be used: their balance changes would be mistaken for pool money.
+
+## Step 4 (2026-09-25) — indexer, keeper, terminal
+
+- `indexer/accounts.mjs`: dependency-free pool and account readers, plus `maintainPool` keeper duties
+  (process ready epochs, retire floored accounts in a bounded rolling scan, sweep buffer surplus,
+  `freezePool` after the index freezes). Unit-tested, and `accounts.integration.test.mjs` reads a real
+  compiled pool on a throwaway anvil chain (unlocked account, no key) so ABI offsets are checked against
+  the contract, not against a fixture.
+- `bitcoin-index.mjs`: `ACCOUNTS=<pool,...>` adds `head.chain.accountPools` and `GET /account/<pool>/<id>`.
+- `bitcoin-keeper.mjs`: the same `ACCOUNTS` list is maintained every round, also after an index freeze.
+- Terminal: a read-only 永续账户 tab (tiers, yang/yin split, matched vs idle, queued pricing heights, buffer,
+  bad debt, account lookup). Pool and account payloads are validated and escaped like vault data, and the
+  tab clears itself when the snapshot is stale. Wallet actions (enter/exit/claim) are not built yet.

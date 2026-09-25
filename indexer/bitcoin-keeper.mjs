@@ -4,11 +4,13 @@ import { assertChain } from './networks.mjs';
 import { rpcRequest } from './evm-rpc.mjs';
 import { maintainFrozenExit } from './frozen-keeper.mjs';
 import { keeperReads, quantity, workerReady } from './keeper-rpc.mjs';
+import { maintainPool } from './accounts.mjs';
 // WUJI keeper — keeps WujiIndex ticking (≤ every 256 blocks) and settles fixed-block series.
 // Signs with `cast` (Foundry) so this file has no dependencies and never touches the key itself.
 //
 //   RPC=... KEYSTORE_ACCOUNT=... PASSWORD_FILE=... CONTRACT=<WujiIndex> [FACTORY=<WujiVaultFactory>] [VAULT=<WujiVault>] [INTERVAL=45] node indexer/keeper.mjs
 //   With FACTORY set, every vault the factory knows is settled; VAULT alone settles just that one.
+//   ACCOUNTS=<pool,pool,...> also maintains T11 perpetual-account pools (process, retire, sweep, freeze).
 //
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
@@ -103,7 +105,7 @@ async function once(){
  await checkChain();
  let exitState=frozenExitMode?await handleExit():null;
  // Completed exits and claims do not depend on Bitcoin API availability.
- if(exitState?.frozen){await claimBounties(num((await call(CONTRACT,'lastHeight()(uint64)'))));return;}
+ if(exitState?.frozen){await claimBounties(num((await call(CONTRACT,'lastHeight()(uint64)'))));await maintainAccounts();return;}
  const tip=await api.tip();
  const best=num((await call(RELAY,'bestHeight()(uint64)')));
  const checkpoint=num((await call(RELAY,'checkpointHeight()(uint64)')));
@@ -180,6 +182,21 @@ async function once(){
  for(const v of FACTORY?await listVaults():VAULT?[VAULT]:[]){
   const boundary=num((await call(v,'currentSettlementHeight()(uint64)')));
   if(last>=boundary){const r=JSON.parse(await send(v,'settle()',3_500_000));if(r.status!=='0x1'&&r.status!==1)throw Error('settle reverted');log('settle',v,boundary,r.transactionHash);}
+ }
+ await maintainAccounts();
+}
+const ACCOUNTS=(process.env.ACCOUNTS||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+if(ACCOUNTS.some(a=>!/^0x[0-9a-f]{40}$/.test(a)))throw Error('ACCOUNTS must be pool addresses');
+const accountCursor=new Map();
+async function maintainAccounts(){
+ for(const pool of ACCOUNTS){
+  try{
+   const r=await maintainPool({pool,cursor:accountCursor.get(pool)||1,log,
+    read:(to,data)=>rpc('eth_call',[{to,data},'latest']),
+    simulate:(to,sig,...args)=>call(to,sig,...args),
+    send:async(to,sig,gas,...args)=>{const t=JSON.parse(await send(to,sig,gas,...args));if(!succeeded(t))throw Error(sig+' reverted');log('accounts',sig,...args,pool.slice(0,10),t.transactionHash);}});
+   accountCursor.set(pool,r.cursor);
+  }catch(e){log('accounts:',pool.slice(0,10),redact(e.stderr||e.message));}
  }
 }
 let vaultCache = { at: 0, list: [] };
