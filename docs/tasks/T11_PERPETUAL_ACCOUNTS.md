@@ -1,6 +1,6 @@
 # T11 design: perpetual accounts (只押本金、链上记账)
 
-Status: steps 1–4 built (see end; wallet actions pending); step 5 not started. It is a **new contract** beside the existing series
+Status: steps 1–4 built (see end); step 5 (testnet deployment) not started. It is a **new contract** beside the existing series
 vaults; it reuses `WujiIndex` / `ZkWujiIndex`, `BitcoinRelay`, `RelayerRewards` and the P2P source unchanged.
 
 ## Why
@@ -186,4 +186,10 @@ Rebasing tokens (stETH) must not be used: their balance changes would be mistake
 - `bitcoin-keeper.mjs`: the same `ACCOUNTS` list is maintained every round, also after an index freeze.
 - Terminal: a read-only 永续账户 tab (tiers, yang/yin split, matched vs idle, queued pricing heights, buffer,
   bad debt, account lookup). Pool and account payloads are validated and escaped like vault data, and the
-  tab clears itself when the snapshot is stale. Wallet actions (enter/exit/claim) are not built yet.
+  tab clears itself when the snapshot is stale.
+- Wallet actions (enter with approve, irrevocable exit with a confirm dialog, claim) work **only for pools
+  listed in the page's built-in `RELEASES[...].accountPools`** — an indexer can suggest a pool, never
+  authorize one. Before every transaction the page re-reads the pool's `asset()` and `K()` through the
+  wallet's own RPC and stops if they differ from the release entry. The account id is taken from the
+  `EnterRequested` log and remembered in this browser only. No pool is released yet, so today every pool
+  shows read-only.

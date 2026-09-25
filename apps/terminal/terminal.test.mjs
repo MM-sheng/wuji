@@ -94,3 +94,24 @@ test('historical redemptions use that series fixed share, never the current live
  assert.equal(r.status,'direct-only');assert.equal(r.currentId,3);assert.equal(r.seriesId,2);assert.equal(r.settled,true);
  assert.equal(r.yangShare_wad,'700000000000000000');assert.equal(r.yang,addr(7));
 });
+test('perp wallet actions only for pools in the built-in release list, never from indexer data',()=>{
+ const src=html.slice(html.indexOf('  function releasedPool('),html.indexOf('  const myIdsKey='));
+ const same=(a,b)=>!!a&&!!b&&a.toLowerCase()===b.toLowerCase();
+ const RELEASES={x:{chainId:11155111,accountPools:[{address:addr(7),asset:addr(8),k_wad:'11500000000000000000'}]},y:{chainId:97}};
+ const c=vm.createContext({RELEASES,same});vm.runInContext(src+'\nthis.f=releasedPool;',c);
+ assert.equal(c.f(addr(9)),null);
+ const hit=c.f(addr(7).toUpperCase().replace('0X','0x'));
+ assert.equal(hit.chainId,11155111);assert.equal(hit.asset,addr(8));
+});
+test('pool and account payloads are validated before rendering',()=>{
+ const src=html.slice(html.indexOf('  const WAD_STR='),html.indexOf('  function validateHead('));
+ const c=vm.createContext({ADDRESS:/^0x[0-9a-fA-F]{40}$/});vm.runInContext(src+'\nthis.p=validatePool;this.a=validateAccount;',c);
+ const pool={address:addr(1),asset:addr(2),index:addr(3),k_wad:'1',yin_wad:'1',yang_wad:'1',matched_wad:'1',idle_wad:'0',buffer_wad:'0',badDebt_wad:'0',balance_wad:'2',lastS_wad:'-3',epoch:6,delay:2,feeBps:30,pendingEpochs:0,nextPricingHeight:1,accountsCreated:0,annualVol:0.1,idleSide:null};
+ c.p(pool);
+ assert.throws(()=>c.p({...pool,yin_wad:'<img src=x>'}));
+ assert.throws(()=>c.p({...pool,address:'javascript:1'}));
+ const acct={owner:addr(4),side:'yang',status:'open',principal_wad:'1',value_wad:'1',pnl_wad:'0',overshoot_wad:'0',enterEpoch:6,exitEpoch:null,multiple:1};
+ assert.equal(c.a(acct).side,'yang');
+ assert.throws(()=>c.a({...acct,status:'<b>'}));
+ assert.throws(()=>c.a({...acct,owner:'"><script>'}));
+});

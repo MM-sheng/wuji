@@ -338,6 +338,8 @@
           <h4>Account · 账户</h4>
           <div class="qty" style="margin-bottom:8px"><select id="pjPool"></select><input id="pjId" type="number" min="1" placeholder="账户编号"><button id="pjLook">查询</button></div>
           <div id="pjAcct"><div class="msg2">输入账户编号查看价值与状态。价值以最近一次已定价的比特币高度为准。</div></div>
+          <h4 style="margin-top:14px">Wallet · 操作</h4>
+          <div id="pjWallet"></div>
         </div>
         <div>
           <h4>规则</h4>
@@ -955,7 +957,7 @@ function exitActionAllowed(state, action) {
     }
     $('cPerp').textContent=pools.length;
     const sel=$('pjPool');
-    if(sel.options.length!==pools.length)sel.innerHTML=pools.map((p,i)=>`<option value="${p.address}">${(p.annualVol*100).toFixed(0)}% · ${short(p.address)}</option>`).join('');
+    if(sel.options.length!==pools.length){sel.innerHTML=pools.map((p,i)=>`<option value="${p.address}">${(p.annualVol*100).toFixed(0)}% · ${short(p.address)}</option>`).join('');renderPerpWallet();}
     $('pjPools').innerHTML=pools.map(p=>{
       const y=wad(p.yang_wad),n=wad(p.yin_wad),t=y+n||1;
       return `<div style="margin-bottom:12px">
@@ -987,6 +989,68 @@ function exitActionAllowed(state, action) {
     }catch(e){el.textContent='读取失败：'+e.message;}
   }
   $('pjLook').onclick=lookAccount;
+  // Wallet actions only for pools listed in RELEASES: an indexer can suggest a pool, never authorize one.
+  const PERP_TOPIC='0x6fb0fa55bce2819ab33da96cdb575107424ba90212579b2264b314a16d6cea88';
+  const perpForm={side:'yang',amount:'',msg:'',busy:false};
+  function releasedPool(address){
+    for(const d of Object.values(RELEASES))for(const p of d.accountPools||[])if(same(p.address,address))return {...p,chainId:d.chainId};
+    return null;
+  }
+  const myIdsKey=pool=>'wuji:perp-ids:'+pool.toLowerCase()+':'+(W.acct||'').toLowerCase();
+  const myIds=pool=>{try{return JSON.parse(localStorage.getItem(myIdsKey(pool)))||[];}catch{return [];}};
+  const rememberId=(pool,id)=>{try{const l=myIds(pool);if(!l.includes(id))l.push(id);localStorage.setItem(myIdsKey(pool),JSON.stringify(l));}catch{}};
+  async function perpSend(rel,to,data,label){
+    perpForm.busy=true;perpForm.msg=label+' · 请在钱包确认…';renderPerpWallet();
+    try{
+      const account=W.acct;if(!account)throw Error('先连接钱包');
+      await requireWalletChain(rel.chainId);
+      // Fresh read through the wallet's own RPC: the released address really is that pool on this chain.
+      const [asset,k]=await Promise.all([ethCall(rel.address,'0x38d52e0f'),ethCall(rel.address,'0xa932492f')]);
+      if(!same('0x'+asset.slice(-40),rel.asset)||BigInt(k)!==BigInt(rel.k_wad))throw Error('链上池子与发布清单不一致，已停止');
+      const h=await eth().request({method:'eth_sendTransaction',params:[{from:account,to,data,chainId:hex(rel.chainId)}]});
+      perpForm.msg=label+' · 已发送 '+short(h)+' · 等待确认…';renderPerpWallet();
+      for(let i=0;i<120;i++){const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]});
+        if(r){if(r.status!=='0x1')throw Error(label+' 失败 · '+short(h));perpForm.msg='✓ '+label+' · '+short(h);return r;}
+        await new Promise(r=>setTimeout(r,1500));}
+      perpForm.msg='回执仍未出现 · '+h+' · 重试前请先查浏览器';return null;
+    }catch(e){perpForm.msg='✗ '+String(e.shortMessage||e.message||e).slice(0,140);return null;}
+    finally{perpForm.busy=false;renderPerpWallet();}
+  }
+  async function perpEnter(){
+    const rel=releasedPool($('pjPool').value);if(!rel||perpForm.busy)return;
+    let amount;try{amount=exactAmount($('pjAmt').value.trim());if(amount===0n||amount>=2n**128n)throw Error('数量无效');}catch(e){perpForm.msg='✗ '+e.message;return renderPerpWallet();}
+    perpForm.amount=$('pjAmt').value;
+    await requireWalletChain(rel.chainId).catch(()=>{});
+    const allowance=BigInt(await ethCall(rel.asset,'0xdd62ed3e'+pad(W.acct)+pad(rel.address)).catch(()=>'0x0'));
+    if(allowance<amount&&!await perpSend(rel,rel.asset,'0x095ea7b3'+pad(rel.address)+pad(amount.toString(16)),'授权 '+(rel.symbol||'抵押品')))return;
+    const r=await perpSend(rel,rel.address,'0x94386983'+pad(perpForm.side==='yang'?'1':'0')+pad(amount.toString(16)),'进场 '+(perpForm.side==='yang'?'阳':'阴'));
+    const log=r?.logs?.find(l=>same(l.address,rel.address)&&l.topics?.[0]===PERP_TOPIC);
+    if(log){const id=Number(BigInt(log.topics[1]));rememberId(rel.address,id);perpForm.msg+=' · 账户 #'+id+' · 约 1–4 小时后定价';$('pjId').value=id;renderPerpWallet();}
+  }
+  async function perpAction(kind){
+    const rel=releasedPool($('pjPool').value),id=+$('pjId').value;if(!rel||perpForm.busy)return;
+    if(!Number.isSafeInteger(id)||id<1){perpForm.msg='✗ 先在上面填账户编号';return renderPerpWallet();}
+    if(kind==='exit'&&!confirm('退出申请不能撤销。账户会按一个还没挖出的比特币高度定价，金额在定价前会继续变动。确定？'))return;
+    await perpSend(rel,rel.address,(kind==='exit'?'0x721c6513':'0x379607f5')+pad(id.toString(16)),(kind==='exit'?'申请退出 #':'领取 #')+id);
+    lookAccount();
+  }
+  function renderPerpWallet(){
+    const el=$('pjWallet'),pool=$('pjPool').value,rel=pool&&releasedPool(pool);
+    if(!pool){el.innerHTML='';return;}
+    if(!rel){el.innerHTML='<div class="msg2">这个池子不在页面内置的发布清单里，不能从网页操作。只读显示仍可用。</div>';return;}
+    if(!W.acct){el.innerHTML='<button id="pjConnect">CONNECT WALLET</button>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId}).then(renderPerpWallet);return;}
+    const dis=perpForm.busy?'disabled':'',mine=myIds(rel.address);
+    el.innerHTML=`<div class="row2"><span style="color:var(--dim)">方向</span>
+      <button id="pjYang" class="${perpForm.side==='yang'?'pri':''}" ${dis}>阳</button><button id="pjYin" class="${perpForm.side==='yin'?'pri':''}" ${dis}>阴</button>
+      <input id="pjAmt" type="text" inputmode="decimal" placeholder="数量 ${esc(rel.symbol||'')}" value="${esc(perpForm.amount)}"><button class="pri" id="pjEnter" ${dis}>进场</button></div>
+      <div class="row2"><button id="pjExit" ${dis}>申请退出（按上方编号）</button><button id="pjClaim" ${dis}>领取（按上方编号）</button></div>
+      ${mine.length?`<div class="msg2">本浏览器记下的账户：${mine.map(i=>'#'+i).join(' ')}</div>`:''}
+      <div class="msg2">${esc(perpForm.msg)||'进场费 '+(rel.feeBps/100)+'%。申请后约 1–4 小时按未来比特币高度定价，不能撤销。'}</div>`;
+    $('pjYang').onclick=()=>{perpForm.side='yang';perpForm.amount=$('pjAmt').value;renderPerpWallet();};
+    $('pjYin').onclick=()=>{perpForm.side='yin';perpForm.amount=$('pjAmt').value;renderPerpWallet();};
+    $('pjEnter').onclick=perpEnter;$('pjExit').onclick=()=>perpAction('exit');$('pjClaim').onclick=()=>perpAction('claim');
+  }
+  $('pjPool').onchange=renderPerpWallet;
   function renderTaiji(){
     renderExit();
     const c=HEAD.chain; const wrap=$('tYYwrap'); const v0=curVault();
