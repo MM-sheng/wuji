@@ -68,3 +68,19 @@ Do not deploy anything: Claude will deploy the pools to the Sepolia v4 index aft
 
 Write `docs/tasks/T11_WALLET_TEST_REPORT.md` with the results of A and B and commit it (message ends with the
 repository's usual co-author line for your agent).
+
+## Task C — collect Sepolia ETH daily (added 2026-09-27)
+
+Goal: **≥ 0.15 Sepolia ETH** on the Sepolia deployer `0x85967858e2464535A12031103ABA38f2795Fe8Fd` (it holds
+≈0.05 now). That covers catching the v4 relay up (≈0.066 ETH), deploying the account pools (≈0.019 ETH) and
+about a week of relay upkeep. Ongoing upkeep is ≈0.014 ETH/day, so keep collecting after the target is reached
+unless told to stop.
+
+- Once per day, request from the faucet that worked before (Google Cloud Web3 faucet, existing session). If it
+  is rate-limited, try one other reputable public Sepolia faucet. Same rules as above: any CAPTCHA, new login,
+  terms acceptance or payment → stop and hand that step to the human. Never pay or bridge real funds.
+- Send only to the address above. Do not move funds out of it; Claude distributes to the keeper.
+- After each receipt, check `cast balance 0x85967858e2464535A12031103ABA38f2795Fe8Fd -r https://ethereum-sepolia-rpc.publicnode.com -e`
+  and append one line to `docs/tasks/T11_WALLET_TEST_REPORT.md` → "Sepolia fuel log":
+  `date · faucet · amount · tx hash · balance after`. Commit the log.
+- When the balance first reaches 0.15 ETH, say so clearly in your report so Claude can deploy.
