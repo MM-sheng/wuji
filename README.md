@@ -73,6 +73,31 @@ Testnet prototype only. Fixed Bitcoin-height checkpoint settlement removes the k
 One series spans 4320 Bitcoin heights (about 30 days on average, not a fixed calendar deadline).
 Do not deploy to mainnet until an independent contract review and the remaining checklist are complete.
 
+## Perpetual accounts (T11, BSC testnet)
+
+A second product on the same index: fixed principal, additive P&L `principal·ΔS/K` in [0, 2·principal], no
+expiry. Entries and exits are priced at a Bitcoin height not yet mined when requested (≈3–4 h). Three tiers,
+fixed forever by the factory. [Design](docs/tasks/T11_PERPETUAL_ACCOUNTS.md) ·
+[threat model](docs/THREAT_MODEL.md#t11-perpetual-accounts) · [contract](contracts/src/WujiAccounts.sol)
+
+| tier | K | pool (BSC testnet, mock WBNB) |
+|---|---:|---|
+| 5% / yr | 23 | `0xD918c63AD7E1E71ef5c0822538A6715580B4c03e` |
+| 10% / yr | 11.5 | `0x2f1BD256267b2738C49CF16F68Ab413B62139791` |
+| 25% / yr | 4.6 | `0x346321B1D1F780f5D31A632D92AD3D5AbD4B8218` |
+
+Bound to the timestamps-v3 index `0xe26b…d19b`, which has **no frozen exit**: after a deep reorg these pools
+stop pricing until history is consistent again. Mainnet pools must use an index with the T9 exit.
+Full parameters and the two earlier, superseded deployments are in
+`contracts/deployments/bsc-testnet-timestamps-v3.json` → `accounts`.
+
+Use them from the terminal's 永续账户 tab (wallet actions are enabled only for these released addresses), or
+directly: `requestEnter(bool yang, uint128 amount)` after approving the pool, `requestExit(id)` (irrevocable),
+then `claim(id)` once the exit's pricing height is processed. Anyone can call `processMany(n)` and
+`retire(id)`; both pay a small bounty from the pool's fee buffer. The indexer and keeper take the pools as
+`ACCOUNTS=<pool,...>`; `scripts/bitcoin-testnet.sh` passes them from the manifest. The indexer serves
+`head.chain.accountPools` and `GET /account/<pool>/<id>`.
+
 ## Bitcoin source (2026-09-20)
 
 The Bitcoin implementation is isolated from the legacy BSC comparison stack. Read

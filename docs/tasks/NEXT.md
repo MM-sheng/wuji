@@ -292,9 +292,15 @@ Remaining:
   or a documented accepted risk, never a key.
 - Renaming: WUJI / μ are final (`docs/NAMING.md`).
 
-## T11 · Perpetual accounts — design written, not built
+## T11 · Perpetual accounts — built, live on BSC testnet
 
 The answer to "a holding that never expires". Fixed principal, additive P&L recorded on chain
 (`principal·ΔS/k`, floor 0, ceiling 2×), fixed vol-tier menu, entry/exit priced at a not-yet-mined Bitcoin
-block, ETH and wstETH/rETH vaults, frozen exit on deep reorg. Supersedes T7 (rolling vault). Full design:
-`docs/tasks/T11_PERPETUAL_ACCOUNTS.md`.
+block, ETH and wstETH/rETH collateral, frozen exit on indexes that have one. Supersedes T7 (rolling vault).
+Design and build log: `docs/tasks/T11_PERPETUAL_ACCOUNTS.md`; risks: `docs/THREAT_MODEL.md` §T11.
+
+Open:
+- [ ] Wallet actions in the terminal tested by a person with a real wallet (BSC testnet).
+- [ ] Sepolia deployment on the v4 index (needs Sepolia ETH for the deployer; exercises the frozen exit).
+- [ ] ZkWujiIndex: source of the best Bitcoin height for request scheduling (options in the design doc).
+- [ ] Independent audit of `WujiAccounts` / `WujiAccountsFactory` before any mainnet deployment.

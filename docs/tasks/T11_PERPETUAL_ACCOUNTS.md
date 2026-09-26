@@ -120,6 +120,9 @@ time, and producing a future-stamped tip costs a real block.
 - Deeper than 6 (only happened in 2013): the index halts as today (T9). After the 144-block delay the pool
   **freezes at the last folded S**; every account can withdraw `clamp(principal + pnl)` at that value;
   pending requests are priced at the frozen S. No new entries.
+- On an index **without** the T9 frozen exit (BSC testnet v3) the pool has no frozen state: after a deep
+  reorg it stops accepting requests and pricing epochs until history is consistent again, so queued exits
+  wait. Mainnet pools must be bound to an index with the frozen exit.
 
 ## Fees
 

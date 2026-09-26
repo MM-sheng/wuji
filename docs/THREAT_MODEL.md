@@ -89,6 +89,10 @@ participant relies on stale UI/contract state. Six confirmations address reorg r
 The protocol currently does not prevent trading on this public-information delay. Market makers still face
 adverse selection, inventory risk and collateral risk; a deterministic index does not remove them.
 
+T11 perpetual accounts do close this window for their own entries and exits: every request is priced at a
+Bitcoin height that was not yet mined when it landed (see §T11 below). Series tokens and any secondary
+market remain exposed as described here.
+
 ## Fixed-height settlement and deep reorgs
 
 Series boundaries are `GENESIS_HEIGHT + k·4320 − 1`. Each is approximately 30 days apart on average, not
@@ -192,6 +196,52 @@ promise profitable operation: without income they decay, and fees, token prices,
 server costs matter. The old lifetime-points/DEAD deployments are immutable historical comparisons, not the
 new mechanism. CREATE address binding and deployed bytecode must be checked for each new deployment. The
 future native-ETH/CREATE2/ZK target is separate work, not a property delivered by this ERC-20 reserve.
+
+## T11 perpetual accounts
+
+`WujiAccounts` pools ([design](tasks/T11_PERPETUAL_ACCOUNTS.md)) add a second product on the same index:
+fixed principal, additive P&L `principal·ΔS/K` clamped to [0, 2·principal], no expiry, no owner.
+
+**Pricing and the public-information window.** A request is priced at the first epoch height ≥ relay best +
+DELAY. That only protects anyone if the relay's best is close to the real tip. The index accepts a relay tip
+up to 3 h old for folding; used for pricing, that would let a requester see the pricing block whenever keepers
+lag. Each pool therefore requires the relay's best header to be at most `MAX_TIP_AGE` old. The chance that the
+pricing block already exists is at most P(≥ DELAY blocks mined within MAX_TIP_AGE): about 1e-7 at the
+deployed 30 min / 16 blocks, worst case. Residual: a best header stamped in the future (Bitcoin allows up to
+2 h) looks fresher than it is. Honest headers are close to real time, and making a future-stamped tip costs a
+real block. This hole existed in the first implementation and was found while building, not by review.
+
+**Floor overshoot.** A loser can cross 0 between two priced epochs; the winner is still credited the full
+move. The shortfall is charged to the pool's fee buffer first and only then recorded as `badDebt`, which is
+public. Keeping it at zero depends on anyone retiring accounts at their floor (paid a bounty from the buffer)
+and on epoch moves being small (≤ ≈2.6% of principal per 6-height epoch at the 10% tier). A pool with a large
+`badDebt` pays exits in order until its balance runs out: late exits bear the shortfall. At high tiers or
+with absent keepers this is a real, not theoretical, loss path.
+
+**Buffer accounting.** On BSC testnet the keeper's routine `sweep()` sent every entry fee to the treasury
+before the entries were priced, because the buffer target counted only live principal. Fixed by counting
+`pendingPrincipal`; v2 pools with the bug remain on chain, unmaintained.
+
+**Index compatibility.** The first BSC deployment called `frozen()` / `historyConsistent()`, which the v3
+index lacks; every request reverted. Pools now probe once and check consistency themselves, and the deploy
+script requires `acceptingRequests()` before finishing. Deploy-time simulation of a real request is now
+part of the release procedure.
+
+**Liveness.** Nothing expires, so an absent keeper delays but does not destroy anything: pending requests
+wait, and anyone (including the account owner) can call `processMany`, `retire` and `claim`. Pricing an epoch
+recomputes S by walking relay headers back from the index tip, at most 1024 heights per call; after a longer
+outage a caller must chain marks through intermediate heights or supply headers (`markWithHeaders`).
+
+**Deep reorgs.** On an index with the T9 frozen exit, the pool freezes with the index: queued epochs are
+priced at their own S where it can still be recomputed, else at the frozen S; entries priced after the last
+folded height are refunded; open accounts withdraw at the frozen S. **On an index without T9 (BSC testnet
+v3) there is no frozen state:** after a deep reorg the pool stops accepting requests and stops pricing
+epochs, so queued exits cannot complete until the relay's history again matches the folded tip. Mainnet
+pools must be bound to an index with the frozen exit.
+
+**Front-end trust.** The terminal only enables wallet actions for pools in its built-in `RELEASES` list and
+re-reads each pool's `asset()` and `K()` through the wallet's own RPC before every transaction. An indexer
+can make the page display a pool; it cannot make the page approve or deposit into one.
 
 ## Monitoring
 
