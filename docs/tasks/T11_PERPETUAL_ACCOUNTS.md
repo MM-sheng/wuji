@@ -341,3 +341,16 @@ the users who want their own requests priced.
 listed under `accounts.previous`; it is empty. Smoke test: yang 1 and yin 1 WBNB into the 10% pool, both
 priced at 968718. (One `requestEnter` failed on the first try because the keeper signs with the same
 account and took the nonce; the retry succeeded. A separate deployer account would avoid this.)
+
+**Separate keeper signer on BSC testnet (2026-09-26).** The keeper now signs with its own encrypted keystore
+account `wuji-keeper-bsc` = `0x7E251FaE0b8E9B1ceD08378bdC8D9CA59E9aCc9f` (funded with 0.02 tBNB), selected by
+`KEEPER_KEYSTORE_ACCOUNT` in the git-ignored `contracts/.env`; `scripts/bitcoin-testnet.sh` applies it to the
+keeper process only, so watchdog restarts keep it. The key was generated straight into the keystore and never
+printed. Deployer and wallet tests no longer race the keeper for nonces. Relay bounties already allocated to
+the old worker `0x6657…0B95` stay claimable by that account.
+
+**Sepolia is blocked on fuel, not code (2026-09-26).** The v4 index's relay stopped at 968103 when its keeper
+(`0x2302…53E4`) ran out of gas (0.0019 ETH left). Catching up ≈620 headers costs ≈0.066 ETH at ~1 gwei, and
+keeping it live ≈0.014 ETH/day (≈0.43 ETH/month); deploying the pools ≈0.019 ETH. Only 0.05 ETH is available.
+Pools deployed without a live relay would reject every request, so they are not deployed yet. This is the
+per-header L1 cost T10 (ZK) exists to remove.

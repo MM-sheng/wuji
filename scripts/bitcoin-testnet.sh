@@ -30,7 +30,11 @@ for name,script in processes:
   try:
    os.kill(int(pidfile.read_text()),0);print(name+' already running');continue
   except ProcessLookupError: pass
+ penv=env
+ # The keeper may sign with its own account, so it never races the deployer (or a person) for nonces.
+ if name=='keeper' and os.environ.get('KEEPER_KEYSTORE_ACCOUNT'):
+  penv=dict(env,KEYSTORE_ACCOUNT=os.environ['KEEPER_KEYSTORE_ACCOUNT'])
  with open('/tmp/'+prefix+'-'+name+'.log','a') as log:
-  p=subprocess.Popen(['node',script],env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+  p=subprocess.Popen(['node',script],env=penv,stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
  pidfile.write_text(str(p.pid));print(name,p.pid)
 PY
