@@ -259,3 +259,10 @@ The v2 10% pool still holds the two first smoke-test accounts (0.997 WBNB each),
 
 v3 smoke test: yang 1 and yin 1 WBNB into the 10% pool, priced at Bitcoin height 968580; with both entries
 pending, `buffer = 0.006` and `sweep()` takes 0.
+
+**Full round trip on BSC testnet v3, 10% pool (2026-09-26).** Entered at height 968580 (S = −0.363408),
+yang #1 requested exit at relay best 968609 → priced at 968628 (S = −0.361296, ΔS = +0.002112). On chain:
+#1 = 0.997183101217391304 WBNB, exactly `0.997 · (1 + ΔS/11.5)` to the wei; #2 (yin) = 0.996816898782608695,
+the mirror image (sum short of 2·0.997 by 1 wei of rounding dust, which stays in the pool). `claim(1)` paid
+0.994191551913739130 = value − 0.3% exit fee, to the wei; the fee went to the buffer (0.0058 → 0.00879).
+Bad debt 0. #2 is now idle: no yang principal is matched against it.
