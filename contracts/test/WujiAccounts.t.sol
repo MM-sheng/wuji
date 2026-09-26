@@ -426,9 +426,66 @@ contract WujiAccountsTest is Test {
         assertEq(w.getStETHByWstETH(ta), ta * 10_300 / 10_000);
     }
 
+    // ------------------------------------------------------------ self-review findings (2026-09-26)
+
+    /// F1: an exit requested before its entry was priced, then a freeze that refunds the entry.
+    function test_review_exitBeforeEntryPricedCannotBrickFreeze() public {
+        advance(10);
+        (uint256 a, uint64 e0) = enter(pool, alice, true, 10e18);
+        enter(pool, bob, false, 10e18);
+        reach(e0);
+        advance(5);
+        (uint256 c, uint64 e1) = enter(pool, carol, true, 5e18);
+        r.tip(r.bestHeight() + 7, keccak256("later"), false);   // next request lands in a later epoch
+        vm.prank(carol);
+        try pool.requestExit(c) { } catch { }                   // after the fix this reverts: entry pending
+        // deep reorg + freeze before e1 is folded
+        r.put(idx.lastHeight(), keccak256("replacement"));
+        r.tip(r.bestHeight() + 1, keccak256("fork tip"), true);
+        uint64 deadline = idx.observeReorg();
+        r.tip(deadline, keccak256("sealed"), false);
+        idx.freeze();
+        pool.freezePool(100);
+        assertTrue(pool.frozen());
+        vm.prank(carol); pool.claim(c);
+        assertEq(asset.balanceOf(carol), 1_000_000e18, "carol refunded in full");
+        vm.prank(alice); pool.claim(a);
+        e1;
+    }
+
+    /// F2: the relay's best height moves down and back up; the same epoch must not be queued twice.
+    function test_review_relayHeightDropCannotDuplicateEpoch() public {
+        advance(10);
+        (, uint64 e0) = enter(pool, alice, true, 10e18);
+        uint64 best = r.bestHeight();
+        uint64 before = pool.nextPricingHeight();
+        r.tip(best - 5, r.headerAt(best - 5), false);          // heavier but shorter branch, above the folded tip
+        assertLt(pool.nextPricingHeight(), before, "precondition: the pricing epoch moved down");
+        enter(pool, bob, false, 10e18);
+        r.tip(best, keccak256("back"), false);
+        enter(pool, carol, true, 1e18);
+        for (uint256 i = 1; i < pool.queueLength(); i++) assertGt(pool.queue(i), pool.queue(i - 1), "queue strictly increasing");
+        reach(pool.queue(pool.queueLength() - 1));
+        assertEq(pool.head(), pool.queueLength());
+        assertEq(pool.pendingPrincipal(), 0);
+        e0;
+    }
+
+    /// F3: dust entries must not be able to buy bounties out of other people's fees.
+    function test_review_dustEntryCannotFarmBounty() public {
+        FEE = 30; BOUNTY = 0.01e18;
+        WujiAccounts p = make(K);
+        advance(10);
+        enter(p, alice, true, 100e18);                          // funds the buffer with 0.3
+        advance(12);
+        vm.prank(carol);
+        vm.expectRevert("below minimum");
+        p.requestEnter(true, 100);                              // fee 1 wei, far below the bounty
+    }
+
     /// Random walks with high leverage: the pool always covers every claim.
     function testFuzz_solvency(uint256 seed) public {
-        FEE = 30; BOUNTY = 0.01e18;
+        FEE = 30; BOUNTY = 0.001e18;   // every fuzz entry is ≥ 1e18, so its fee (≥ 0.003) covers the bounty
         WujiAccounts p = make(0.05e18);
         advance(10);
         address[3] memory users = [alice, bob, carol];

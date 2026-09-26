@@ -128,13 +128,20 @@ contract WujiAccounts {
         require(_tipFresh(), "relay stale");
         e = nextPricingHeight();
         uint256 n = queue.length;
-        if (n == 0 || queue[n - 1] != e) queue.push(e);
+        // The relay's best height can move down (a heavier, shorter branch). Never queue behind the last
+        // epoch: a later height is still unmined, and a strictly increasing queue can never price an epoch
+        // twice (which would double-count its entries and brick processing).
+        if (n > 0 && queue[n - 1] >= e) e = queue[n - 1];
+        else queue.push(e);
     }
 
     /// @notice Deposit `amount`; the principal is `amount` minus the entry fee.
     function requestEnter(bool yang, uint128 amount) external returns (uint256 id) {
         uint128 fee = uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
         require(amount > fee, "zero");
+        // Each entry can create an epoch whose processing pays BOUNTY from the buffer; its own fee must cover
+        // that, or dust entries farm bounties out of other depositors' fees.
+        require(fee >= BOUNTY, "below minimum");
         uint128 principal = amount - fee;
         uint64 e = _schedule();
         asset.safeTransferFrom(msg.sender, address(this), amount);
@@ -151,6 +158,9 @@ contract WujiAccounts {
         Account storage a = accounts[id];
         require(a.owner == msg.sender, "not owner");
         require(a.exitEpoch == 0, "exit pending");
+        // Until the entry is priced it may still be refunded by a freeze; an exit queued before that would be
+        // subtracted from principal that never joined, underflowing and bricking freezePool.
+        require(epochs[a.enterEpoch].processed, "entry pending");
         uint64 e = _schedule();
         require(e > a.enterEpoch, "same epoch");
         a.exitEpoch = e;
