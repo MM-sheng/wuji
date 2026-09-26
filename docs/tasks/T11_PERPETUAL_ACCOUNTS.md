@@ -280,3 +280,50 @@ Bad debt 0. #2 is now idle: no yang principal is matched against it.
 - Both pools are empty; bad debt 0. The v3 pool's buffer went to the treasury through `sweep()` once no
   principal remained (target 0), as specified; 1 wei of rounding dust remains. The v2 pool still holds its
   0.005982 buffer: its keeper duties stopped, so nobody swept it.
+
+## Self-review (2026-09-26)
+
+Done before any external audit, because live operation had already found two defects.
+
+**Fixed (`15245e5` and the commit after it):**
+1. *Bricking, freeze path.* An exit requested before its entry was priced, followed by a freeze that refunds
+   that entry, subtracted principal that never joined: `freezePool` underflowed forever and nobody could
+   withdraw. Exits now require a priced entry. `test_review_exitBeforeEntryPricedCannotBrickFreeze`.
+2. *Bricking, relay height moving down.* A heavier but shorter branch lowers the relay's best height; a new
+   request could then queue an earlier epoch, and a later one the same epoch again. Processing it twice
+   double-counted its entries and underflowed `pendingPrincipal` forever. The queue is now strictly
+   increasing (a request never prices below the last queued epoch, which is still unmined).
+   `test_review_relayHeightDropCannotDuplicateEpoch`.
+3. *Bounty farming.* A 1-wei-fee entry could create an epoch and collect the processing bounty from other
+   depositors' fees. An entry's fee must now be ≥ `BOUNTY`.
+4. *Stranded ceiling surplus.* A winner capped at 2× principal left the loser's excess payment in the pool
+   untracked, unsweepable forever. It now goes to the buffer.
+5. *Hardening.* `ReentrancyGuard` on every state-changing entry point, as in `WujiVault`; entries check the
+   amount actually received and reject fee-on-transfer tokens.
+
+**Stateful invariants** (`WujiAccounts.invariant.t.sol`, 64 runs × 60 calls, no reverts allowed): random
+enter / exit / claim / retire / transfer / process / sweep / mining / relay height drops by four actors at
+K = 0.01, where floors are reached within a run (checked with a canary). Invariants: solvency net of recorded
+and unretired overshoot, principal books equal to the accounts exactly, strictly increasing queue, values
+within [0, 2·principal]. Mutation check: reintroducing finding 2 fails four invariants. Not covered by the
+handler: the freeze path (unit tests only).
+
+**Gas** (`WujiAccounts.gas.t.sol`, warm pool, deployed parameters):
+
+| operation | gas | ETH at 1 gwei | ETH at 10 gwei |
+|---|---:|---:|---:|
+| requestEnter, first in its epoch | 267,120 | 0.00027 | 0.0027 |
+| requestEnter, epoch already queued | 159,166 | 0.00016 | 0.0016 |
+| requestExit | 110,215 | 0.00011 | 0.0011 |
+| claim | 77,372 | 0.00008 | 0.0008 |
+| process one epoch, 1 height to walk | 280,785 | 0.00028 | 0.0028 |
+| process one epoch, 12 heights | 336,198 | 0.00034 | 0.0034 |
+| process one epoch, 144 heights | 1,038,526 | 0.0010 | 0.0104 |
+
+Walking costs ≈ 5.3k gas per height, so prompt processing is cheap and a week-long keeper absence is not.
+
+**Consequence for mainnet parameters.** `BOUNTY` is a fixed amount, while the cost it must cover moves with
+gas price. To cover one epoch at 10 gwei it must be ≈ 0.0034 ETH, and with fee ≥ BOUNTY the minimum entry at
+0.3% becomes ≈ 1.1 ETH (≈ 0.11 ETH at 1 gwei). Options before mainnet: accept a high minimum; pay bounties
+per epoch but require the fee only once per *epoch creator* (later entries in the same epoch pay less); or
+make the bounty a share of the buffer, like `RelayerRewards`, instead of a constant. Undecided.

@@ -483,6 +483,43 @@ contract WujiAccountsTest is Test {
         p.requestEnter(true, 100);                              // fee 1 wei, far below the bounty
     }
 
+    /// Gain past the 2x ceiling was paid by the loser; it must reach the buffer, not stay stranded.
+    function test_review_ceilingSurplusGoesToBuffer() public {
+        WujiAccounts p = make(0.001e18);
+        advance(10);
+        (uint256 a, uint64 e0) = enter(p, alice, true, 10e18);
+        (uint256 b,) = enter(p, bob, false, 30e18);             // bigger side: winner's raw can exceed 2x
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        p.processMany(10);
+        advance(60);
+        (, uint64 e1) = enter(p, carol, true, 1e18);
+        if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
+        p.processMany(10);
+        uint256 winner = p.rawValueOf(a) > 20e18 ? a : b;
+        int256 raw = p.rawValueOf(winner);
+        (,,,, uint128 principal) = p.accounts(winner);
+        require(raw > 2 * int256(uint256(principal)), "precondition: winner above ceiling");
+        address owner = winner == a ? alice : bob;
+        vm.prank(owner);
+        uint64 ex;
+        p.requestExit(winner); (,,, ex,) = p.accounts(winner);
+        if (idx.lastHeight() < ex) advance(ex - idx.lastHeight());
+        p.processMany(10);
+        raw = p.rawValueOf(winner);
+        uint256 before = p.buffer();
+        vm.prank(owner); p.claim(winner);
+        assertEq(p.buffer() - before, uint256(raw - 2 * int256(uint256(principal))), "surplus credited to buffer");
+    }
+
+    function test_review_feeOnTransferTokenRejected() public {
+        FeeToken f = new FeeToken();
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(f, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000));
+        f.mint(alice, 10e18);
+        vm.prank(alice); f.approve(address(p), type(uint256).max);
+        advance(10);
+        vm.prank(alice); vm.expectRevert("short transfer"); p.requestEnter(true, 1e18);
+    }
+
     /// Random walks with high leverage: the pool always covers every claim.
     function testFuzz_solvency(uint256 seed) public {
         FEE = 30; BOUNTY = 0.001e18;   // every fuzz entry is ≥ 1e18, so its fee (≥ 0.003) covers the bounty
@@ -533,5 +570,12 @@ contract WujiAccountsTest is Test {
 
     function _enterEpoch(WujiAccounts p, uint256 id) internal view returns (uint64 e) {
         (,, e,,) = p.accounts(id);
+    }
+}
+
+contract FeeToken is MockUSDT {
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0)) { super._update(from, address(0xdead), value / 100); value -= value / 100; }
+        super._update(from, to, value);
     }
 }

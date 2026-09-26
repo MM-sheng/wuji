@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {WujiIndex} from "./WujiIndex.sol";
 
 /// @notice T11 perpetual accounts. Fixed principal, additive P&L = principal·side·ΔS/k, value in
@@ -9,7 +10,7 @@ import {WujiIndex} from "./WujiIndex.sol";
 /// See docs/tasks/T11_PERPETUAL_ACCOUNTS.md. No owner, no pause, no upgrade; every parameter is immutable.
 /// @dev Every entry and exit is priced at an epoch height that was not yet mined when it was requested.
 /// Epochs are processed strictly in order; between processed epochs the pool does not move.
-contract WujiAccounts {
+contract WujiAccounts is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     int256 internal constant ONE = 1e18;
@@ -136,7 +137,7 @@ contract WujiAccounts {
     }
 
     /// @notice Deposit `amount`; the principal is `amount` minus the entry fee.
-    function requestEnter(bool yang, uint128 amount) external returns (uint256 id) {
+    function requestEnter(bool yang, uint128 amount) external nonReentrant returns (uint256 id) {
         uint128 fee = uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
         require(amount > fee, "zero");
         // Each entry can create an epoch whose processing pays BOUNTY from the buffer; its own fee must cover
@@ -144,7 +145,10 @@ contract WujiAccounts {
         require(fee >= BOUNTY, "below minimum");
         uint128 principal = amount - fee;
         uint64 e = _schedule();
+        uint256 before = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), amount);
+        // Fee-on-transfer and other short-paying tokens would credit principal that never arrived.
+        require(asset.balanceOf(address(this)) - before == amount, "short transfer");
         buffer += fee;
         id = nextId++;
         accounts[id] = Account(msg.sender, yang, e, 0, principal);
@@ -154,7 +158,7 @@ contract WujiAccounts {
     }
 
     /// @notice Irrevocable. Exposure continues until the pricing epoch.
-    function requestExit(uint256 id) external {
+    function requestExit(uint256 id) external nonReentrant {
         Account storage a = accounts[id];
         require(a.owner == msg.sender, "not owner");
         require(a.exitEpoch == 0, "exit pending");
@@ -246,7 +250,11 @@ contract WujiAccounts {
     // ---------------------------------------------------------------- epoch processing
 
     /// @notice Process the next queued epoch once its height is folded. Anyone may call.
-    function process() public returns (bool) {
+    function process() public nonReentrant returns (bool) {
+        return _process();
+    }
+
+    function _process() internal returns (bool) {
         if (head >= queue.length) return false;
         uint64 e = queue[head];
         if (!marked[e]) {
@@ -259,8 +267,8 @@ contract WujiAccounts {
         return true;
     }
 
-    function processMany(uint256 max) external returns (uint256 n) {
-        while (n < max && process()) n++;
+    function processMany(uint256 max) external nonReentrant returns (uint256 n) {
+        while (n < max && _process()) n++;
     }
 
     function _advance(uint64 e, int256 s) internal {
@@ -313,8 +321,13 @@ contract WujiAccounts {
         return a.exitEpoch != 0 && epochs[a.exitEpoch].processed ? epochs[a.exitEpoch].acc[a.yang ? 1 : 0] : acc[a.yang ? 1 : 0];
     }
 
+    /// @dev Settle the clamps of an account leaving the pool. Loss past the floor is charged to the buffer, then
+    /// recorded as badDebt. Gain past the ceiling was paid in by losers but belongs to no account: it goes to
+    /// the buffer instead of being stranded in the pool forever.
     function _recordBadDebt(Account storage a) internal {
         int256 v = _raw(a.principal, _endAcc(a) - _entryAcc(a));
+        int256 cap = 2 * int256(uint256(a.principal));
+        if (v > cap) { buffer += uint256(v - cap); return; }
         if (v >= 0) return;
         uint256 debt = uint256(-v);
         uint256 absorbed = debt < buffer ? debt : buffer;
@@ -331,7 +344,7 @@ contract WujiAccounts {
     }
 
     /// @notice Send buffer above its target to the treasury (FeeRouter → RelayerRewards). Anyone may call.
-    function sweep() external returns (uint256 amount) {
+    function sweep() external nonReentrant returns (uint256 amount) {
         uint256 target = (uint256(principalOf[0]) + principalOf[1] + pendingPrincipal) * BUFFER_BPS / 10_000;
         if (buffer <= target) return 0;
         amount = buffer - target;
@@ -355,7 +368,7 @@ contract WujiAccounts {
     }
 
     /// @notice Pay out a processed exit, a frozen-pool account, or a refunded entry.
-    function claim(uint256 id) external {
+    function claim(uint256 id) external nonReentrant {
         Account storage a = accounts[id];
         require(a.owner == msg.sender, "not owner");
         uint256 amount;
@@ -381,7 +394,7 @@ contract WujiAccounts {
     }
 
     /// @notice Remove an account that has reached its floor so it stops diluting the matched amount.
-    function retire(uint256 id) external {
+    function retire(uint256 id) external nonReentrant {
         Account storage a = accounts[id];
         require(a.owner != address(0) && a.exitEpoch == 0 && !frozen, "not live");
         require(epochs[a.enterEpoch].processed && !epochs[a.enterEpoch].frozenRefund, "entry pending");
@@ -397,7 +410,7 @@ contract WujiAccounts {
 
     /// @notice After the index freezes, price every queued epoch: those already folded and markable at their
     /// own S, the rest at the frozen S with their entries refunded. Then the pool stops.
-    function freezePool(uint256 max) external {
+    function freezePool(uint256 max) external nonReentrant {
         require(_indexFrozen(), "index live");
         require(!frozen, "pool frozen");
         int256 s = index.S();
