@@ -354,3 +354,9 @@ the old worker `0x6657…0B95` stay claimable by that account.
 keeping it live ≈0.014 ETH/day (≈0.43 ETH/month); deploying the pools ≈0.019 ETH. Only 0.05 ETH is available.
 Pools deployed without a live relay would reject every request, so they are not deployed yet. This is the
 per-header L1 cost T10 (ZK) exists to remove.
+
+**v4 first pricing and v3 closed (2026-09-27).** v4 10% pool priced 968718: yin/yang 0.997 each, pending 0,
+bad debt 0; the keeper's bounty was 0.006 / 10000 = 0.0000006 WBNB, exactly the buffer share. v3: Codex's
+browser-wallet accounts #3/#4 exited at 968718 (ΔS = −0.051708 since 968682): #3 = 0.992517141217391304 =
+`0.997·(1 + ΔS/11.5)` to the wei, #4 its mirror; the two claims paid 1.988018 WBNB, exactly values minus
+0.3%. v3 is empty and no longer maintained by the keeper.
