@@ -269,3 +269,14 @@ yang #1 requested exit at relay best 968609 → priced at 968628 (S = −0.36129
 the mirror image (sum short of 2·0.997 by 1 wei of rounding dust, which stays in the pool). `claim(1)` paid
 0.994191551913739130 = value − 0.3% exit fee, to the wei; the fee went to the buffer (0.0058 → 0.00879).
 Bad debt 0. #2 is now idle: no yang principal is matched against it.
+
+**Closing the smoke tests (2026-09-26).** All three remaining accounts exited at height 968652.
+- v2 10% pool (no longer maintained by the keeper): the owner called `processMany` and `claim` directly,
+  confirming that an unmaintained pool still pays out. ΔS = −0.04038 since 968556: yang #1 =
+  0.993499229565217391, exactly `0.997 · (1 + ΔS/11.5)`; yin #2 = 1.000500770434782608, the mirror image.
+- v3 10% pool: yin #2 had been idle since yang #1 left and its value was unchanged to the wei
+  (0.996816898782608695).
+- The three claims paid 2.981844448086260700 in total, exactly each value minus the 0.3% exit fee.
+- Both pools are empty; bad debt 0. The v3 pool's buffer went to the treasury through `sweep()` once no
+  principal remained (target 0), as specified; 1 wei of rounding dust remains. The v2 pool still holds its
+  0.005982 buffer: its keeper duties stopped, so nobody swept it.
