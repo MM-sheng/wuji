@@ -13,7 +13,7 @@ sepolia=j['chainId']==11155111
 v4=j.get('version')=='bitcoin-sepolia-v4'
 assert j.get('status') == 'confirmed' if sepolia else j.get('status') in (None,'confirmed'), 'deployment receipts not confirmed'
 env=os.environ.copy();env.update(SOURCE='bitcoin',PORT=os.environ.get('PORT','8794' if v4 else '8793' if sepolia else '8789'),CHAIN_ID=str(j['chainId']),GENESIS_HEIGHT=str(j['genesisHeight']),RELAY=j['BitcoinRelay'],CONTRACT=j['WujiIndex'],FACTORY=j['WujiVaultFactory'],RPC=os.environ.get('RPC_OVERRIDE') or j['rpc'],FEE_ROUTER=j.get('FeeRouter',''))
-env.update(ACCOUNTS=','.join(p['address'] for p in j.get('accounts',{}).get('pools',[])))
+env.update(ACCOUNTS=','.join([p['address'] for p in j.get('accounts',{}).get('pools',[])]+j.get('accounts',{}).get('alsoMaintain',[])))
 if j.get('version') in ('bitcoin-reserve-v2','bitcoin-timestamps-v3','bitcoin-sepolia-v3','bitcoin-sepolia-v4'):
  env.update(REWARD_MODEL='operations-reserve',REWARDS=j['RelayerRewards'],REWARD_TOKENS=os.environ.get('REWARD_TOKENS',','.join(j['rewardTokens'])))
 if j.get('version') in ('bitcoin-timestamps-v3','bitcoin-sepolia-v3','bitcoin-sepolia-v4'):

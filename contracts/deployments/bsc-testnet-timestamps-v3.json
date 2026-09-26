@@ -275,6 +275,10 @@
         ],
         "reason": "Pre-self-review source: freeze and relay-height-drop bricking bugs, fixed-bounty farming, stranded ceiling surplus, no reentrancy guard. All smoke accounts exited; pools empty."
       }
-    ]
+    ],
+    "alsoMaintain": [
+      "0x2f1BD256267b2738C49CF16F68Ab413B62139791"
+    ],
+    "alsoMaintainReason": "v3 10% pool holds Codex wallet-test accounts #3/#4 (entered before the v4 redeploy); keep processing it until they exit, then remove."
   }
 }

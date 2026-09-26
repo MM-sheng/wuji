@@ -1,5 +1,22 @@
 # Handoff to Codex: T11 wallet test on BSC testnet, and Sepolia fuel
 
+## Update 2026-09-26 (after your first report, `f633e2a`) — read this first
+
+- Task B is done. Thank you.
+- Pools were redeployed as **v4** while you were testing (self-review fixes). The table below now lists v4.
+  Your accounts #3 / #4 are in the **v3** pool `0x2f1B…9791`, which the terminal no longer releases for wallet
+  actions. The keeper still processes v3 until it is empty, and Claude will close #3 / #4 from the command
+  line (they belong to `0x6657…0B95`). **Do not act on #3 / #4.**
+- The five terminal issues you reported are fixed and verified in the page with a stubbed wallet: balance
+  check before approval, every transaction simulated first with the revert reason shown in Chinese, explicit
+  wrong-network message, "已在钱包中取消" on a rejected signature, "尚未定价" instead of value 0.
+- Continue Task A on the **v4 10% pool** with fresh entries: the full approve → enter → priced → exit →
+  priced → claim round trip, and the error cases again (they should now all fail before any wallet prompt,
+  except the cancel case). Reload the terminal first.
+- The MetaMask account you used, `0x6657…0B95`, is also the keeper's signer; its transactions can collide on
+  nonces with the keeper. If MetaMask shows a nonce or "replacement" error, wait a minute and retry, and note
+  it in the report. A separate test account would avoid this.
+
 Written 2026-09-26. Context: `docs/tasks/T11_PERPETUAL_ACCOUNTS.md` (design + build log), `README.md`
 §Perpetual accounts. Everything below is testnet only. Read `AGENTS.md` first; its rules apply.
 

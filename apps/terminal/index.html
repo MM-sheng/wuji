@@ -980,9 +980,10 @@ function exitActionAllowed(state, action) {
       const a=validateAccount(raw);
       if(a.closed){el.innerHTML='<div class="msg2">账户 #'+id+' 不存在或已结清。</div>';return;}
       const st={entering:'等待进场定价',open:'持有中',exiting:'等待退出定价',claimable:'可领取'}[a.status];
+      const valueCell=a.status==='entering'?'<b>尚未定价 · 本金 '+fmtW(a.principal_wad)+' 等待进场</b>':`<b class="${cls(wad(a.pnl_wad))}">${fmtW(a.value_wad)} · ${a.multiple.toFixed(4)}×</b>`;
       el.innerHTML=`<div class="kv"><span>方向 · 状态</span><b>${a.side==='yang'?'阳':'阴'} · ${st}</b></div>
       <div class="kv"><span>本金</span><b>${fmtW(a.principal_wad)}</b></div>
-      <div class="kv"><span>当前价值</span><b class="${cls(wad(a.pnl_wad))}">${fmtW(a.value_wad)} · ${a.multiple.toFixed(4)}×</b></div>
+      <div class="kv"><span>当前价值</span>${valueCell}</div>
       <div class="kv"><span>进场高度${a.exitEpoch?' · 退出高度':''}</span><b>#${a.enterEpoch}${a.exitEpoch?' · #'+a.exitEpoch:''}</b></div>
       <div class="kv"><span>持有人</span><b>${short(a.owner)}</b></div>
       ${a.atFloor?'<div class="msg2">已触底，任何人都可以清退这个账户。</div>':''}`;
@@ -999,11 +1000,33 @@ function exitActionAllowed(state, action) {
   const myIdsKey=pool=>'wuji:perp-ids:'+pool.toLowerCase()+':'+(W.acct||'').toLowerCase();
   const myIds=pool=>{try{return JSON.parse(localStorage.getItem(myIdsKey(pool)))||[];}catch{return [];}};
   const rememberId=(pool,id)=>{try{const l=myIds(pool);if(!l.includes(id))l.push(id);localStorage.setItem(myIdsKey(pool),JSON.stringify(l));}catch{}};
+  // Contract revert reasons and wallet errors, in words a holder can act on.
+  const PERP_REASONS={'not claimable':'还不能领取：要先申请退出，并等退出定价处理完','entry pending':'进场还没定价，定价后才能申请退出',
+    'exit pending':'这个账户已经申请过退出','same epoch':'进场还没定价，定价后才能申请退出','relay stale':'比特币数据暂时不够新（最新块超过 30 分钟），过几分钟再试',
+    'pool frozen':'池子已停止接受申请（比特币深度重组或已冻结）','not owner':'这个账户不属于当前钱包','zero':'数量太小','short transfer':'这个代币转账会被扣费，池子不接受',
+    'not at floor':'账户还没触底，不能清退','not live':'账户已结清'};
+  function revertReason(e){
+    const parts=[e?.message,e?.data?.message,e?.error?.message,typeof e?.data==='string'?e.data:e?.data?.data,e?.error?.data?.data].filter(x=>typeof x==='string');
+    for(const t of parts){
+      const m=t.match(/0x08c379a0([0-9a-fA-F]+)/);
+      if(m){try{const h=m[1],len=parseInt(h.slice(64,128),16);return new TextDecoder().decode(Uint8Array.from(h.slice(128,128+len*2).match(/../g).map(x=>parseInt(x,16))));}catch{}}
+      for(const k of Object.keys(PERP_REASONS))if(t.includes(k))return k;
+    }
+    return null;
+  }
+  function perpError(e){
+    if(e?.code===4001||/denied|rejected/i.test(String(e?.message)))return '已在钱包中取消';
+    const m=String(e?.message||e).match(/^Switch wallet to (.+)$/);if(m)return '请先把钱包切换到 '+m[1];
+    const r=revertReason(e);if(r)return PERP_REASONS[r]||('合约拒绝：'+r);
+    return String(e?.shortMessage||e?.message||e).slice(0,140);
+  }
   async function perpSend(rel,to,data,label){
     perpForm.busy=true;perpForm.msg=label+' · 请在钱包确认…';renderPerpWallet();
     try{
       const account=W.acct;if(!account)throw Error('先连接钱包');
       await requireWalletChain(rel.chainId);
+      // Simulate first: a call that would revert never reaches the wallet, and the reason is shown instead.
+      await eth().request({method:'eth_call',params:[{from:account,to,data},'latest']});
       // Fresh read through the wallet's own RPC: the released address really is that pool on this chain.
       const [asset,k]=await Promise.all([ethCall(rel.address,'0x38d52e0f'),ethCall(rel.address,'0xa932492f')]);
       if(!same('0x'+asset.slice(-40),rel.asset)||BigInt(k)!==BigInt(rel.k_wad))throw Error('链上池子与发布清单不一致，已停止');
@@ -1013,15 +1036,21 @@ function exitActionAllowed(state, action) {
         if(r){if(r.status!=='0x1')throw Error(label+' 失败 · '+short(h));perpForm.msg='✓ '+label+' · '+short(h);return r;}
         await new Promise(r=>setTimeout(r,1500));}
       perpForm.msg='回执仍未出现 · '+h+' · 重试前请先查浏览器';return null;
-    }catch(e){perpForm.msg='✗ '+String(e.shortMessage||e.message||e).slice(0,140);return null;}
+    }catch(e){perpForm.msg='✗ '+perpError(e);return null;}
     finally{perpForm.busy=false;renderPerpWallet();}
   }
   async function perpEnter(){
     const rel=releasedPool($('pjPool').value);if(!rel||perpForm.busy)return;
     let amount;try{amount=exactAmount($('pjAmt').value.trim());if(amount===0n||amount>=2n**128n)throw Error('数量无效');}catch(e){perpForm.msg='✗ '+e.message;return renderPerpWallet();}
     perpForm.amount=$('pjAmt').value;
-    await requireWalletChain(rel.chainId).catch(()=>{});
-    const allowance=BigInt(await ethCall(rel.asset,'0xdd62ed3e'+pad(W.acct)+pad(rel.address)).catch(()=>'0x0'));
+    let allowance;
+    try{
+      await requireWalletChain(rel.chainId);
+      const [bal,al]=await Promise.all([ethCall(rel.asset,'0x70a08231'+pad(W.acct)),ethCall(rel.asset,'0xdd62ed3e'+pad(W.acct)+pad(rel.address))]);
+      if(!/^0x[0-9a-fA-F]{64}$/.test(bal)||!/^0x[0-9a-fA-F]{64}$/.test(al))throw Error('读不到抵押品余额，请确认钱包网络');
+      if(BigInt(bal)<amount){perpForm.msg='✗ 余额不足：你有 '+fmtW(BigInt(bal).toString())+' '+(rel.symbol||'');return renderPerpWallet();}
+      allowance=BigInt(al);
+    }catch(e){perpForm.msg='✗ '+perpError(e);return renderPerpWallet();}
     if(allowance<amount&&!await perpSend(rel,rel.asset,'0x095ea7b3'+pad(rel.address)+pad(amount.toString(16)),'授权 '+(rel.symbol||'抵押品')))return;
     const r=await perpSend(rel,rel.address,'0x94386983'+pad(perpForm.side==='yang'?'1':'0')+pad(amount.toString(16)),'进场 '+(perpForm.side==='yang'?'阳':'阴'));
     const log=r?.logs?.find(l=>same(l.address,rel.address)&&l.topics?.[0]===PERP_TOPIC);

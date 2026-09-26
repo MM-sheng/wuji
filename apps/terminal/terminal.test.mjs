@@ -115,3 +115,14 @@ test('pool and account payloads are validated before rendering',()=>{
  assert.throws(()=>c.a({...acct,status:'<b>'}));
  assert.throws(()=>c.a({...acct,owner:'"><script>'}));
 });
+test('perp wallet errors are shown in words a holder can act on',()=>{
+ const src=html.slice(html.indexOf('  const PERP_REASONS='),html.indexOf('  async function perpSend('));
+ const c=vm.createContext({TextDecoder,Uint8Array,parseInt,String,Object});vm.runInContext(src+'\nthis.f=perpError;',c);
+ const enc=s=>'0x08c379a0'+'20'.padStart(64,'0')+s.length.toString(16).padStart(64,'0')+Buffer.from(s).toString('hex').padEnd(64,'0');
+ assert.equal(c.f({code:4001,message:'MetaMask Tx Signature: User denied transaction signature.'}),'已在钱包中取消');
+ assert.equal(c.f(new Error('Switch wallet to BNB Smart Chain Testnet')),'请先把钱包切换到 BNB Smart Chain Testnet');
+ assert.match(c.f({message:'Internal JSON-RPC error.',data:{message:'execution reverted: not claimable'}}),/还不能领取/);
+ assert.match(c.f({message:'execution reverted',data:enc('entry pending')}),/进场还没定价/);
+ assert.match(c.f({message:'execution reverted',data:{data:enc('relay stale')}}),/不够新/);
+ assert.equal(c.f({message:'execution reverted',data:enc('something new')}),'合约拒绝：something new');
+});
