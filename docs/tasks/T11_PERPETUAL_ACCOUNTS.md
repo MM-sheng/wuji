@@ -335,3 +335,9 @@ the buffer per day), and pays only when the share exceeds the attacker's gas.
 `test_review_dustFarmingIsBoundedToAShare` checks 50 dust epochs take < 1%. Cost: in a small or young pool
 the share may not cover gas, so processing then relies on keepers that run anyway (as with the index) or on
 the users who want their own requests priced.
+
+**BSC testnet redeployed as v4 (2026-09-26)** with the self-review fixes and the buffer-share bounty
+(factory `0x0F9F553a0B30F7745739a7478ebc033C9552E4Df`; pools in the manifest, README and terminal). v3 is
+listed under `accounts.previous`; it is empty. Smoke test: yang 1 and yin 1 WBNB into the 10% pool, both
+priced at 968718. (One `requestEnter` failed on the first try because the keeper signs with the same
+account and took the nonce; the retry succeeded. A separate deployer account would avoid this.)

@@ -16,9 +16,9 @@ Pools (mock WBNB collateral, `0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15`):
 
 | tier | pool |
 |---|---|
-| 5%  | `0xD918c63AD7E1E71ef5c0822538A6715580B4c03e` |
-| 10% | `0x2f1BD256267b2738C49CF16F68Ab413B62139791` |
-| 25% | `0x346321B1D1F780f5D31A632D92AD3D5AbD4B8218` |
+| 5%  | `0x2F31C0F91A9cc9FBf153a0802d14567E7CbC91e2` |
+| 10% | `0x3Da26cae56AEB344E997075229Cf21aE8426b071` |
+| 25% | `0x4f6F0266966150D23F639BDdE58073b385b879A3` |
 
 1. Terminal: the running indexer serves it at `http://localhost:8789` (do not restart that stack; a watchdog
    manages it). Open the 永续账户 tab.

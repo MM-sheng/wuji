@@ -206,41 +206,42 @@
     "0xe374a11a6c390f18fbcbe15f1dbcbd46a57eea15"
   ],
   "accounts": {
-    "version": "t11-accounts-v3",
     "deployedAt": "2026-09-25T10:35:21.773316+00:00",
-    "WujiAccountsFactory": "0xe611399b885dd5fAE78c999174aEf9Bc27d4997b",
     "treasury": "0xeea9c3f9bfd7f1b2420bdbd1bc31d225e98e5c43",
     "epoch": 6,
     "delay": 16,
     "maxTipAge": 1800,
     "bufferBps": 1000,
+    "version": "t11-accounts-v4",
+    "WujiAccountsFactory": "0x0F9F553a0B30F7745739a7478ebc033C9552E4Df",
+    "bountyDivisor": 10000,
     "pools": [
       {
         "tier": 0,
-        "address": "0xD918c63AD7E1E71ef5c0822538A6715580B4c03e",
+        "address": "0x2F31C0F91A9cc9FBf153a0802d14567E7CbC91e2",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "23000000000000000000",
         "feeBps": 30,
-        "bounty": "100000000000000"
+        "bountyDivisor": 10000
       },
       {
         "tier": 1,
-        "address": "0x2f1BD256267b2738C49CF16F68Ab413B62139791",
+        "address": "0x3Da26cae56AEB344E997075229Cf21aE8426b071",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "11500000000000000000",
         "feeBps": 30,
-        "bounty": "100000000000000"
+        "bountyDivisor": 10000
       },
       {
         "tier": 2,
-        "address": "0x346321B1D1F780f5D31A632D92AD3D5AbD4B8218",
+        "address": "0x4f6F0266966150D23F639BDdE58073b385b879A3",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "4600000000000000000",
         "feeBps": 30,
-        "bounty": "100000000000000"
+        "bountyDivisor": 10000
       }
     ],
     "previous": [
@@ -263,6 +264,16 @@
           "0x1b07bb9532266cA0967AD28D70a4D528FaC85073"
         ],
         "reason": "v2 sweep() ignored pending entries, so fees could be swept to the treasury before the accounts they protect joined; the 10% pool lost its whole buffer that way. Holds two deployer test accounts (0.997 WBNB each); no longer maintained by the keeper."
+      },
+      {
+        "version": "t11-accounts-v3",
+        "WujiAccountsFactory": "0xe611399b885dd5fAE78c999174aEf9Bc27d4997b",
+        "pools": [
+          "0xD918c63AD7E1E71ef5c0822538A6715580B4c03e",
+          "0x2f1BD256267b2738C49CF16F68Ab413B62139791",
+          "0x346321B1D1F780f5D31A632D92AD3D5AbD4B8218"
+        ],
+        "reason": "Pre-self-review source: freeze and relay-height-drop bricking bugs, fixed-bounty farming, stranded ceiling surplus, no reentrancy guard. All smoke accounts exited; pools empty."
       }
     ]
   }
