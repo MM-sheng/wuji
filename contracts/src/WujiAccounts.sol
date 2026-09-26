@@ -31,12 +31,15 @@ contract WujiAccounts is ReentrancyGuard {
     bool public immutable INDEX_CAN_FREEZE;
     address public immutable treasury;  // FeeRouter: surplus fees go to the relayers' operations reserve
     uint256 public immutable FEE_BPS;   // charged on entry and on normal exit
-    uint256 public immutable BOUNTY;    // paid from the buffer per processed epoch and per retirement
+    /// @notice Each processed epoch and each retirement pays `buffer / BOUNTY_DIVISOR` to its caller (0 = none).
+    /// A share, not a constant, like RelayerRewards: it cannot outgrow the buffer, needs no per-token amount,
+    /// and farming it with dust requests drains at most one share per epoch (≈0.24%/day at 1/10000).
+    uint256 public immutable BOUNTY_DIVISOR;
     uint256 public immutable BUFFER_BPS; // buffer kept against floor overshoot, relative to live principal
 
     struct Config {
         IERC20 asset; WujiIndex index; int256 k; uint64 epoch; uint64 delay; uint256 maxTipAge;
-        address treasury; uint256 feeBps; uint256 bounty; uint256 bufferBps;
+        address treasury; uint256 feeBps; uint256 bountyDivisor; uint256 bufferBps;
     }
 
     struct Account {
@@ -101,7 +104,7 @@ contract WujiAccounts is ReentrancyGuard {
         (bool ok, bytes memory ret) = address(c.index).staticcall(abi.encodeWithSignature("frozen()"));
         INDEX_CAN_FREEZE = ok && ret.length == 32;
         asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay; MAX_TIP_AGE = c.maxTipAge;
-        treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY = c.bounty; BUFFER_BPS = c.bufferBps;
+        treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY_DIVISOR = c.bountyDivisor; BUFFER_BPS = c.bufferBps;
     }
 
     // ---------------------------------------------------------------- requests
@@ -140,9 +143,6 @@ contract WujiAccounts is ReentrancyGuard {
     function requestEnter(bool yang, uint128 amount) external nonReentrant returns (uint256 id) {
         uint128 fee = uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
         require(amount > fee, "zero");
-        // Each entry can create an epoch whose processing pays BOUNTY from the buffer; its own fee must cover
-        // that, or dust entries farm bounties out of other depositors' fees.
-        require(fee >= BOUNTY, "below minimum");
         uint128 principal = amount - fee;
         uint64 e = _schedule();
         uint256 before = asset.balanceOf(address(this));
@@ -336,7 +336,8 @@ contract WujiAccounts is ReentrancyGuard {
     }
 
     function _payBounty(address to) internal {
-        uint256 amount = BOUNTY < buffer ? BOUNTY : buffer;
+        if (BOUNTY_DIVISOR == 0) return;
+        uint256 amount = buffer / BOUNTY_DIVISOR;
         if (amount == 0) return;
         buffer -= amount;
         asset.safeTransfer(to, amount);

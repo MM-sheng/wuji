@@ -12,6 +12,8 @@ contract WujiAccountsFactory {
     int256 public constant K_10 = 11.5e18; // 10% per year
     int256 public constant K_25 = 4.6e18;  // 25% per year
     uint256 public constant TIERS = 3;
+    /// @notice Keeper bounty per processed epoch or retirement: 1/10000 of the pool's buffer.
+    uint256 public constant BOUNTY_DIVISOR = 10_000;
 
     WujiIndex public immutable index;
     address public immutable treasury;
@@ -22,7 +24,7 @@ contract WujiAccountsFactory {
     uint256 public immutable BUFFER_BPS;
 
     mapping(address => WujiAccounts[3]) internal pools;
-    event Created(address indexed asset, uint256 tier, int256 k, address pool, uint256 bounty);
+    event Created(address indexed asset, uint256 tier, int256 k, address pool);
 
     constructor(WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps, uint256 bufferBps) {
         index = index_; treasury = treasury_; EPOCH = epoch; DELAY = delay; MAX_TIP_AGE = maxTipAge;
@@ -33,15 +35,14 @@ contract WujiAccountsFactory {
         return [K_5, K_10, K_25][tier];
     }
 
-    /// @notice Create the three pools for `asset`. `bounty` is in asset units (chosen by the creator because
-    /// only they know the token's decimals and value); it is capped by what the buffer holds, never more.
-    function create(IERC20 asset, uint256 bounty) external returns (WujiAccounts[3] memory created) {
+    /// @notice Create the three pools for `asset`, once, by anyone.
+    function create(IERC20 asset) external returns (WujiAccounts[3] memory created) {
         require(address(pools[address(asset)][0]) == address(0), "exists");
         for (uint256 t; t < TIERS; t++) {
             created[t] = new WujiAccounts(WujiAccounts.Config(
-                asset, index, kOf(t), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, bounty, BUFFER_BPS));
+                asset, index, kOf(t), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, BOUNTY_DIVISOR, BUFFER_BPS));
             pools[address(asset)][t] = created[t];
-            emit Created(address(asset), t, kOf(t), address(created[t]), bounty);
+            emit Created(address(asset), t, kOf(t), address(created[t]));
         }
     }
 

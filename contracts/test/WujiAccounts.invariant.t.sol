@@ -130,7 +130,7 @@ contract WujiAccountsInvariantTest is Test {
         idx = new WujiIndex(BitcoinRelay(address(r)), 1000, 4320, RelayerRewards(address(0)));
         token = new MockUSDT();
         // K = 0.01: roughly 50% of principal per block, so floors, ceilings and overshoot happen within a run.
-        pool = new WujiAccounts(WujiAccounts.Config(token, idx, 0.01e18, 6, 2, 30 minutes, address(0xFEE), 30, 0.001e18, 1_000));
+        pool = new WujiAccounts(WujiAccounts.Config(token, idx, 0.01e18, 6, 2, 30 minutes, address(0xFEE), 30, 10_000, 1_000));
         h = new AccountsHandler(pool, idx, r, token);
         h.mine(10);
         targetContract(address(h));

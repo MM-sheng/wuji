@@ -19,7 +19,7 @@ contract WujiAccountsGas is Test {
         r = new FrozenExitRelayMock();
         idx = new WujiIndex(BitcoinRelay(address(r)), 1000, 4320, RelayerRewards(address(0)));
         t = new MockUSDT();
-        pool = new WujiAccounts(WujiAccounts.Config(t, idx, 11.5e18, 6, 16, 30 minutes, address(0xFEE), 30, 0.0001e18, 1_000));
+        pool = new WujiAccounts(WujiAccounts.Config(t, idx, 11.5e18, 6, 16, 30 minutes, address(0xFEE), 30, 10_000, 1_000));
         for (uint256 i; i < 2; i++) { address u = i == 0 ? a : b; t.mint(u, 1e24); vm.prank(u); t.approve(address(pool), type(uint256).max); }
         _mine(10);
     }

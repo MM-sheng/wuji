@@ -326,4 +326,12 @@ Walking costs ≈ 5.3k gas per height, so prompt processing is cheap and a week-
 gas price. To cover one epoch at 10 gwei it must be ≈ 0.0034 ETH, and with fee ≥ BOUNTY the minimum entry at
 0.3% becomes ≈ 1.1 ETH (≈ 0.11 ETH at 1 gwei). Options before mainnet: accept a high minimum; pay bounties
 per epoch but require the fee only once per *epoch creator* (later entries in the same epoch pay less); or
-make the bounty a share of the buffer, like `RelayerRewards`, instead of a constant. Undecided.
+make the bounty a share of the buffer, like `RelayerRewards`, instead of a constant.
+
+**Decided (2026-09-26): a share of the buffer.** Each processed epoch and each retirement pays
+`buffer / 10000` (`BOUNTY_DIVISOR`, fixed by the factory). No minimum entry, no per-token amount to choose.
+Farming with dust requests is bounded to one share per epoch, at most one epoch per 6 heights (≈0.24% of
+the buffer per day), and pays only when the share exceeds the attacker's gas.
+`test_review_dustFarmingIsBoundedToAShare` checks 50 dust epochs take < 1%. Cost: in a small or young pool
+the share may not cover gas, so processing then relies on keepers that run anyway (as with the index) or on
+the users who want their own requests priced.

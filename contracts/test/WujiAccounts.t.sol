@@ -24,7 +24,7 @@ contract WujiAccountsTest is Test {
     uint64 constant DELAY = 2;
     address treasury = address(0xFEE);
     uint256 FEE = 0;          // most tests check the pure mechanism; fee tests set it
-    uint256 BOUNTY = 0;
+    uint256 BOUNTY = 0;       // bounty divisor: 0 = no bounty
 
     function setUp() public {
         vm.warp(1_800_000_000);
@@ -318,7 +318,7 @@ contract WujiAccountsTest is Test {
     }
 
     function test_feesBufferBountiesAndSweep() public {
-        FEE = 30; BOUNTY = 0.05e18;
+        FEE = 30; BOUNTY = 10_000;
         WujiAccounts p = make(K);
         advance(10);
         (uint256 a, uint64 e0) = enter(p, alice, true, 100e18);
@@ -330,8 +330,8 @@ contract WujiAccountsTest is Test {
         uint256 carolBefore = asset.balanceOf(carol);
         vm.prank(carol);
         p.processMany(10);
-        assertEq(asset.balanceOf(carol) - carolBefore, BOUNTY, "processing pays a bounty");
-        assertEq(p.buffer(), 0.55e18);
+        assertEq(asset.balanceOf(carol) - carolBefore, 0.6e18 / 10_000, "processing pays 1/10000 of the buffer");
+        assertEq(p.buffer(), 0.6e18 - 0.6e18 / 10_000);
         // Buffer above 10% of principal is swept; here it is below target.
         assertEq(p.sweep(), 0);
         uint64 e1 = exit(p, alice, a);
@@ -385,13 +385,14 @@ contract WujiAccountsTest is Test {
 
     function test_factoryFixesTheMenu() public {
         WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000);
-        WujiAccounts[3] memory pools = f.create(asset, 0.01e18);
+        WujiAccounts[3] memory pools = f.create(asset);
         assertEq(pools[0].K(), 23e18);
         assertEq(pools[1].K(), 11.5e18);
         assertEq(pools[2].K(), 4.6e18);
         assertEq(address(f.pool(address(asset), 1)), address(pools[1]));
+        assertEq(pools[1].BOUNTY_DIVISOR(), 10_000);
         vm.expectRevert("exists");
-        f.create(asset, 0);
+        f.create(asset);
     }
 
     /// Invariant 7: yield accrues to holders through the token's own NAV and never enters the bet.
@@ -471,16 +472,24 @@ contract WujiAccountsTest is Test {
         e0;
     }
 
-    /// F3: dust entries must not be able to buy bounties out of other people's fees.
-    function test_review_dustEntryCannotFarmBounty() public {
-        FEE = 30; BOUNTY = 0.01e18;
+    /// F3: dust entries buy at most one 1/10000 share of the buffer per epoch; the buffer decays geometrically.
+    function test_review_dustFarmingIsBoundedToAShare() public {
+        FEE = 30; BOUNTY = 10_000;
         WujiAccounts p = make(K);
         advance(10);
-        enter(p, alice, true, 100e18);                          // funds the buffer with 0.3
-        advance(12);
-        vm.prank(carol);
-        vm.expectRevert("below minimum");
-        p.requestEnter(true, 100);                              // fee 1 wei, far below the bounty
+        enter(p, alice, true, 1000e18);                         // buffer 3
+        uint256 start = p.buffer();
+        uint256 farmed;
+        for (uint256 i; i < 50; i++) {
+            (, uint64 e) = enter(p, carol, true, 100);          // dust: fee 1 wei, new epoch each round
+            if (idx.lastHeight() < e) advance(e - idx.lastHeight());
+            uint256 b0 = asset.balanceOf(carol);
+            vm.prank(carol); p.processMany(10);
+            farmed += asset.balanceOf(carol) - b0;
+        }
+        // 50 epochs (≈ 2 days of Bitcoin) take < 1% of the buffer, whatever the attacker's gas costs.
+        assertLt(farmed, start / 100);
+        assertGe(p.buffer() + farmed, start);                   // nothing is created or lost
     }
 
     /// Gain past the 2x ceiling was paid by the loser; it must reach the buffer, not stay stranded.
@@ -522,7 +531,7 @@ contract WujiAccountsTest is Test {
 
     /// Random walks with high leverage: the pool always covers every claim.
     function testFuzz_solvency(uint256 seed) public {
-        FEE = 30; BOUNTY = 0.001e18;   // every fuzz entry is ≥ 1e18, so its fee (≥ 0.003) covers the bounty
+        FEE = 30; BOUNTY = 10_000;
         WujiAccounts p = make(0.05e18);
         advance(10);
         address[3] memory users = [alice, bob, carol];

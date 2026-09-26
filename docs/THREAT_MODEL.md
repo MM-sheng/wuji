@@ -227,6 +227,10 @@ index lacks; every request reverted. Pools now probe once and check consistency 
 script requires `acceptingRequests()` before finishing. Deploy-time simulation of a real request is now
 part of the release procedure.
 
+**Keeper bounties.** Processing an epoch or retiring a floored account pays 1/10000 of the pool's buffer.
+A share cannot exceed the buffer or be farmed faster than one share per epoch; in a small pool it may not
+cover gas at all. A self-review found the earlier fixed bounty could be farmed with 1-wei-fee entries.
+
 **Liveness.** Nothing expires, so an absent keeper delays but does not destroy anything: pending requests
 wait, and anyone (including the account owner) can call `processMany`, `retire` and `claim`. Pricing an epoch
 recomputes S by walking relay headers back from the index tip, at most 1024 heights per call; after a longer
