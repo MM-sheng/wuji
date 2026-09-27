@@ -82,9 +82,9 @@ fixed forever by the factory. [Design](docs/tasks/T11_PERPETUAL_ACCOUNTS.md) ·
 
 | tier | K | pool (BSC testnet, mock WBNB) |
 |---|---:|---|
-| 5% / yr | 23 | `0x2F31C0F91A9cc9FBf153a0802d14567E7CbC91e2` |
-| 10% / yr | 11.5 | `0x3Da26cae56AEB344E997075229Cf21aE8426b071` |
-| 25% / yr | 4.6 | `0x4f6F0266966150D23F639BDdE58073b385b879A3` |
+| 5% / yr | 23 | `0xE159401061F53f4c2974d38B819dEbB52E48c5Ad` |
+| 10% / yr | 11.5 | `0x98F9f8D17E27c87F19AA8a31c7A7A797D4C97aD6` |
+| 25% / yr | 4.6 | `0xa9C6c0567948F04eED05DA9779Df95788c2389dc` |
 
 Bound to the timestamps-v3 index `0xe26b…d19b`, which has **no frozen exit**: after a deep reorg these pools
 stop pricing until history is consistent again. Mainnet pools must use an index with the T9 exit.

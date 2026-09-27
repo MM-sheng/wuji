@@ -212,13 +212,13 @@
     "delay": 16,
     "maxTipAge": 1800,
     "bufferBps": 1000,
-    "version": "t11-accounts-v4",
-    "WujiAccountsFactory": "0x0F9F553a0B30F7745739a7478ebc033C9552E4Df",
     "bountyDivisor": 10000,
+    "version": "t11-accounts-v5",
+    "WujiAccountsFactory": "0x3bdc6b22F6339338Ba4303FB672b31fa0ba986F0",
     "pools": [
       {
         "tier": 0,
-        "address": "0x2F31C0F91A9cc9FBf153a0802d14567E7CbC91e2",
+        "address": "0xE159401061F53f4c2974d38B819dEbB52E48c5Ad",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "23000000000000000000",
@@ -227,7 +227,7 @@
       },
       {
         "tier": 1,
-        "address": "0x3Da26cae56AEB344E997075229Cf21aE8426b071",
+        "address": "0x98F9f8D17E27c87F19AA8a31c7A7A797D4C97aD6",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "11500000000000000000",
@@ -236,7 +236,7 @@
       },
       {
         "tier": 2,
-        "address": "0x4f6F0266966150D23F639BDdE58073b385b879A3",
+        "address": "0xa9C6c0567948F04eED05DA9779Df95788c2389dc",
         "asset": "0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15",
         "symbol": "WBNB",
         "k_wad": "4600000000000000000",
@@ -274,7 +274,21 @@
           "0x346321B1D1F780f5D31A632D92AD3D5AbD4B8218"
         ],
         "reason": "Pre-self-review source: freeze and relay-height-drop bricking bugs, fixed-bounty farming, stranded ceiling surplus, no reentrancy guard. All smoke accounts exited; pools empty."
+      },
+      {
+        "version": "t11-accounts-v4",
+        "WujiAccountsFactory": "0x0F9F553a0B30F7745739a7478ebc033C9552E4Df",
+        "pools": [
+          "0x2F31C0F91A9cc9FBf153a0802d14567E7CbC91e2",
+          "0x3Da26cae56AEB344E997075229Cf21aE8426b071",
+          "0x4f6F0266966150D23F639BDdE58073b385b879A3"
+        ],
+        "reason": "Before review round 2: buffer could count tokens already paid out (bricks sweep/bounties after an overshoot + freeze), ceiling surplus credited as if paid, no catch-up bridging. 10% pool holds two deployer test accounts exiting at 968862."
       }
-    ]
+    ],
+    "alsoMaintain": [
+      "0x3Da26cae56AEB344E997075229Cf21aE8426b071"
+    ],
+    "alsoMaintainReason": "v4 10% pool: two deployer test accounts exit at 968862; keep processing until claimed, then remove."
   }
 }
