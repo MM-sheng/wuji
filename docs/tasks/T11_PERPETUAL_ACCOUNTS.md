@@ -381,3 +381,10 @@ browser-wallet accounts #3/#4 exited at 968718 (ΔS = −0.051708 since 968682):
   usual bounty) until the epoch is in range. 3000 heights of absence → 3 calls, priced at exactly the S the
   index had at that height. A chunk costs ≈1.54M gas; the keeper's ceiling for `processMany` is now 8M.
 - Stress: both suites at 500 runs × 60 calls, twice (120,000 calls), no failures, no reverts.
+
+**BSC testnet v5 live (2026-09-28).** Redeployed with review round 2 (factory
+`0x3bdc6b22F6339338Ba4303FB672b31fa0ba986F0`). v4's two test accounts exited at 968862 (ΔS = +0.06618 since
+968718): yin #1 = 0.991262481739130434 = `0.997·(1 − ΔS/11.5)` to the wei, yang #2 its mirror; claims paid
+1.988018, exactly values minus 0.3%. v4 is empty and no longer maintained. v5 10% pool: yang/yin 1 WBNB each
+priced at 968862, one buffer-share bounty paid. First deployment with the separate keeper signer: no nonce
+collisions.

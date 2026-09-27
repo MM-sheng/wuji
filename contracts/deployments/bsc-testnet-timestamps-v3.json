@@ -285,10 +285,6 @@
         ],
         "reason": "Before review round 2: buffer could count tokens already paid out (bricks sweep/bounties after an overshoot + freeze), ceiling surplus credited as if paid, no catch-up bridging. 10% pool holds two deployer test accounts exiting at 968862."
       }
-    ],
-    "alsoMaintain": [
-      "0x3Da26cae56AEB344E997075229Cf21aE8426b071"
-    ],
-    "alsoMaintainReason": "v4 10% pool: two deployer test accounts exit at 968862; keep processing until claimed, then remove."
+    ]
   }
 }
