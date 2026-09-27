@@ -22,6 +22,8 @@ contract AccountsHandler is Test {
     uint256 public ghostFloors;
     uint256 public ghostClaims;
     uint256 public ghostProcessed;
+    uint256 public ghostFrozen;
+    uint256 public ghostFrozenClaims;
 
     constructor(WujiAccounts p, WujiIndex i, FrozenExitRelayMock relay, MockUSDT t) {
         pool = p; idx = i; r = relay; token = t;
@@ -53,26 +55,32 @@ contract AccountsHandler is Test {
         if (ids.length == 0 || !pool.acceptingRequests()) return;
         uint256 id = ids[idSeed % ids.length];
         (address owner,, uint64 enterEpoch, uint64 exitEpoch,) = pool.accounts(id);
-        if (owner == address(0) || exitEpoch != 0 || !_entered(id)) return;
+        if (owner == address(0) || exitEpoch != 0) return;
         if (pool.nextPricingHeight() <= enterEpoch) return;
+        // Deliberately also tries accounts whose entry is not yet priced: the contract must refuse those
+        // (a queued exit on an entry a freeze later refunds used to brick freezePool).
         vm.prank(owner);
-        pool.requestExit(id);
+        try pool.requestExit(id) { } catch { }
     }
 
     function claim(uint256 idSeed) external {
         if (ids.length == 0) return;
         uint256 id = ids[idSeed % ids.length];
-        (address owner,,, uint64 exitEpoch,) = pool.accounts(id);
-        if (owner == address(0) || exitEpoch == 0) return;
-        (,, bool processed) = pool.epochAcc(exitEpoch);
-        if (!processed) return;
+        (address owner,, uint64 enterEpoch, uint64 exitEpoch,) = pool.accounts(id);
+        if (owner == address(0)) return;
+        (bool entered, bool refunded) = pool.epochInfo(enterEpoch);
+        bool exited;
+        if (exitEpoch != 0) (exited,) = pool.epochInfo(exitEpoch);
+        // Claimable: a refunded entry, a priced exit, or any priced account once the pool is frozen.
+        if (!(entered && refunded) && !exited && !(pool.frozen() && entered)) return;
         vm.prank(owner);
         pool.claim(id);
         ghostClaims++;
+        if (pool.frozen()) ghostFrozenClaims++;
     }
 
     function retire(uint256 idSeed) external {
-        if (ids.length == 0) return;
+        if (ids.length == 0 || pool.frozen()) return;
         uint256 id = ids[idSeed % ids.length];
         (address owner,,, uint64 exitEpoch,) = pool.accounts(id);
         if (owner == address(0) || exitEpoch != 0 || !_entered(id) || pool.valueOf(id) != 0) return;
@@ -90,7 +98,19 @@ contract AccountsHandler is Test {
     }
 
     function process() external {
+        if (idx.frozen()) { if (!pool.frozen()) pool.freezePool(3); return; }   // small max: freezes over several calls
         ghostProcessed += pool.processMany(5);
+    }
+
+    /// A deep reorg below the folded tip, observed, waited out and sealed: the index freezes. Rare by design.
+    function freeze(uint256 dice) external {
+        if (idx.frozen() || dice % 4 != 0 || idx.lastHash() == bytes32(0)) return;
+        r.put(idx.lastHeight(), keccak256(abi.encode("replacement", dice)));
+        r.tip(r.bestHeight() + 1, keccak256(abi.encode("fork tip", dice)), true);
+        uint64 deadline = idx.observeReorg();
+        r.tip(deadline, keccak256(abi.encode("sealed", dice)), false);
+        idx.freeze();
+        ghostFrozen++;
     }
 
     function sweep() external {
@@ -99,6 +119,7 @@ contract AccountsHandler is Test {
 
     /// Mine and fold 1..30 heights.
     function mine(uint256 count) external {
+        if (idx.frozen()) return;
         count = bound(count, 1, 30);
         uint64 end = idx.lastHeight() + uint64(count);
         for (uint64 h = idx.lastHeight() + 1; h <= end + 6; h++) r.put(h, keccak256(abi.encode(h, "inv")));
@@ -108,6 +129,7 @@ contract AccountsHandler is Test {
 
     /// The relay switches to a heavier but shorter branch that still contains the folded tip.
     function dropBest(uint256 by) external {
+        if (idx.frozen()) return;
         uint64 best = r.bestHeight();
         uint64 floor = idx.lastHeight() + 1;
         if (best <= floor) return;
@@ -144,8 +166,8 @@ contract WujiAccountsInvariantTest is Test {
             uint256 id = h.ids(i);
             (address owner,, uint64 enterEpoch,, uint128 principal) = pool.accounts(id);
             if (owner == address(0)) continue;
-            (,, bool entered) = pool.epochAcc(enterEpoch);
-            if (!entered) { owed += principal; continue; }
+            (bool entered, bool refunded) = pool.epochInfo(enterEpoch);
+            if (!entered || refunded) { owed += principal; continue; }
             owed += pool.valueOf(id);
             int256 raw = pool.rawValueOf(id);
             if (raw < 0) unretired += uint256(-raw);
@@ -160,8 +182,9 @@ contract WujiAccountsInvariantTest is Test {
             uint256 id = h.ids(i);
             (address owner, bool yang, uint64 enterEpoch, uint64 exitEpoch, uint128 principal) = pool.accounts(id);
             if (owner == address(0)) continue;
-            (,, bool entered) = pool.epochAcc(enterEpoch);
+            (bool entered, bool refunded) = pool.epochInfo(enterEpoch);
             if (!entered) { pending += principal; continue; }
+            if (refunded) continue;
             bool exited;
             if (exitEpoch != 0) (,, exited) = pool.epochAcc(exitEpoch);
             if (!exited) live[yang ? 1 : 0] += principal;
@@ -176,7 +199,8 @@ contract WujiAccountsInvariantTest is Test {
         uint256 n = pool.queueLength();
         for (uint256 i = 1; i < n; i++) assertGt(pool.queue(i), pool.queue(i - 1));
         assertLe(pool.head(), n);
-        if (pool.head() > 0) assertLe(pool.queue(pool.head() - 1), idx.lastHeight());
+        // Before a freeze nothing is priced beyond the folded tip; freezePool prices the rest at the frozen S.
+        if (pool.head() > 0 && !idx.frozen()) assertLe(pool.queue(pool.head() - 1), idx.lastHeight());
     }
 
     /// No open account's value leaves [0, 2·principal].
@@ -189,6 +213,6 @@ contract WujiAccountsInvariantTest is Test {
 
     function invariant_callSummary() public view {
         // Keeps the run's shape visible with -vv; the assertions above carry the weight.
-        h.ghostDrops(); h.ghostFloors(); h.ghostClaims(); h.ghostProcessed();
+        h.ghostDrops(); h.ghostFloors(); h.ghostClaims(); h.ghostProcessed(); h.ghostFrozen(); h.ghostFrozenClaims();
     }
 }

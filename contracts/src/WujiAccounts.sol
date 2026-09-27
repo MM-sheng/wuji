@@ -444,4 +444,8 @@ contract WujiAccounts is ReentrancyGuard {
     function epochAcc(uint64 e) external view returns (int256 yin, int256 yang, bool processed) {
         Epoch storage ep = epochs[e]; return (ep.acc[0], ep.acc[1], ep.processed);
     }
+    /// @notice Whether an epoch is priced, and whether its entries were refunded by a freeze instead of joining.
+    function epochInfo(uint64 e) external view returns (bool processed, bool refunded) {
+        Epoch storage ep = epochs[e]; return (ep.processed, ep.frozenRefund);
+    }
 }
