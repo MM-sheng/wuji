@@ -13,9 +13,9 @@
 - Continue Task A on the **v4 10% pool** with fresh entries: the full approve → enter → priced → exit →
   priced → claim round trip, and the error cases again (they should now all fail before any wallet prompt,
   except the cancel case). Reload the terminal first.
-- The MetaMask account you used, `0x6657…0B95`, is also the keeper's signer; its transactions can collide on
-  nonces with the keeper. If MetaMask shows a nonce or "replacement" error, wait a minute and retry, and note
-  it in the report. A separate test account would avoid this.
+- Since `273c12d` the keeper signs with its own account (`0x7E25…Cc9f`), so the MetaMask account
+  `0x6657…0B95` no longer races it for nonces. If MetaMask still shows a nonce or "replacement" error, note it
+  in the report: that would be a new finding.
 
 Written 2026-09-26. Context: `docs/tasks/T11_PERPETUAL_ACCOUNTS.md` (design + build log), `README.md`
 §Perpetual accounts. Everything below is testnet only. Read `AGENTS.md` first; its rules apply.
