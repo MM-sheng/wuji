@@ -1,5 +1,59 @@
 # T11 wallet test — in progress
 
+## Current checkpoint — 2026-09-27, handoff `65ef8ad`
+
+**Task C attempted today; no new Sepolia receipt yet. Task A on v4 is incomplete and awaiting a human wallet action. This is a progress report, not a completed round-trip acceptance.** The September 26 v3 results below are historical. Claude closed the old v3 accounts in `b29df9a`; do not resume or transact on those accounts.
+
+### C — today's faucet attempt
+
+- Google Cloud Web3 faucet rejected today's request under its daily limit. The page gives the next eligible time as **2026-09-27 17:16:50 Asia/Shanghai**.
+- Tried one alternative, Alchemy's Ethereum Sepolia faucet. It presented human verification and also requires at least **0.001 mainnet ETH**. The recipient's mainnet balance was **0**, so the alternative is not eligible. No real funds were paid or bridged; the CAPTCHA handoff was withdrawn once this requirement was confirmed.
+- Sepolia balance remained **0.050184441800254118 ETH**. No new transaction hash exists for either attempt; the 0.15 ETH target has **not** been reached.
+- A one-shot thread follow-up (`wuji-sepolia`) is scheduled for **today 17:20 Asia/Shanghai** to retry Google, verify any receipt, and append it here. A scheduled attempt is not a received grant.
+
+### A — v4 browser verification so far
+
+Tested `http://localhost:8789` after reload, using the existing MetaMask account `0x6657289562f870677325124f3ACbdebB0ea80B95`, BSC testnet chain 97, v4 10% pool **`0x3Da26cae56AEB344E997075229Cf21aE8426b071`**, and MockWBNB `0xe374A11A6C390F18fbcbE15F1dBcbd46a57eeA15`.
+
+Served terminal SHA-256: `d6efa03152954100e9caef3dc310ded878b41700f38256ef18beb8140ff51a9d`. Concurrent source commits through `9d0a525` include further contract review changes; browser testing the immutable v4 address does not establish that these latest source changes are deployed there. No contracts, terminal code, deployments or running services were changed for this attempt.
+
+| Case / requested UI fix | Actual browser result | Status |
+|---|---|---|
+| Amount `0` | `✗ 数量无效`; control remained usable | PASS |
+| Amount `abc` | `✗ 输入非负数量，最多 18 位小数`; control remained usable | PASS |
+| Balance check before approval: amount `10000` | `✗ 余额不足：你有 9,906.28805662 WBNB`; no wallet prompt | PASS |
+| Simulate before transaction and show Chinese revert reason | Not yet exercised on a failing v4 account action | OPEN |
+| Explicit wrong-network message / switch mid-flow | Not yet exercised in this v4 run | OPEN |
+| Rejected signature shows `已在钱包中取消` | Requested that the human cancel the current 1-token approval; no cancellation observed yet | WAITING |
+| Pending account value shows `尚未定价` | No fresh test entry broadcast yet | OPEN |
+| Fresh approve → enter 阳 1 and 阴 1 | First approval prompt pending; neither entry completed | WAITING |
+| Pricing → exit → pricing → claim; duplicate exit; premature claim | Requires the fresh entries and actual Bitcoin pricing heights | OPEN |
+
+The starting pool allowance was 8 MockWBNB. To make the fresh browser approval test meaningful, it was reset to zero using the existing encrypted Foundry signer (not imported into MetaMask), after checking chain, signer, nonce and simulation. This is **setup only**, not a browser approval or an entry:
+
+- [Allowance-reset transaction](https://testnet.bscscan.com/tx/0x38ec5527ba50d3c926d5d526e3a5795b6bce0fad9ed9df24a2c18da1dce87435), receipt status `0x1`, nonce 1614.
+- At **2026-09-27 10:55:01 Asia/Shanghai**, block `0x7f38c64`, allowance remained 0 and latest/pending wallet nonces were both 1615. No subsequent transaction from this wallet was observed at that checkpoint.
+- Terminal currently displays `授权 WBNB · 请在钱包确认…`. Browser safety policy denied access to the MetaMask extension URL and explicitly prohibited alternate-surface workarounds. Wallet buttons must therefore be operated by the human. The current requested action is **cancel**, to test the cancellation message; then the formal approval and entry flow can resume.
+
+Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet-test-evidence.json](../../contracts/deployments/t11-v4-wallet-test-evidence.json). Screenshots are present in the Codex computer-use record; portable screenshot files remain outstanding. No payout arithmetic is reported as an actual result because no v4 claim occurred.
+
+### Resume the current v4 test
+
+1. Observe the human's cancellation of the pending 1 MockWBNB approval and record the exact message and button recovery. Do not reset the allowance again or replace wallet interaction with command-line signing.
+2. Recheck account, chain and pool; submit fresh 阳 1 and 阴 1 through the terminal with human MetaMask confirmation. Record approval and entry receipts and derive the account IDs from those receipts. Do not reuse or assume v3 #3/#4, or attribute Claude's existing v4 smoke-test accounts to this run.
+3. Verify `尚未定价`, premature-claim rejection, and actual entry pricing. Then request exits, check duplicate-exit rejection, await exit pricing, claim, and compare the actual MockWBNB transfers against `value - floor(value × 30 / 10000)` for both positions.
+4. Complete wrong-network and mid-flow network-switch checks, export screenshots, and only then mark the five UI fixes and full round trip passed. Preserve any observed failures.
+5. At today's faucet follow-up, check this log before retrying. Append an amount and hash only after a successful receipt; leave Sepolia funds for Claude.
+
+## Sepolia fuel log
+
+| Date (Asia/Shanghai) | Faucet | Received amount | Transaction | Balance after / observed |
+|---|---|---|---|---|
+| 2026-09-26 | Google Cloud Web3 | 0.05 ETH | `0x53bd87d02c1cba2ecedfd1d8858a03fa97e09190fe81578709c50b0c91330d67` | 0.050184441800254118 ETH |
+| 2026-09-27, morning attempt | Google daily limit; Alchemy ineligible | 0 ETH (attempt only) | None | 0.050184441800254118 ETH |
+
+## Historical report — 2026-09-26, v3
+
 Date: 2026-09-26. Task: [CODEX_T11_HANDOFF.md](CODEX_T11_HANDOFF.md).
 
 **Task B passed: 0.05 Sepolia ETH received. Task A has two real browser-wallet entries on chain and is waiting for Bitcoin height 968682 to be priced. Exit, payout and the complete round trip have not passed yet.**
@@ -86,7 +140,9 @@ Google Cloud Web3 faucet completed the request in its existing signed-in session
 
 No Sepolia deployment or outgoing transfer was made. The funds are left for Claude's deployment work.
 
-## Resume without duplicating deposits
+## Historical resume instructions — superseded; do not execute
+
+The following instructions belonged to the September 26 v3 report. The current handoff and v4 resume steps above replace them; Claude already closed these old positions.
 
 1. Read this report and the current handoff; inspect concurrent repository changes. Keep testing the recorded v3 address unless a new explicit handoff changes it.
 2. Read `/account/0x2f1bd256267b2738c49cf16f68ab413b62139791/3` and `/4` on port 8789. Wait until their status is `open` and record the pricing transaction/height/value. Do not enter again.
