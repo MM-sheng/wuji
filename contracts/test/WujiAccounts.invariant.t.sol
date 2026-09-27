@@ -25,8 +25,10 @@ contract AccountsHandler is Test {
     uint256 public ghostFrozen;
     uint256 public ghostFrozenClaims;
 
-    constructor(WujiAccounts p, WujiIndex i, FrozenExitRelayMock relay, MockUSDT t) {
-        pool = p; idx = i; r = relay; token = t;
+    bool public immutable allowFreeze;
+
+    constructor(WujiAccounts p, WujiIndex i, FrozenExitRelayMock relay, MockUSDT t, bool freezes) {
+        pool = p; idx = i; r = relay; token = t; allowFreeze = freezes;
         for (uint256 k; k < 4; k++) {
             address a = address(uint160(0xA11CE + k));
             actors.push(a);
@@ -104,7 +106,7 @@ contract AccountsHandler is Test {
 
     /// A deep reorg below the folded tip, observed, waited out and sealed: the index freezes. Rare by design.
     function freeze(uint256 dice) external {
-        if (idx.frozen() || dice % 4 != 0 || idx.lastHash() == bytes32(0)) return;
+        if (!allowFreeze || idx.frozen() || dice % 4 != 0 || idx.lastHash() == bytes32(0)) return;
         r.put(idx.lastHeight(), keccak256(abi.encode("replacement", dice)));
         r.tip(r.bestHeight() + 1, keccak256(abi.encode("fork tip", dice)), true);
         uint64 deadline = idx.observeReorg();
@@ -139,12 +141,15 @@ contract AccountsHandler is Test {
     }
 }
 
+/// Without freezes: runs stay long enough to reach floors, retirements and ceilings.
 contract WujiAccountsInvariantTest is Test {
     AccountsHandler h;
     WujiAccounts pool;
     WujiIndex idx;
     FrozenExitRelayMock r;
     MockUSDT token;
+
+    function freezes() internal pure virtual returns (bool) { return false; }
 
     function setUp() public {
         vm.warp(1_800_000_000);
@@ -153,7 +158,7 @@ contract WujiAccountsInvariantTest is Test {
         token = new MockUSDT();
         // K = 0.01: roughly 50% of principal per block, so floors, ceilings and overshoot happen within a run.
         pool = new WujiAccounts(WujiAccounts.Config(token, idx, 0.01e18, 6, 2, 30 minutes, address(0xFEE), 30, 10_000, 1_000));
-        h = new AccountsHandler(pool, idx, r, token);
+        h = new AccountsHandler(pool, idx, r, token, freezes());
         h.mine(10);
         targetContract(address(h));
     }
@@ -215,4 +220,9 @@ contract WujiAccountsInvariantTest is Test {
         // Keeps the run's shape visible with -vv; the assertions above carry the weight.
         h.ghostDrops(); h.ghostFloors(); h.ghostClaims(); h.ghostProcessed(); h.ghostFrozen(); h.ghostFrozenClaims();
     }
+}
+
+/// With frequent deep-reorg freezes: refunds, frozen pricing and frozen claims, same invariants.
+contract WujiAccountsFreezeInvariantTest is WujiAccountsInvariantTest {
+    function freezes() internal pure override returns (bool) { return true; }
 }
