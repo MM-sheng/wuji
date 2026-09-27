@@ -492,32 +492,40 @@ contract WujiAccountsTest is Test {
         assertGe(p.buffer() + farmed, start);                   // nothing is created or lost
     }
 
-    /// Gain past the 2x ceiling was paid by the loser; it must reach the buffer, not stay stranded.
-    function test_review_ceilingSurplusGoesToBuffer() public {
+    /// Gain past the 2x ceiling is not credited while anyone is still owed; once the pool is empty, sweep
+    /// sends every remaining unit (surplus and dust) to the treasury, so nothing is stranded.
+    function test_review_ceilingSurplusLeavesOnlyWhenPoolIsEmpty() public {
         WujiAccounts p = make(0.001e18);
         advance(10);
         (uint256 a, uint64 e0) = enter(p, alice, true, 10e18);
-        (uint256 b,) = enter(p, bob, false, 30e18);             // bigger side: winner's raw can exceed 2x
+        (uint256 b,) = enter(p, bob, false, 30e18);
         if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
         p.processMany(10);
         advance(60);
-        (, uint64 e1) = enter(p, carol, true, 1e18);
+        (uint256 c, uint64 e1) = enter(p, carol, true, 1e18);
         if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
         p.processMany(10);
         uint256 winner = p.rawValueOf(a) > 20e18 ? a : b;
-        int256 raw = p.rawValueOf(winner);
         (,,,, uint128 principal) = p.accounts(winner);
-        require(raw > 2 * int256(uint256(principal)), "precondition: winner above ceiling");
-        address owner = winner == a ? alice : bob;
-        vm.prank(owner);
-        uint64 ex;
-        p.requestExit(winner); (,,, ex,) = p.accounts(winner);
-        if (idx.lastHeight() < ex) advance(ex - idx.lastHeight());
+        require(p.rawValueOf(winner) > 2 * int256(uint256(principal)), "precondition: winner above ceiling");
+        uint256 bufferBefore = p.buffer();
+        address[3] memory owners = [alice, bob, carol];
+        uint256[3] memory ids = [a, b, c];
+        for (uint256 i; i < 3; i++) {
+            (address o,,, uint64 ex,) = p.accounts(ids[i]);
+            if (o == address(0)) continue;
+            if (p.valueOf(ids[i]) == 0 && ex == 0) { p.retire(ids[i]); continue; }
+            vm.prank(owners[i]); p.requestExit(ids[i]);
+        }
+        (,,, uint64 last,) = p.accounts(c);
+        if (idx.lastHeight() < last) advance(last - idx.lastHeight());
         p.processMany(10);
-        raw = p.rawValueOf(winner);
-        uint256 before = p.buffer();
-        vm.prank(owner); p.claim(winner);
-        assertEq(p.buffer() - before, uint256(raw - 2 * int256(uint256(principal))), "surplus credited to buffer");
+        assertEq(p.buffer(), bufferBefore, "no surplus credited while accounts remain");
+        for (uint256 i; i < 3; i++) { (address o,,,,) = p.accounts(ids[i]); if (o != address(0)) { vm.prank(owners[i]); p.claim(ids[i]); } }
+        assertEq(p.openAccounts(), 0);
+        uint256 rest = asset.balanceOf(address(p));
+        assertEq(p.sweep(), rest);
+        assertEq(asset.balanceOf(address(p)), 0, "nothing stranded");
     }
 
     function test_review_feeOnTransferTokenRejected() public {
@@ -527,6 +535,24 @@ contract WujiAccountsTest is Test {
         vm.prank(alice); f.approve(address(p), type(uint256).max);
         advance(10);
         vm.prank(alice); vm.expectRevert("short transfer"); p.requestEnter(true, 1e18);
+    }
+
+    /// A keeper absent for ~3000 heights (≈3 weeks): processing recovers by itself, one chunk per call,
+    /// and prices the epoch at exactly the S the index had at that height.
+    function test_processRecoversAfterLongAbsence() public {
+        advance(10);
+        (uint256 a, uint64 e0) = enter(pool, alice, true, 10e18);
+        enter(pool, bob, false, 10e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        int256 sAtEpoch = idx.S();
+        assertEq(idx.lastHeight(), e0);
+        for (uint256 i; i < 12; i++) advance(250);                // 3000 heights, nobody processes
+        assertGt(idx.lastHeight() - e0, 2 * pool.MAX_WALK());
+        uint256 calls;
+        while (pool.head() == 0) { pool.processMany(10); calls++; require(calls < 10, "no progress"); }
+        assertEq(calls, 3, "two bridging chunks, then the epoch");
+        assertEq(pool.sAt(e0), sAtEpoch, "priced at the index's S at that height");
+        assertEq(pool.valueOf(a), 10e18);
     }
 
     /// Random walks with high leverage: the pool always covers every claim.

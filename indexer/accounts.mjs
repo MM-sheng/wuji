@@ -83,7 +83,8 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
     return { state, done, cursor };
   }
   if (state.nextEpochReady) {
-    await send(pool, 'processMany(uint256)', 2_500_000, '8'); done.push('processMany');
+    // Ceiling, not a reservation: a catch-up chunk after a long absence walks 1024 heights (≈5.5M gas).
+    await send(pool, 'processMany(uint256)', 8_000_000, '8'); done.push('processMany');
   }
   // Retirement: scan a window of ids per round so cost stays bounded as the pool grows.
   const last = state.accountsCreated;

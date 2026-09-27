@@ -55,6 +55,10 @@ contract WujiAccountsGas is Test {
         _processAt(ex, 1);
         vm.prank(a); g = gasleft(); pool.claim(1); console.log("claim                     ", g - gasleft());
         g = gasleft(); pool.sweep(); console.log("sweep                     ", g - gasleft());
+        vm.prank(a); pool.requestEnter(true, 1e18);
+        (,, uint64 far,,) = pool.accounts(pool.nextId() - 1);
+        _mine(far + 1100 - idx.lastHeight());
+        g = gasleft(); pool.processMany(1); console.log("catch-up chunk, 1024 hts  ", g - gasleft());
         vm.prank(b); g = gasleft(); pool.transfer(2, a); console.log("transfer                  ", g - gasleft());
     }
 }

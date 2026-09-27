@@ -296,8 +296,11 @@ Done before any external audit, because live operation had already found two def
    `test_review_relayHeightDropCannotDuplicateEpoch`.
 3. *Bounty farming.* A 1-wei-fee entry could create an epoch and collect the processing bounty from other
    depositors' fees. An entry's fee must now be ≥ `BOUNTY`.
-4. *Stranded ceiling surplus.* A winner capped at 2× principal left the loser's excess payment in the pool
-   untracked, unsweepable forever. It now goes to the buffer.
+4. *Stranded ceiling surplus* — **the first fix was wrong, corrected 2026-09-27.** Crediting a capped winner's
+   excess to the buffer counts money that a floored loser never paid; the freeze invariant suite found `sweep`
+   then sending out tokens the pool did not have. The surplus now stays in the pool as unaccounted margin
+   (it is what covers such overshoot), and once `openAccounts == 0` `sweep` sends the whole remaining balance
+   to the treasury, so nothing is stranded either.
 5. *Hardening.* `ReentrancyGuard` on every state-changing entry point, as in `WujiVault`; entries check the
    amount actually received and reject fee-on-transfer tokens.
 
@@ -360,3 +363,21 @@ bad debt 0; the keeper's bounty was 0.006 / 10000 = 0.0000006 WBNB, exactly the 
 browser-wallet accounts #3/#4 exited at 968718 (ΔS = −0.051708 since 968682): #3 = 0.992517141217391304 =
 `0.997·(1 + ΔS/11.5)` to the wei, #4 its mirror; the two claims paid 1.988018 WBNB, exactly values minus
 0.3%. v3 is empty and no longer maintained by the keeper.
+
+## Self-review, round 2 (2026-09-27)
+
+- **Freeze path in the stateful suites.** Split into a no-freeze suite (reaches floors and retirements) and a
+  freeze suite (deep reorg, seal, `freezePool` over several calls, refunds and frozen claims), each with a
+  canary proving its path runs. Exit requests are also tried on unpriced entries. Removing either bricking fix
+  fails its suite 3/3 at default runs. New view `epochInfo(e) → (processed, refunded)`.
+- **Finding 6 — buffer counted tokens the pool no longer had.** Unequal sides, one large move floors the small
+  side past 0, freeze: the winner's value includes the loser's unpaid overshoot, its claim drains the pool
+  including the buffer, and the next `sweep`/bounty reverts forever. After every payout the buffer is now
+  clamped to the real balance (it has absorbed that overshoot); invariant `buffer ≤ balance` added.
+  Replayed exactly in `WujiAccounts.regression.t.sol`. Users' exposure is unchanged: late exits still bear
+  any overshoot the buffer could not cover.
+- **Long keeper absence recovers by itself.** If a queued epoch lies more than 1024 heights below the tip,
+  `process` walks down one 1024-height chunk per call (remembering the lowest point in `bridge`, paying the
+  usual bounty) until the epoch is in range. 3000 heights of absence → 3 calls, priced at exactly the S the
+  index had at that height. A chunk costs ≈1.54M gas; the keeper's ceiling for `processMany` is now 8M.
+- Stress: both suites at 500 runs × 60 calls, twice (120,000 calls), no failures, no reverts.

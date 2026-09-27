@@ -213,7 +213,9 @@ real block. This hole existed in the first implementation and was found while bu
 
 **Floor overshoot.** A loser can cross 0 between two priced epochs; the winner is still credited the full
 move. The shortfall is charged to the pool's fee buffer first and only then recorded as `badDebt`, which is
-public. Keeping it at zero depends on anyone retiring accounts at their floor (paid a bounty from the buffer)
+public. After every payout the buffer is clamped to the pool's real balance, so a winner paid out of a
+floored loser's overshoot can never leave bounties or `sweep` counting tokens that are gone (a self-review
+finding that bricked the pool in a stateful test). Keeping it at zero depends on anyone retiring accounts at their floor (paid a bounty from the buffer)
 and on epoch moves being small (≤ ≈2.6% of principal per 6-height epoch at the 10% tier). A pool with a large
 `badDebt` pays exits in order until its balance runs out: late exits bear the shortfall. At high tiers or
 with absent keepers this is a real, not theoretical, loss path.
@@ -234,7 +236,8 @@ cover gas at all. A self-review found the earlier fixed bounty could be farmed w
 **Liveness.** Nothing expires, so an absent keeper delays but does not destroy anything: pending requests
 wait, and anyone (including the account owner) can call `processMany`, `retire` and `claim`. Pricing an epoch
 recomputes S by walking relay headers back from the index tip, at most 1024 heights per call; after a longer
-outage a caller must chain marks through intermediate heights or supply headers (`markWithHeaders`).
+outage `process` bridges down one 1024-height chunk per call by itself (≈1.5M gas each), so recovery needs
+only repeated calls, not manual marks.
 
 **Deep reorgs.** On an index with the T9 frozen exit, the pool freezes with the index: queued epochs are
 priced at their own S where it can still be recomputed, else at the frozen S; entries priced after the last

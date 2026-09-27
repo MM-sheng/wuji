@@ -79,12 +79,16 @@ contract WujiAccounts is ReentrancyGuard {
     /// credited those amounts, so this is the pool's only possible shortfall. It stays zero while the buffer
     /// covers overshoot, which is what `retire` and its bounty are for.
     uint256 public badDebt;
+    /// @notice Accounts not yet claimed or retired (pending, open, exiting or frozen).
+    uint256 public openAccounts;
 
     // Index value at arbitrary folded heights, recomputed from relay headers.
     mapping(uint64 => int256) public sAt;
     mapping(uint64 => bool) public marked;
     /// @notice Bitcoin header hash (raw sha256d digest order) at a height marked from supplied headers.
     mapping(uint64 => bytes32) public hashAt;
+    /// @notice Lowest height marked on the way down to a queued epoch that was more than MAX_WALK below the tip.
+    uint64 public bridge;
 
     event EnterRequested(uint256 indexed id, address indexed owner, bool yang, uint128 principal, uint64 epoch);
     event ExitRequested(uint256 indexed id, uint64 epoch);
@@ -151,6 +155,7 @@ contract WujiAccounts is ReentrancyGuard {
         require(asset.balanceOf(address(this)) - before == amount, "short transfer");
         buffer += fee;
         id = nextId++;
+        openAccounts++;
         accounts[id] = Account(msg.sender, yang, e, 0, principal);
         epochs[e].enterIn[yang ? 1 : 0] += principal;
         pendingPrincipal += principal;
@@ -260,7 +265,17 @@ contract WujiAccounts is ReentrancyGuard {
         if (!marked[e]) {
             uint64 last = index.lastHeight();
             if (e > last) return false;
-            mark(e, last);
+            // After a long keeper absence the epoch can lie more than MAX_WALK below the tip. Walk down one
+            // MAX_WALK chunk per call, remembering the lowest point reached, until the epoch is in range.
+            uint64 from = bridge >= e && marked[bridge] ? bridge : last;
+            if (from - e > MAX_WALK) {
+                uint64 mid = from - uint64(MAX_WALK);
+                mark(mid, from);
+                bridge = mid;
+                _payBounty(msg.sender);
+                return false;
+            }
+            mark(e, from);
         }
         _advance(e, sAt[e]);
         _payBounty(msg.sender);
@@ -321,13 +336,13 @@ contract WujiAccounts is ReentrancyGuard {
         return a.exitEpoch != 0 && epochs[a.exitEpoch].processed ? epochs[a.exitEpoch].acc[a.yang ? 1 : 0] : acc[a.yang ? 1 : 0];
     }
 
-    /// @dev Settle the clamps of an account leaving the pool. Loss past the floor is charged to the buffer, then
-    /// recorded as badDebt. Gain past the ceiling was paid in by losers but belongs to no account: it goes to
-    /// the buffer instead of being stranded in the pool forever.
+    /// @dev Loss past the floor is charged to the buffer, then recorded as badDebt. Gain past the ceiling is
+    /// deliberately NOT credited anywhere: it is real money only if the matching loser stayed above its floor,
+    /// and crediting it early let `sweep` send out money that a floored loser never paid (found by the freeze
+    /// invariant suite). It stays in the pool as unaccounted margin, which is what covers such overshoot; once
+    /// every account is closed, `sweep` sends the whole remainder to the treasury.
     function _recordBadDebt(Account storage a) internal {
         int256 v = _raw(a.principal, _endAcc(a) - _entryAcc(a));
-        int256 cap = 2 * int256(uint256(a.principal));
-        if (v > cap) { buffer += uint256(v - cap); return; }
         if (v >= 0) return;
         uint256 debt = uint256(-v);
         uint256 absorbed = debt < buffer ? debt : buffer;
@@ -346,6 +361,13 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice Send buffer above its target to the treasury (FeeRouter → RelayerRewards). Anyone may call.
     function sweep() external nonReentrant returns (uint256 amount) {
+        if (openAccounts == 0) {
+            // Nobody is owed anything: rounding dust and ceiling surplus leave with the buffer.
+            amount = asset.balanceOf(address(this));
+            buffer = 0;
+            if (amount > 0) { asset.safeTransfer(treasury, amount); emit Swept(amount); }
+            return amount;
+        }
         uint256 target = (uint256(principalOf[0]) + principalOf[1] + pendingPrincipal) * BUFFER_BPS / 10_000;
         if (buffer <= target) return 0;
         amount = buffer - target;
@@ -388,9 +410,15 @@ contract WujiAccounts is ReentrancyGuard {
             principalOf[a.yang ? 1 : 0] -= a.principal;
         }
         delete accounts[id];
+        openAccounts--;
         uint256 balance = asset.balanceOf(address(this));
         if (amount > balance) amount = balance; // only reachable if floor overshoot exhausted everything
         asset.safeTransfer(msg.sender, amount);
+        // A winner's value can include a floored loser's unpaid overshoot. Paying it consumes real tokens that
+        // the buffer counted as its own: the buffer has then absorbed that overshoot, so it can never claim
+        // more than the pool actually holds (else bounties and sweep would revert and brick the pool).
+        uint256 left = balance - amount;
+        if (buffer > left) { emit BadDebt(buffer - left, buffer - left); buffer = left; }
         emit Claimed(id, msg.sender, amount);
     }
 
@@ -403,6 +431,7 @@ contract WujiAccounts is ReentrancyGuard {
         _recordBadDebt(a);
         principalOf[a.yang ? 1 : 0] -= a.principal;
         delete accounts[id];
+        openAccounts--;
         emit Retired(id);
         _payBounty(msg.sender);
     }

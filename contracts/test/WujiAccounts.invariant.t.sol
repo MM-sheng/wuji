@@ -180,6 +180,11 @@ contract WujiAccountsInvariantTest is Test {
         assertGe(token.balanceOf(address(pool)) + pool.badDebt() + unretired, owed + pool.buffer());
     }
 
+    /// The buffer only ever counts tokens the pool really holds.
+    function invariant_bufferBacked() public view {
+        assertLe(pool.buffer(), token.balanceOf(address(pool)));
+    }
+
     /// Principal bookkeeping matches the accounts exactly.
     function invariant_principalBooks() public view {
         uint256 pending; uint256[2] memory live;
