@@ -2,14 +2,16 @@
 
 ## Current checkpoint — 2026-09-27, handoff `65ef8ad`
 
-**Task C attempted today; no new Sepolia receipt yet. Task A on v4 is incomplete and awaiting a human wallet action. This is a progress report, not a completed round-trip acceptance.** The September 26 v3 results below are historical. Claude closed the old v3 accounts in `b29df9a`; do not resume or transact on those accounts.
+**Task C's September 27 collection passed: 0.05 Sepolia ETH received; verified balance 0.100184441800254118 ETH, still below the 0.15 ETH target. Task A on v4 is incomplete and awaiting a human wallet action. This is a progress report, not a completed round-trip acceptance.** The September 26 v3 results below are historical. Claude closed the old v3 accounts in `b29df9a`; do not resume or transact on those accounts.
 
 ### C — today's faucet attempt
 
 - Google Cloud Web3 faucet rejected today's request under its daily limit. The page gives the next eligible time as **2026-09-27 17:16:50 Asia/Shanghai**.
 - Tried one alternative, Alchemy's Ethereum Sepolia faucet. It presented human verification and also requires at least **0.001 mainnet ETH**. The recipient's mainnet balance was **0**, so the alternative is not eligible. No real funds were paid or bridged; the CAPTCHA handoff was withdrawn once this requirement was confirmed.
-- Sepolia balance remained **0.050184441800254118 ETH**. No new transaction hash exists for either attempt; the 0.15 ETH target has **not** been reached.
-- A one-shot thread follow-up (`wuji-sepolia`) is scheduled for **today 17:20 Asia/Shanghai** to retry Google, verify any receipt, and append it here. A scheduled attempt is not a received grant.
+- After the morning attempts, Sepolia balance remained **0.050184441800254118 ETH**; neither morning attempt produced a receipt.
+- The one-shot thread follow-up (`wuji-sepolia`) ran after **17:20 Asia/Shanghai** and successfully claimed **0.05 Sepolia ETH** through the existing Google session. No CAPTCHA, new login or terms acceptance was presented. Google displayed `Transaction complete! Check your wallet address`.
+- [September 27 receipt](https://sepolia.etherscan.io/tx/0x8fd7eef20f6b7da267518b6a437861008df00b63d02f1a32916514cc11db0b55): status `0x1`, Sepolia chain ID `11155111`, recipient `0x85967858e2464535A12031103ABA38f2795Fe8Fd`, value **50000000000000000 wei**. Public Sepolia RPC verified the transaction and receipt. Balance at observation block `0xb3f016` was **0.100184441800254118 ETH**. The **0.15 ETH target has not been reached**.
+- Full transaction, raw receipt and balance observation: [t11-sepolia-fuel-2026-09-27.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-27.json). No outgoing transfer, deployment or Task A wallet signature was performed during this follow-up. Today's claim is complete; do not submit another September 27 claim.
 
 ### A — v4 browser verification so far
 
@@ -43,7 +45,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 2. Recheck account, chain and pool; submit fresh 阳 1 and 阴 1 through the terminal with human MetaMask confirmation. Record approval and entry receipts and derive the account IDs from those receipts. Do not reuse or assume v3 #3/#4, or attribute Claude's existing v4 smoke-test accounts to this run.
 3. Verify `尚未定价`, premature-claim rejection, and actual entry pricing. Then request exits, check duplicate-exit rejection, await exit pricing, claim, and compare the actual MockWBNB transfers against `value - floor(value × 30 / 10000)` for both positions.
 4. Complete wrong-network and mid-flow network-switch checks, export screenshots, and only then mark the five UI fixes and full round trip passed. Preserve any observed failures.
-5. At today's faucet follow-up, check this log before retrying. Append an amount and hash only after a successful receipt; leave Sepolia funds for Claude.
+5. Today's faucet follow-up is complete. Check this log before any future daily collection to avoid duplicates; leave Sepolia funds for Claude.
 
 ## Sepolia fuel log
 
@@ -51,6 +53,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 |---|---|---|---|---|
 | 2026-09-26 | Google Cloud Web3 | 0.05 ETH | `0x53bd87d02c1cba2ecedfd1d8858a03fa97e09190fe81578709c50b0c91330d67` | 0.050184441800254118 ETH |
 | 2026-09-27, morning attempt | Google daily limit; Alchemy ineligible | 0 ETH (attempt only) | None | 0.050184441800254118 ETH |
+| 2026-09-27, after 17:20 | Google Cloud Web3 | 0.05 ETH | `0x8fd7eef20f6b7da267518b6a437861008df00b63d02f1a32916514cc11db0b55` | 0.100184441800254118 ETH |
 
 ## Historical report — 2026-09-26, v3
 
