@@ -84,3 +84,10 @@ unless told to stop.
   and append one line to `docs/tasks/T11_WALLET_TEST_REPORT.md` → "Sepolia fuel log":
   `date · faucet · amount · tx hash · balance after`. Commit the log.
 - When the balance first reaches 0.15 ETH, say so clearly in your report so Claude can deploy.
+
+### Task C, round 2 (2026-09-28)
+
+The first 0.15 ETH arrived, thank you. Catching the relay up turned out to need ≈0.12 ETH by itself (≈850
+headers, not the 620 estimated), so the Sepolia keeper is spending it now. **New target: another 0.15 Sepolia
+ETH to the same deployer address** `0x85967858e2464535A12031103ABA38f2795Fe8Fd` (≈0.06 there now), then keep
+collecting ≈0.05/day for upkeep (≈0.02 ETH/day at 1.6 gwei). Same rules and fuel log as above.
