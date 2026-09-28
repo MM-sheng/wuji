@@ -17,9 +17,10 @@ public deployment for a year.
 
 Ethereum applications that need Bitcoin facts (a block exists, a header has N confirmations, a value
 derived from Bitcoin's proof-of-work) mostly rely on multisig bridges or oracle committees. Trust-minimized
-alternatives exist in pieces, but verifying Bitcoin headers directly in the EVM costs ≈90k gas per header,
-≈144 headers a day. At Ethereum L1 prices that is thousands of dollars a month, so few such relays are kept
-running and public.
+Solidity relays exist and some run in production, but each verifies headers one by one at ≈90k gas per
+header, ≈144 headers a day: thousands of dollars a month at L1 prices, paid by whichever application embeds
+the relay. Proving the header chain itself in zero knowledge, so that any batch costs one fixed
+verification, has so far stayed at proof-of-concept stage.
 
 ## What exists today
 
@@ -54,6 +55,23 @@ priced at Bitcoin heights that were not yet mined when requested, verified end t
 
 **Tests.** 163 Solidity test functions including stateful invariant suites; 150 JavaScript tests; Rust
 tests with journal-fixture regeneration in CI.
+
+## How this differs from existing work
+
+Full survey with sources: `docs/RELATED_WORK.md`. In short:
+
+- **Permissionless full-rule Solidity relays already exist** (for example Tacit's relay on Ethereum mainnet
+  since September 2026; tBTC's LightRelay in production, with an owner). Ours is comparable on that front
+  and we do not claim otherwise.
+- **The header chain itself proven in ZK, with the Solidity rules as escape hatch.** Existing SP1 use proves
+  application state while headers still pay per-header gas; earlier SNARK header relays were proofs of
+  concept. Our Rust core is differential-tested against the Solidity and JavaScript implementations.
+- **No administration from deployment:** genesis is a public constructor checkpoint; no owner, authorised
+  submitter list or parameter setter.
+- **A defined deep-reorg answer:** observe on chain, wait 144 heights, freeze consumers at the last
+  consistent state.
+- **Standalone and reusable,** not embedded in one application, plus a derived public index no other
+  project publishes.
 
 ## What the grant funds
 
