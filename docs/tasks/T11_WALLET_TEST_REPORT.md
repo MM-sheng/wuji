@@ -1,5 +1,13 @@
 # T11 wallet test — in progress
 
+## Task C checkpoint — 2026-09-28
+
+Today's scheduled attempt was **blocked before submission**: connecting to the existing Google faucet tab failed twice because the browser request-header policy could not be loaded. No claim was submitted, no alternative browser surface was used, and there is no new transaction hash. This is a browser-tool failure, not a faucet rejection or a confirmed cooldown.
+
+Read-only Sepolia RPC verification at block `0xb40c1e` found **0.100184441800254118 ETH**, still below **0.15 ETH**. Today's collection remains incomplete. Resume with the existing Google session once browser access recovers, or let the human submit the faucet form for the designated recipient; verify any resulting hash before recording a receipt. No funds were transferred out, no contracts were deployed, and Task A wallet signatures were untouched.
+
+Attempt and balance evidence: [t11-sepolia-fuel-2026-09-28.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-28.json).
+
 ## Current checkpoint — 2026-09-27, handoff `65ef8ad`
 
 **Task C's September 27 collection passed: 0.05 Sepolia ETH received; verified balance 0.100184441800254118 ETH, still below the 0.15 ETH target. Task A on v4 is incomplete and awaiting a human wallet action. This is a progress report, not a completed round-trip acceptance.** The September 26 v3 results below are historical. Claude closed the old v3 accounts in `b29df9a`; do not resume or transact on those accounts.
@@ -54,6 +62,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-26 | Google Cloud Web3 | 0.05 ETH | `0x53bd87d02c1cba2ecedfd1d8858a03fa97e09190fe81578709c50b0c91330d67` | 0.050184441800254118 ETH |
 | 2026-09-27, morning attempt | Google daily limit; Alchemy ineligible | 0 ETH (attempt only) | None | 0.050184441800254118 ETH |
 | 2026-09-27, after 17:20 | Google Cloud Web3 | 0.05 ETH | `0x8fd7eef20f6b7da267518b6a437861008df00b63d02f1a32916514cc11db0b55` | 0.100184441800254118 ETH |
+| 2026-09-28, 17:21 observation | Google page inaccessible to browser tool; claim not submitted | 0 ETH received by this attempt | None | 0.100184441800254118 ETH |
 
 ## Historical report — 2026-09-26, v3
 

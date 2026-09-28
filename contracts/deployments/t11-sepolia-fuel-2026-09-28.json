@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-28",
+  "observedAt": "2026-09-28T09:21:35.904Z",
+  "faucet": "Google Cloud Web3",
+  "recipient": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "status": "blocked-before-submission",
+  "browserError": "Unable to load browser request-header policy. Retry the browser command.",
+  "browserAttempts": 2,
+  "claimSubmitted": false,
+  "transactionHash": null,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": "0xaa36a7",
+  "balanceObservedAtBlock": "0xb40c1e",
+  "balanceWei": "100184441800254118",
+  "targetReached": false
+}
