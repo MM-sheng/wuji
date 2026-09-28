@@ -2,11 +2,13 @@
 
 ## Task C checkpoint — 2026-09-28
 
-Today's scheduled attempt was **blocked before submission**: connecting to the existing Google faucet tab failed twice because the browser request-header policy could not be loaded. No claim was submitted, no alternative browser surface was used, and there is no new transaction hash. This is a browser-tool failure, not a faucet rejection or a confirmed cooldown.
+**September 28 collection passed on the user-requested retry. The deployer balance first reached the 0.15 ETH target: 0.150184441800254118 Sepolia ETH.** Funds remain at the designated address for Claude's deployment work; this does not mark Task A or any deployment complete.
 
-Read-only Sepolia RPC verification at block `0xb40c1e` found **0.100184441800254118 ETH**, still below **0.15 ETH**. Today's collection remains incomplete. Resume with the existing Google session once browser access recovers, or let the human submit the faucet form for the designated recipient; verify any resulting hash before recording a receipt. No funds were transferred out, no contracts were deployed, and Task A wallet signatures were untouched.
+The scheduled attempt at approximately 17:21 was blocked before submission: the browser request-header policy failed to load twice. At that point block `0xb40c1e` showed 0.100184441800254118 ETH. Those failed connection attempts did not submit a faucet claim.
 
-Attempt and balance evidence: [t11-sepolia-fuel-2026-09-28.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-28.json).
+The user-requested retry at approximately **17:30 Asia/Shanghai** recovered through the normal browser connection and existing Google login. The faucet displayed `Transaction complete! Check your wallet address`; no CAPTCHA, new login or terms acceptance was presented. [Transaction](https://sepolia.etherscan.io/tx/0xb7eb7bfb0e7befd0f80d3c2260c4cedaa8a0b069627936e38c4b5f6edbd8804d) has receipt status `0x1`, Sepolia chain ID `11155111`, recipient `0x85967858e2464535A12031103ABA38f2795Fe8Fd`, and value **50000000000000000 wei (0.05 ETH)**. The public Sepolia RPC verified the transaction and balance **150184441800254118 wei** at block `0xb40c4a`.
+
+Today's claim is complete; do not submit another September 28 claim. No funds were transferred out, no contracts were deployed, and Task A wallet signatures were untouched. Raw transaction, receipt, current balance and preserved failed-attempt history: [t11-sepolia-fuel-2026-09-28.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-28.json).
 
 ## Current checkpoint — 2026-09-27, handoff `65ef8ad`
 
@@ -63,6 +65,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-27, morning attempt | Google daily limit; Alchemy ineligible | 0 ETH (attempt only) | None | 0.050184441800254118 ETH |
 | 2026-09-27, after 17:20 | Google Cloud Web3 | 0.05 ETH | `0x8fd7eef20f6b7da267518b6a437861008df00b63d02f1a32916514cc11db0b55` | 0.100184441800254118 ETH |
 | 2026-09-28, 17:21 observation | Google page inaccessible to browser tool; claim not submitted | 0 ETH received by this attempt | None | 0.100184441800254118 ETH |
+| 2026-09-28, approximately 17:30 retry | Google Cloud Web3 | 0.05 ETH | `0xb7eb7bfb0e7befd0f80d3c2260c4cedaa8a0b069627936e38c4b5f6edbd8804d` | **0.150184441800254118 ETH — first verified target attainment** |
 
 ## Historical report — 2026-09-26, v3
 
