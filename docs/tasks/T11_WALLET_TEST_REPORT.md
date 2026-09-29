@@ -1,14 +1,16 @@
 # T11 wallet test — in progress
 
-## Task C checkpoint — 2026-09-29, before cooldown
+## Task C checkpoint — 2026-09-29, collection complete
 
-Google rejected the approximately 17:21 request under its daily limit and explicitly returned **2026-09-29 17:30:01 Asia/Shanghai** as the next eligible time. No new receipt exists. The existing `wuji-sepolia` follow-up was moved to **17:35** and its stale prompt updated to use the latest claim/cooldown and the second-round funding requirement. This scheduling change is not an incoming transfer.
+**Today's 0.05 Sepolia ETH was received after the 17:35 retry. Second-round confirmed receipts now total 0.05 / 0.15 ETH; another 0.10 ETH is still needed for that collection target.** The current wallet balance is a separate measurement and may decrease as Claude funds the keeper.
 
-Sepolia RPC at block `0xb42807` shows **0.003111176757578118 ETH**. The original 0.15 ETH target was reached on September 28; the updated handoff asks for **another 0.15 ETH**, followed by ongoing upkeep. No additional confirmed faucet receipt after the September 28 receipt has been recorded here yet.
+Google rejected the earlier approximately 17:21 request under its daily limit and explicitly returned **2026-09-29 17:30:01 Asia/Shanghai** as the next eligible time. The existing `wuji-sepolia` follow-up was moved to **17:35**. At that earlier checkpoint, block `0xb42807` showed 0.003111176757578118 ETH. The original 0.15 ETH target had already been reached on September 28 and is not counted again toward the additional funding target.
+
+The post-cooldown retry used the existing Google session; no CAPTCHA, new login or terms acceptance was presented. Google displayed `Transaction complete! Check your wallet address`. [Transaction](https://sepolia.etherscan.io/tx/0x050c598710f8a316c10ed888ec1dde478d5b30ae7074301ae26645f6dd0eed9d) was verified through the public Sepolia RPC: chain ID `11155111`, receipt status `0x1`, recipient `0x85967858e2464535A12031103ABA38f2795Fe8Fd`, value **50000000000000000 wei**. Balance at observation block `0xb42848` was **0.053111176757578118 ETH**.
 
 Previously tested alternatives remain unavailable under the current conditions: Alchemy and QuickNode require mainnet funds, Chainlink requires 1 mainnet LINK (the user confirmed they have none), PoW rejects the current hosting IP, and the logged-in ETHGlobal account was ineligible for both Hacker and Supporter Packs. These were not retried. No outgoing transaction, deployment or Task A signature was performed.
 
-Attempt and balance evidence: [t11-sepolia-fuel-2026-09-29.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-29.json). At the 17:35 follow-up, first check this log for a new receipt and then retry Google if still needed.
+Raw transaction, receipt, balance and preserved earlier cooldown response: [t11-sepolia-fuel-2026-09-29.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-29.json). Today's collection is complete; do not submit another September 29 claim. Future daily attempts must respect the latest claim time and the faucet's actual cooldown.
 
 ## Task C checkpoint — 2026-09-28
 
@@ -77,6 +79,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-28, 17:21 observation | Google page inaccessible to browser tool; claim not submitted | 0 ETH received by this attempt | None | 0.100184441800254118 ETH |
 | 2026-09-28, approximately 17:30 retry | Google Cloud Web3 | 0.05 ETH | `0xb7eb7bfb0e7befd0f80d3c2260c4cedaa8a0b069627936e38c4b5f6edbd8804d` | **0.150184441800254118 ETH — first verified target attainment** |
 | 2026-09-29, approximately 17:21 attempt | Google daily limit; eligible after 17:30:01 | 0 ETH (attempt only) | None | 0.003111176757578118 ETH |
+| 2026-09-29, after 17:35 | Google Cloud Web3 | 0.05 ETH | `0x050c598710f8a316c10ed888ec1dde478d5b30ae7074301ae26645f6dd0eed9d` | 0.053111176757578118 ETH; round 2 receipts 0.05 / 0.15 ETH |
 
 ## Historical report — 2026-09-26, v3
 
