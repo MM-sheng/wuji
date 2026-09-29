@@ -9,9 +9,10 @@ We are building open, owner-less infrastructure that lets Ethereum contracts kno
 without trusting anyone: a Solidity Bitcoin header relay that enforces the full consensus header rules, a
 zero-knowledge light client (SP1) that proves a whole batch of headers for a fixed on-chain cost, and a
 public index derived from Bitcoin block hashes that any contract can read and anyone can recompute. The
-relay and index run today on two testnets; the ZK path generates and verifies proofs locally. We ask for
-funding to finish the on-chain ZK verifier, pay for an independent security review, and operate the
-public deployment for a year.
+relay and index run today on two testnets, and a Groth16 proof of 100 real mainnet headers already verifies
+on chain against SP1's own verifier contract for 453,888 gas, against 7,956,964 gas for the same headers
+checked one by one. We ask for funding to automate proving in the keeper, deploy the ZK path publicly, pay
+for an independent security review, and operate the public deployment for a year.
 
 ## The problem
 
@@ -33,9 +34,12 @@ timestamp vectors derived from Bitcoin Core. Measured cost ≈87–90k gas per h
 **Zero-knowledge light client (SP1).** The same rules as a plain Rust crate (`wuji-header-core`, no zkVM
 dependency), wrapped as an SP1 guest. The Rust crate, the Solidity relay and a JavaScript implementation
 produce identical results over the real-header fixtures. Measured on a laptop (14-core, 64 GB):
-≈27.5k RISC-V cycles per header, a compressed proof of 100 headers in 44.4 s, verified locally. The
-on-chain contract folds 256 heights for ≈86k gas plus the verifier. The Solidity header path stays
-deployed as a permissionless escape hatch, so liveness never depends on a prover.
+≈27.5k RISC-V cycles per header; a Groth16 proof of 100 real headers in 217 s (31 GB peak memory),
+verified on chain by SP1's unmodified v6.1.0 verifier: **453,888 gas for the whole batch** (357,037 of it
+the verifier) versus 7,956,964 gas on the per-header path, with identical resulting state. Tampered
+journals, tampered proofs and a wrong program key are rejected. The cost is flat in batch size. The
+Solidity header path stays deployed as a permissionless escape hatch, so liveness never depends on a
+prover.
 
 **Public proof-of-work index.** For every Bitcoin block six confirmations deep, `R = SHA256(block hash)`
 and the index moves by `byteSum(R) − 4080`. Anyone can recompute it from Bitcoin alone; the contract, an
@@ -77,12 +81,12 @@ Full survey with sources: `docs/RELATED_WORK.md`. In short:
 
 | # | Deliverable | Acceptance | Estimate |
 |---|---|---|---|
-| 1 | Groth16 wrap of the SP1 proof and the on-chain verifier path, measured on Sepolia | A proof of ≥100 real headers accepted by `ZkWujiIndex.foldProof` on Sepolia; gas figure published | [USD 3,000–6,000] engineering + proving hardware |
+| 1 | Public ZK deployment: `ZkWujiIndex` with SP1's Groth16 verifier on Sepolia, then mainnet after review | Real-header proofs accepted on Sepolia; gas published per batch | [USD 2,000–4,000] engineering + proving hardware |
 | 2 | Keeper proving pipeline | Keeper proves and submits batches, falls back to raw headers when no prover is available; 30 days on Sepolia without manual action | [USD 4,000–8,000] |
 | 3 | Independent security review of relay, index, ZK index, SP1 guest and the reference application | Public report; every finding fixed or answered in writing | [USD 20,000–45,000, pending quotes] |
 | 4 | Twelve months of public operation | Two independent keepers, public dashboard, monthly status notes | [USD 3,000–6,000] gas and servers |
 | 5 | Documentation for integrators | Guide and example contract that reads the relay and the index | [USD 2,000–4,000] |
-| | **Total** | | **[USD 32,000–69,000]** |
+| | **Total** | | **[USD 31,000–67,000]** |
 
 Milestones: 1 → 2 in the first two months; 3 after 1–2 are frozen; 4 and 5 run throughout.
 
@@ -101,7 +105,8 @@ Milestones: 1 → 2 in the first two months; 3 after 1–2 are frozen; 4 and 5 r
 
 - **Not audited yet.** Our own reviews found and fixed defects, three of which could have frozen funds;
   that is exactly why item 3 is in this proposal.
-- **Groth16 is not done.** It needs ≈15 GB of proving artifacts; the compressed proof works today.
+- **The ZK path is proven locally and on a local chain, not yet on a public network.** Proving needs a
+  machine with ≈32 GB of memory.
 - **Header-only verification.** It proves Bitcoin headers and work, not transactions or global visibility.
 - **The ZK path adds trust in SP1** and its on-chain verifier; the raw-header path remains available.
 - [Single maintainer; applicant to describe team and continuity plan.]

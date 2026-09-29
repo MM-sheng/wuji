@@ -237,7 +237,14 @@ The v3 comparison keeper is currently stopped for insufficient test fuel; its re
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.
 - Then: independent audit of the exact release commit; bug bounty; `docs/MAINNET_CHECKLIST.md` fully ticked.
 
-## T10 · ZK relay — in progress (Claude, 2026-09-23/24)
+## T10 · ZK relay — Groth16 verified on chain (2026-09-29); keeper automation and public deployment remain
+
+A real Groth16 proof of 100 mainnet headers verifies against SP1's unmodified v6.1.0 verifier: 453,888 gas
+for the batch vs 7,956,964 on the header path (`contracts/test/ZkWujiGroth16.t.sol`, details in
+T10_DESIGN.md). Remaining: keeper proves and submits batches (falls back to headers); deploy on Sepolia with
+the real verifier; best-height source for T11 pools on a ZK index.
+
+### History
 
 Design: [T10_DESIGN.md](T10_DESIGN.md). The decision that shapes it: the guest proves **the index
 increment**, not only chain validity, so `submit` and `fold` collapse into one call whose cost does not

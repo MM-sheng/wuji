@@ -93,14 +93,21 @@ Proven here, with numbers in `docs/tasks/NEXT.md`:
 - Rust's `abi_encode` and Solidity's `abi.decode` agree on the journal, checked with real bytes;
 - `ZkWujiIndex` reaches the same state through a proof journal as through raw headers.
 
-**Not proven here: the Groth16 wrap.** SP1 downloads a 6.2 GB circuit-artifact tarball for it
-(`sp1-circuits.s3-us-east-2.amazonaws.com/v6.1.0-groth16.tar.gz`), needs roughly that much again to
-extract, and its installer deletes the staging directory on any interruption. This machine had 6.3 GB
-free, so the download cannot complete, and two attempts failed at 140–225 MB with `artifact not found`.
-Nothing about it is blocked in principle: Groth16 changes only the wrapper around the same execution the
-compressed proof already verifies, and the verifier's on-chain cost is a published SP1 constant. It has
-to be run somewhere with ~15 GB free and a stable connection before any deployment claims a real
-verifier gas figure.
+**The Groth16 wrap, proven 2026-09-29.** A Groth16 proof of the same 100 real mainnet headers was generated
+on this machine (217 s total, of which 18 s for the Groth16 step; 31 GB peak memory; SP1 6.8.0 with
+`native-gnark`, circuit artifacts v6.1.0) and verified **on chain by SP1's own v6.1.0 verifier contract**
+(`contracts/src/vendor/sp1`, copied unmodified). `test/ZkWujiGroth16.t.sol`:
+
+| path | gas to advance 100 headers |
+|---|---:|
+| `foldHeaders` (Solidity rules, per header) | 7,956,964 |
+| `foldProof` with a real Groth16 proof | 453,888 |
+| of which `SP1Verifier.verifyProof` | 357,037 |
+
+The proof path reaches the same height, hash, S and work as the header path. A tampered journal, a tampered
+proof and a wrong program key are each rejected. The proof cost is flat in the batch size, so a day (144
+headers) or a month (4,320) costs about the same ≈450k gas. Not yet done: keeper automation of proving and
+submission, and a public-testnet deployment with the real verifier.
 
 ## Build order
 
