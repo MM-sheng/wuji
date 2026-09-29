@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-29",
+  "observedAt": "2026-09-29T09:22:13.521Z",
+  "faucet": "Google Cloud Web3",
+  "recipient": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "status": "rate-limited",
+  "requestSubmitted": true,
+  "receivedAmountWei": "0",
+  "transactionHash": null,
+  "eligibleAfterLocal": "2026-09-29T17:30:01+08:00",
+  "retryScheduledLocal": "2026-09-29T17:35:00+08:00",
+  "automationId": "wuji-sepolia",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "message": "Each Google Account and wallet address gets one drip on Sepolia every 1 day. Try again after Sep 29, 2026, 5:30:01 PM.",
+  "chainId": "0xaa36a7",
+  "balanceObservedAtBlock": "0xb42807",
+  "balanceWei": "3111176757578118"
+}

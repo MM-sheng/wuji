@@ -1,5 +1,15 @@
 # T11 wallet test — in progress
 
+## Task C checkpoint — 2026-09-29, before cooldown
+
+Google rejected the approximately 17:21 request under its daily limit and explicitly returned **2026-09-29 17:30:01 Asia/Shanghai** as the next eligible time. No new receipt exists. The existing `wuji-sepolia` follow-up was moved to **17:35** and its stale prompt updated to use the latest claim/cooldown and the second-round funding requirement. This scheduling change is not an incoming transfer.
+
+Sepolia RPC at block `0xb42807` shows **0.003111176757578118 ETH**. The original 0.15 ETH target was reached on September 28; the updated handoff asks for **another 0.15 ETH**, followed by ongoing upkeep. No additional confirmed faucet receipt after the September 28 receipt has been recorded here yet.
+
+Previously tested alternatives remain unavailable under the current conditions: Alchemy and QuickNode require mainnet funds, Chainlink requires 1 mainnet LINK (the user confirmed they have none), PoW rejects the current hosting IP, and the logged-in ETHGlobal account was ineligible for both Hacker and Supporter Packs. These were not retried. No outgoing transaction, deployment or Task A signature was performed.
+
+Attempt and balance evidence: [t11-sepolia-fuel-2026-09-29.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-29.json). At the 17:35 follow-up, first check this log for a new receipt and then retry Google if still needed.
+
 ## Task C checkpoint — 2026-09-28
 
 **September 28 collection passed on the user-requested retry. The deployer balance first reached the 0.15 ETH target: 0.150184441800254118 Sepolia ETH.** Funds remain at the designated address for Claude's deployment work; this does not mark Task A or any deployment complete.
@@ -66,6 +76,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-27, after 17:20 | Google Cloud Web3 | 0.05 ETH | `0x8fd7eef20f6b7da267518b6a437861008df00b63d02f1a32916514cc11db0b55` | 0.100184441800254118 ETH |
 | 2026-09-28, 17:21 observation | Google page inaccessible to browser tool; claim not submitted | 0 ETH received by this attempt | None | 0.100184441800254118 ETH |
 | 2026-09-28, approximately 17:30 retry | Google Cloud Web3 | 0.05 ETH | `0xb7eb7bfb0e7befd0f80d3c2260c4cedaa8a0b069627936e38c4b5f6edbd8804d` | **0.150184441800254118 ETH — first verified target attainment** |
+| 2026-09-29, approximately 17:21 attempt | Google daily limit; eligible after 17:30:01 | 0 ETH (attempt only) | None | 0.003111176757578118 ETH |
 
 ## Historical report — 2026-09-26, v3
 
