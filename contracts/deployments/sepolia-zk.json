@@ -1,0 +1,27 @@
+{
+  "version": "t10-zk-sepolia-v1",
+  "chainId": 11155111,
+  "deployedAt": "2026-09-29",
+  "SP1Verifier": "0x3de0B34c4516AF875b8619Ca893dF9Be44C4ca6a",
+  "SP1VerifierVersion": "v6.1.0 (succinctlabs/sp1-contracts, unmodified; contracts/src/vendor/sp1)",
+  "ZkWujiIndex": "0x38192BF0275DB4E1e1dD4cC3d7489C0890B49Cc9",
+  "programVKey": "0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8",
+  "anchor": "contracts/deployments/sepolia-zk-anchor.json",
+  "anchorHeight": 969131,
+  "genesisHeight": 969132,
+  "checkpointInterval": 4320,
+  "rewards": "none (address(0)); maintained by the project keeper 0x2302992F8ef33a3561bf26E19994Cf12E76F53E4",
+  "keeper": "indexer/zk-keeper.mjs, BITCOIN_SOURCE=p2p, batches 42..1008 headers",
+  "transactions": [
+    {
+      "contract": "SP1Verifier",
+      "address": "0x3de0b34c4516af875b8619ca893df9be44c4ca6a",
+      "hash": "0x7c755fdab86512480da2c69a0edfdc0b41ce3e25d6ee842c5581385c3706f129"
+    },
+    {
+      "contract": "ZkWujiIndex",
+      "address": "0x38192bf0275db4e1e1dd4cc3d7489c0890b49cc9",
+      "hash": "0x6998018ba49ad75d2026cf69f1fa76508b712baf5df42f762676e9f943b6d3ab"
+    }
+  ]
+}

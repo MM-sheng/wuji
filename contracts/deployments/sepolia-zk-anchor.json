@@ -1,0 +1,27 @@
+{
+ "tip": 969161,
+ "anchorHeight": 969131,
+ "anchorHeader": "0x00c0c226e49049fbedf966942e9f74e1eaaff3bf34a21fa059940100000000000000000099721a8f1bdeff3b77c68ae90d798557286529d770f925adfc3a83dae8f61734e47fbb6ac51e02175bb1bdbf",
+ "anchorHash": "00000000000000000001772431ae0fb6be36fdf0dad17ace449044fc31a39c56",
+ "epochFirst": 967680,
+ "epochStart": 1789801745,
+ "ancestorTimes": [
+  1790668517,
+  1790668677,
+  1790669794,
+  1790669801,
+  1790669804,
+  1790669882,
+  1790670667,
+  1790671028,
+  1790671250,
+  1790672201,
+  1790672868
+ ],
+ "genesisHeight": 969132,
+ "sources": [
+  "mempool.space (indexer BitcoinAPI) for all fields",
+  "blockstream.info cross-check of anchor hash and epoch-start timestamp"
+ ],
+ "fetchedAt": "2026-09-29"
+}
