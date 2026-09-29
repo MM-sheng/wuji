@@ -3,6 +3,8 @@
 //!   cargo run --release -- execute            # run the guest, print the journal, no proof
 //!   cargo run --release -- prove              # generate a proof and report timing
 //!   cargo run --release -- journal --out FILE # write the ABI-encoded journal for the Solidity test
+//!   cargo run --release -- prove-input --input IN.json --out OUT.json [--mode groth16|execute]
+//!                                             # live keeper path: prove a batch from on-chain state
 //!
 //! Inputs default to the committed mainnet fixtures so the numbers are comparable with the
 //! Solidity and JS tests.
@@ -46,6 +48,16 @@ enum Command {
     Journal {
         #[arg(long)]
         out: String,
+    },
+    /// Prove one batch described by a JSON file (written by indexer/zk-keeper.mjs from the contract's
+    /// `continuity()` and fresh Bitcoin headers). `execute` checks the batch without proving.
+    ProveInput {
+        #[arg(long)]
+        input: String,
+        #[arg(long)]
+        out: String,
+        #[arg(long, default_value = "groth16")]
+        mode: String,
     },
 }
 
@@ -97,6 +109,46 @@ fn fixture_inputs(count: usize) -> Inputs {
         genesis_height: meta["start"].as_u64().unwrap(),
         checkpoint_interval: 4320,
         confirmations: 6,
+    }
+}
+
+fn unhex(s: &str) -> Vec<u8> {
+    let t = s.trim().trim_start_matches("0x");
+    assert!(t.len() % 2 == 0, "odd hex length");
+    (0..t.len() / 2).map(|i| u8::from_str_radix(&t[i * 2..i * 2 + 2], 16).expect("hex")).collect()
+}
+fn bytes32(s: &str) -> [u8; 32] {
+    unhex(s).try_into().expect("32 bytes")
+}
+
+/// Live inputs. Every field comes from the contract (`continuity()`, immutables) except `headers`
+/// and `maxTime`; hashes are in raw sha256d digest order, as stored on chain.
+fn json_inputs(path: &str) -> Inputs {
+    let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path).expect("input file")).expect("json");
+    let st = &v["start"];
+    let num = |x: &serde_json::Value| -> u64 {
+        x.as_u64().or_else(|| x.as_str().and_then(|s| s.parse().ok())).expect("number")
+    };
+    let mut recent_times = [0u32; 11];
+    for (i, slot) in recent_times.iter_mut().enumerate() {
+        *slot = num(&st["recentTimes"][i]) as u32;
+    }
+    Inputs {
+        start: ChainState {
+            hash: bytes32(st["hash"].as_str().expect("hash")),
+            height: num(&st["height"]),
+            work: U256::from_be_bytes(&bytes32(st["work"].as_str().expect("work as 0x-hex bytes32"))),
+            bits: num(&st["bits"]) as u32,
+            time: num(&st["time"]) as u32,
+            epoch_start: num(&st["epochStart"]) as u32,
+            recent_times,
+            u: st["u"].as_i64().or_else(|| st["u"].as_str().and_then(|s| s.parse().ok())).expect("u"),
+        },
+        headers: unhex(v["headers"].as_str().expect("headers")),
+        max_time: num(&v["maxTime"]) as u32,
+        genesis_height: num(&v["genesisHeight"]),
+        checkpoint_interval: num(&v["checkpointInterval"]),
+        confirmations: num(&v["confirmations"]),
     }
 }
 
@@ -157,10 +209,43 @@ fn expected_journal(i: &Inputs) -> Journal {
 
 fn main() {
     let cli = Cli::parse();
+    if let Command::ProveInput { input, out, mode } = &cli.command {
+        let inputs = json_inputs(input);
+        // Validate with the same crate first: a bad batch fails here in milliseconds, not after minutes of proving.
+        let expected = expected_journal(&inputs);
+        let journal = expected.abi_encode();
+        let started = Instant::now();
+        let (proof_hex, vkey) = if mode == "execute" {
+            (String::new(), String::new())
+        } else {
+            assert_eq!(mode, "groth16", "live proofs are groth16");
+            let client = ProverClient::from_env();
+            let pk = client.setup(ELF).expect("setup");
+            let vk = pk.verifying_key();
+            let proof = client.prove(&pk, stdin_for(&inputs)).groth16().run().expect("prove");
+            assert_eq!(proof.public_values.as_slice(), journal.as_slice(), "proof journal must equal the host's");
+            client.verify(&proof, vk, None).expect("proof must verify");
+            (format!("0x{}", hex(&proof.bytes())), vk.bytes32())
+        };
+        let result = serde_json::json!({
+            "mode": mode,
+            "proof": proof_hex,
+            "journal": format!("0x{}", hex(&journal)),
+            "vkey": vkey,
+            "prevHeight": expected.prevHeight,
+            "newHeight": expected.newHeight,
+            "headers": inputs.headers.len() / 80,
+            "seconds": started.elapsed().as_secs_f64(),
+        });
+        std::fs::write(out, serde_json::to_string_pretty(&result).unwrap()).expect("write out");
+        println!("{}", result);
+        return;
+    }
     let inputs = fixture_inputs(cli.headers);
     let expected = expected_journal(&inputs);
 
     match cli.command {
+        Command::ProveInput { .. } => unreachable!(),
         Command::Journal { out } => {
             std::fs::write(&out, format!("0x{}", hex(&expected.abi_encode()))).unwrap();
             println!("journal written to {out} ({} headers)", cli.headers);
