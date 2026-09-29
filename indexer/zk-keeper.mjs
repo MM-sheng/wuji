@@ -27,6 +27,11 @@ const MIN_BATCH = Number(env.ZK_MIN_BATCH || 42);          // 36 folded heights 
 const MAX_BATCH = Number(env.ZK_MAX_BATCH || 1008);        // ≈ 1 week; proving time and memory grow linearly
 const MAX_WAIT_MIN = Number(env.ZK_MAX_WAIT_MIN || 720);   // prove a smaller batch rather than let the tip age
 const INTERVAL = Number(env.INTERVAL || 120);
+// Bitcoin source calls get a deadline: on 2026-09-29 one P2P request never settled and the keeper sat
+// silently for eight hours with the process still alive. Proving has its own (longer) timeout.
+const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
+const within = (promise, what) => Promise.race([promise,
+  new Promise((_, reject) => setTimeout(() => reject(Error(`${what} timed out after ${SOURCE_TIMEOUT_MS / 1000} s`)), SOURCE_TIMEOUT_MS).unref())]);
 const FALLBACK = env.ZK_FALLBACK !== '0';
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const CAST = env.CAST || path.join(os.homedir(), '.foundry/bin/cast');
@@ -84,7 +89,7 @@ export async function round(source) {
   };
   const start = decodeContinuity(await call(sel('continuity()')));
   if (start.height !== lastHeight) { lastHeight = start.height; lastProgress = Date.now(); }
-  const tip = await source.tip();
+  const tip = await within(source.tip(), 'Bitcoin tip');
   const available = tip - start.height;
   const waited = (Date.now() - lastProgress) / 60_000;
   if (available <= immut.confirmations || (available < MIN_BATCH && waited < MAX_WAIT_MIN)) {
@@ -94,7 +99,7 @@ export async function round(source) {
   const headers = [];
   let prev = start.hash.slice(2);
   for (let h = start.height + 1; h <= start.height + count; h++) {
-    const b = await source.at(h);
+    const b = await within(source.at(h), `Bitcoin header ${h}`);
     const s = step(b.header);
     if (b.header.slice(8, 72) !== prev) throw Error(`header ${h} does not link to ${h - 1}; source may be on another branch`);
     if (s.hash !== b.hash) throw Error(`source hash mismatch at ${h}`);

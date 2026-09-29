@@ -106,8 +106,12 @@ on this machine (217 s total, of which 18 s for the Groth16 step; 31 GB peak mem
 
 The proof path reaches the same height, hash, S and work as the header path. A tampered journal, a tampered
 proof and a wrong program key are each rejected. The proof cost is flat in the batch size, so a day (144
-headers) or a month (4,320) costs about the same ≈450k gas. Not yet done: keeper automation of proving and
-submission, and a public-testnet deployment with the real verifier.
+headers) or a month (4,320) costs about the same ≈450k gas. Keeper automation (`indexer/zk-keeper.mjs`) and the public-testnet deployment followed the same day.
+
+**First public proof, Sepolia, 2026-09-29.** `ZkWujiIndex` `0x38192BF0275DB4E1e1dD4cC3d7489C0890B49Cc9` with SP1's
+v6.1.0 verifier `0x3de0B34c4516AF875b8619Ca893dF9Be44C4ca6a`, anchored at Bitcoin 969131. The keeper proved 42
+live mainnet headers (969132–969173) in 264 s from the P2P source and `foldProof` advanced the index to 969167
+for **323,385 gas**: tx `0x9671261fcbe53a409b2ed89577587f0bb940e0079554f8c2e9c27e5c4abc8919`.
 
 ## Build order
 

@@ -13,3 +13,18 @@ test('continuity() decodes into the host input shape, including a negative U', (
   assert.equal(BigInt(c.work), 123456789n);
   assert.throws(() => decodeContinuity('0x1234'));
 });
+
+test('a Bitcoin source that never answers fails the round instead of hanging the keeper', async () => {
+  process.env.ZK_SOURCE_TIMEOUT_S = '0.2';
+  const { round } = await import('./zk-keeper.mjs?timeout');
+  const rpcStub = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const { method, params, id } = JSON.parse(init.body);
+    const result = method === 'eth_chainId' ? '0x7a69' : '0x' + '0'.repeat(1152);
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id, result }));
+  };
+  try {
+    const hanging = { tip: () => new Promise(() => {}), at: () => new Promise(() => {}) };
+    await assert.rejects(round(hanging), /timed out/);
+  } finally { globalThis.fetch = rpcStub; }
+});
