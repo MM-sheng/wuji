@@ -1,7 +1,7 @@
 # Bitcoin source migration — review handoff
 
 Branch: `codex/bitcoin-source`, based on `70fc13b`.
-Worktree: `/Users/m/Projects/wuji-bitcoin-source`.
+Worktree: a separate local checkout of this repository.
 
 The new contracts use Bitcoin header work and heights. A delayed relayer cannot discard increments.
 The legacy BSC comparison remains at ports 8787/8788 in the original checkout. Bitcoin terminal: http://localhost:8789/.

@@ -3,6 +3,22 @@
 > 无极生太极，太极生两仪。
 > A market about nothing. Verifiable. Heartbeat: Bitcoin.
 
+**What this repository is.** Owner-less infrastructure that lets Ethereum contracts verify Bitcoin
+proof-of-work without trusting anyone, plus a public index derived from it:
+
+- a Solidity Bitcoin header relay that enforces the header consensus rules (PoW, linkage, retargeting,
+  median-time-past, heaviest work) from a public checkpoint;
+- a zero-knowledge light client (SP1, Groth16) that proves a whole batch of headers: **100 real mainnet
+  headers for 453,888 gas instead of 7,956,964** checked one by one, running on Ethereum Sepolia since
+  2026-09-29 (first live proof: 42 headers, 323,385 gas);
+- a public index `S` computed from Bitcoin block hashes that anyone can recompute, and a deep-reorg rule
+  that freezes consumers at the last consistent state.
+
+No owner, admin key, pause, upgrade path, governance or token. **Testnets only; not audited.**
+Status and numbers: [T10 design](docs/tasks/T10_DESIGN.md) · [related work](docs/RELATED_WORK.md) ·
+[threat model](docs/THREAT_MODEL.md). The paired YANG/YIN vaults and perpetual accounts below are testnet
+applications of the index.
+
 WUJI is a verifiable pure-randomness settlement market and public benchmark. Its settlement index is
 derived from Bitcoin proof-of-work headers and can be independently recomputed. “Pure randomness” describes
 the intended model; it is not a proof of unbiased mining, independence from every asset, or investment returns.

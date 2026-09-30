@@ -38,7 +38,7 @@ literally; derive known from a nonzero field or change the layout with explicit 
 
 ## Testnet delivery
 
-Repository: `/Users/m/Projects/wuji`, branch `codex/relayer-rewards`.
+Repository: this repository, branch `codex/relayer-rewards`.
 Twelve deployment receipts succeeded on BSC testnet. Manifest: `contracts/deployments/bsc-testnet.json`.
 Previous Bitcoin deployment archived in `bsc-testnet-bitcoin-v1.json`; its running terminal at 8789 is retained.
 Reward-enabled terminal at http://localhost:8790/, isolated data/rewards cache and keeper process prefix.
