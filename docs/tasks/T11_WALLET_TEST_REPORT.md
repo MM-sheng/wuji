@@ -1,5 +1,13 @@
 # T11 wallet test — in progress
 
+## Task C checkpoint — 2026-09-30, collection complete
+
+**Today's 0.05 Sepolia ETH was received. Second-round confirmed receipts now total 0.10 / 0.15 ETH; another 0.05 ETH is needed.** Wallet balance is tracked separately from cumulative receipts.
+
+The existing Google session accepted today's request after 17:35 Asia/Shanghai, with no CAPTCHA, new login or terms acceptance. The page displayed `Transaction complete! Check your wallet address`. [Transaction](https://sepolia.etherscan.io/tx/0xb1431def2bceaa6ca8050d166bb22b8d13d005e46fe2f7d44939f3dc1d3479f8) was verified via the public Sepolia RPC: chain ID `11155111`, receipt status `0x1`, recipient `0x85967858e2464535A12031103ABA38f2795Fe8Fd`, value **50000000000000000 wei**. At observation block `0xb443af`, balance was **0.083711524667916053 ETH**.
+
+Raw transaction, receipt and balance: [t11-sepolia-fuel-2026-09-30.json](../../contracts/deployments/t11-sepolia-fuel-2026-09-30.json). [Faucet completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-09-30.jpg). Today's collection is complete; do not submit another September 30 claim. Future attempts must follow the latest successful request and the faucet's actual 24-hour cooldown. Previously ineligible channels were not retried; no outgoing transfer, deployment or Task A wallet signature was performed.
+
 ## Task C checkpoint — 2026-09-29, collection complete
 
 **Today's 0.05 Sepolia ETH was received after the 17:35 retry. Second-round confirmed receipts now total 0.05 / 0.15 ETH; another 0.10 ETH is still needed for that collection target.** The current wallet balance is a separate measurement and may decrease as Claude funds the keeper.
@@ -80,6 +88,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-28, approximately 17:30 retry | Google Cloud Web3 | 0.05 ETH | `0xb7eb7bfb0e7befd0f80d3c2260c4cedaa8a0b069627936e38c4b5f6edbd8804d` | **0.150184441800254118 ETH — first verified target attainment** |
 | 2026-09-29, approximately 17:21 attempt | Google daily limit; eligible after 17:30:01 | 0 ETH (attempt only) | None | 0.003111176757578118 ETH |
 | 2026-09-29, after 17:35 | Google Cloud Web3 | 0.05 ETH | `0x050c598710f8a316c10ed888ec1dde478d5b30ae7074301ae26645f6dd0eed9d` | 0.053111176757578118 ETH; round 2 receipts 0.05 / 0.15 ETH |
+| 2026-09-30, after 17:35 | Google Cloud Web3 | 0.05 ETH | `0xb1431def2bceaa6ca8050d166bb22b8d13d005e46fe2f7d44939f3dc1d3479f8` | 0.083711524667916053 ETH; round 2 receipts 0.10 / 0.15 ETH |
 
 ## Historical report — 2026-09-26, v3
 
