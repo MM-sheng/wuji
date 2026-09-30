@@ -11,8 +11,10 @@ zero-knowledge light client (SP1) that proves a whole batch of headers for a fix
 public index derived from Bitcoin block hashes that any contract can read and anyone can recompute. The
 relay and index run today on two testnets, and a Groth16 proof of 100 real mainnet headers already verifies
 on chain against SP1's own verifier contract for 453,888 gas, against 7,956,964 gas for the same headers
-checked one by one. We ask for funding to automate proving in the keeper, deploy the ZK path publicly, pay
-for an independent security review, and operate the public deployment for a year.
+checked one by one. The ZK path has run on Ethereum Sepolia since 2026-09-29, proving live Bitcoin
+headers from the peer-to-peer network (first batch: 42 headers, 323,385 gas). We ask for funding to add a
+challenge window so that a flaw in the proof system alone cannot corrupt the index, pay for an independent
+security review, and operate the public deployment for a year.
 
 ## The problem
 
@@ -81,14 +83,16 @@ Full survey with sources: `docs/RELATED_WORK.md`. In short:
 
 | # | Deliverable | Acceptance | Estimate |
 |---|---|---|---|
-| 1 | Public ZK deployment: `ZkWujiIndex` with SP1's Groth16 verifier on Sepolia, then mainnet after review | Real-header proofs accepted on Sepolia; gas published per batch | [USD 2,000–4,000] engineering + proving hardware |
-| 2 | Keeper proving pipeline | Keeper proves and submits batches, falls back to raw headers when no prover is available; 30 days on Sepolia without manual action | [USD 4,000–8,000] |
+| 1 | Challenge window for ZK folds (`docs/tasks/T12_CHALLENGE_WINDOW.md`): proofs finalize after 6 h unless disputed; a dispute is settled by checking the raw headers on chain | A forged proof accepted by a mock verifier never finalizes when disputed (invariant tests); watcher script; Sepolia deployment | [USD 4,000–8,000] |
+| 2 | Mainnet deployment of the reviewed contracts | Deployed bytecode reproduced from the audited source; addresses published | [USD 1,000–2,000] gas and verification |
 | 3 | Independent security review of relay, index, ZK index, SP1 guest and the reference application | Public report; every finding fixed or answered in writing | [USD 20,000–45,000, pending quotes] |
 | 4 | Twelve months of public operation | Two independent keepers, public dashboard, monthly status notes | [USD 3,000–6,000] gas and servers |
 | 5 | Documentation for integrators | Guide and example contract that reads the relay and the index | [USD 2,000–4,000] |
-| | **Total** | | **[USD 31,000–67,000]** |
+| | **Total** | | **[USD 30,000–65,000]** |
 
-Milestones: 1 → 2 in the first two months; 3 after 1–2 are frozen; 4 and 5 run throughout.
+Already done without funding, and therefore not requested: the Groth16 verifier path, the keeper proving
+pipeline and the Sepolia deployment. Milestones: 1 in the first two months; 3 once 1 is frozen; 2 after 3;
+4 and 5 run throughout.
 
 ## Why it is a public good
 
@@ -109,14 +113,16 @@ Milestones: 1 → 2 in the first two months; 3 after 1–2 are frozen; 4 and 5 r
   machine with ≈32 GB of memory.
 - **Header-only verification.** It proves Bitcoin headers and work, not transactions or global visibility.
 - **The ZK path adds trust in SP1** and its on-chain verifier; the raw-header path remains available.
-- [Single maintainer; applicant to describe team and continuity plan.]
+- **Single maintainer today.** Continuity rests on the design (no owner, no upgrade, anyone can run the
+  keeper and watcher from the published scripts) and on recruiting a second independent operator during the
+  grant.
 
 ## Applicant
 
-- Name / organisation: [ ]
-- Contact: [ ]
-- Public repository: [must be public before submission]
-- Previous work: [ ]
+Applicant and payment details are provided privately in the application form. The project is published under
+a pseudonym; the application names the developer and, where required, a legal guardian as co-signer. Built
+with extensive use of AI coding assistants; every component is covered by tests, and the security review in
+item 3 is independent.
 
 ## Links in the repository
 
