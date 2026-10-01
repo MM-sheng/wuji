@@ -235,6 +235,38 @@ Marking is solved; request scheduling is not. `ZkWujiIndex` stores only its fold
    or exit. No index change.
 3. Keep a thin header relay only for the best tip. Brings back the per-header gas ZK was built to remove.
 
+### Update 2026-10-01: T12 changes the answer
+
+With the T12 challenge window, anything a proof says is untrusted for `W` (6 h). Option 1 above (a `seenHeight`
+in the journal) therefore gives a tip that is either untrusted (pending) or ≥ 6 h old (finalized). Trusting a
+pending tip for scheduling is unsafe exactly when T12 matters: a forged, too-low tip sets the pricing height at
+a block that already exists, and the requester knows S there. The options are now:
+
+A. **Price from the finalized tip with a statistical margin.** `P = lastHeight + m(now − tipTime)`, where `m` is
+   the 10⁻⁷ upper quantile of Poisson block arrivals over the tip's age (+2 h timestamp skew), the same
+   bound the whitepaper states today. No index change and no new trust; the pool reads `tip.time`, which
+   `ZkWujiIndex` already exposes. Cost: a long wait, since the finalized tip is typically 7–13 h old:
+
+   | finalized tip age | margin `m` | expected wait after request |
+   |---:|---:|---:|
+   | 3 h | 64 | 7.7 h |
+   | 7 h | 97 | 9.2 h |
+   | 12 h | 137 | 10.8 h |
+   | 24 h | 226 | 13.7 h |
+
+   The quantile assumes a constant block rate. Hash-rate growth within a difficulty epoch makes blocks faster,
+   so `m` needs a rate factor (e.g. ×1.25), which lengthens the wait further. A table of `m` by age bucket
+   fits in the contract as constants.
+B. **Requester supplies headers.** The request carries the raw headers from the finalized tip to the current
+   tip, checked by the Solidity rules (any valid-PoW chain proves at least that much real work exists, so it
+   is a safe lower bound). Keeps today's 3–4 h wait and adds no trust, but costs ≈ 20k gas per header:
+   45–80 headers ≈ 0.9–1.6M gas per request on top of the request itself.
+C. **A thin header relay for the best tip only** (option 3 above): per-header gas forever.
+
+Recommendation: **A** for the testnet pools (no new trust, no index change, simple), and keep B as an optional
+fast path a requester can pay for. Not implemented; this needs a decision because it changes the user-facing
+wait from about 3–4 h to about 9–11 h.
+
 ## Step 5 (2026-09-25) — live on BSC testnet
 
 Deployed against the running BSC testnet stack (index `0xe26b…d19b`, timestamps-v3, P2P source, keeper live)
