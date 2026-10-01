@@ -45,5 +45,6 @@
     "S": "-21780000000000000",
     "lastHash": "0000000000000000000194552869f79875547b5060d02060dd0ca7ec2b31543c (display order; equals mempool.space block 969375)",
     "watcher": "reported batch 0 as matching the chain on every round from 03:13 to 09:09 UTC; no dispute"
-  }
+  },
+  "supersededBy": "contracts/deployments/sepolia-zk-t12-v2.json (2026-10-01, adds refute for WUJI-08, lastTime and seenTip); keeper and watcher moved there. Batch 1 (969376-969411) was left pending here."
 }

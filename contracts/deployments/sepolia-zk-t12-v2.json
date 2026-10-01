@@ -1,0 +1,39 @@
+{
+  "version": "t12-zk-sepolia-v2",
+  "chainId": 11155111,
+  "deployedAt": "2026-10-01",
+  "sourceCommit": "047156c (branch t12-challenge-window)",
+  "ZkWujiIndex": "0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7",
+  "SP1Verifier": "0x3de0B34c4516AF875b8619Ca893dF9Be44C4ca6a",
+  "programVKey": "0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8",
+  "anchor": "contracts/deployments/sepolia-zk-anchor.json (same as T10 and T12 v1)",
+  "anchorHeight": 969131,
+  "genesisHeight": 969132,
+  "checkpointInterval": 4320,
+  "challenge": {
+    "window": 21600,
+    "responseWindow": 21600,
+    "bond": "50000000000000000"
+  },
+  "rewards": "none (address(0))",
+  "changesFromV1": [
+    "refute(id, headers, tokens): WUJI-08, forged batches at the head cannot hold the index",
+    "lastTime() and seenTip(headers): what T11 pools on this index need for pricing A and B"
+  ],
+  "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "transaction": {
+    "hash": "0x471e1f611a822c467c040ae9ba70f7c40c4e9eb33aaec6bcbc8d14df7677d9dc",
+    "block": 11821390,
+    "gasUsed": 4565106,
+    "effectiveGasPrice": 1115650503
+  },
+  "verification": {
+    "runtimeBytecode": "20,142 bytes; identical to forge build of 047156c with immutables masked",
+    "views": "verifier, programVKey, GENESIS_HEIGHT, CHALLENGE_WINDOW, RESPONSE_WINDOW, DISPUTE_BOND, lastHeight=969131, lastHash = anchor, lastTime, pendingCount=0",
+    "seenTip": "10 real headers 969132-969141 from mempool.space returned (969141, 1790679599)"
+  },
+  "operators": {
+    "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), P2P source; log /tmp/wuji-sepolia-zk-t12b-keeper.log",
+    "watcher": "indexer/zk-watcher.mjs as the deployer (wuji-sepolia), WATCH_SOURCES=p2p,http; log /tmp/wuji-sepolia-zk-t12b-watcher.log"
+  }
+}

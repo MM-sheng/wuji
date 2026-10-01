@@ -1,7 +1,8 @@
 # T12 design: a challenge window for ZK folds
 
-Status: implemented 2026-10-01 and deployed on Sepolia the same day
-(`0x0ee930Fe689a29Fde478a5fE995e17AE0Fd06B47`, `contracts/deployments/sepolia-zk-t12.json`); not audited. Applies to `ZkWujiIndex` (T10). Implementation notes and measurements are at the end.
+Status: implemented 2026-10-01 and live on Sepolia at `0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7`
+(`contracts/deployments/sepolia-zk-t12-v2.json`, with `refute`); the first deployment
+(`0x0ee930Fe…6B47`, `sepolia-zk-t12.json`) carried the first full cycle. Not audited. Applies to `ZkWujiIndex` (T10). Implementation notes and measurements are at the end.
 
 ## Why
 
@@ -177,11 +178,16 @@ Fixed in source with `refute` (step 6 above; `docs/AUDIT_NOTES.md` WUJI-08). The
 disputing and falls back to `reject` on contracts without `refute`, such as the one deployed above. The fix
 needs a redeployment to take effect on Sepolia.
 
+### Redeployment with `refute` (2026-10-01)
+
+`0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7` from `047156c`: same anchor, verifier and parameters, plus
+`refute` (WUJI-08), `lastTime()` and `seenTip(headers)` for T11 pools. 4,565,106 gas, tx
+`0x471e1f611a822c467c040ae9ba70f7c40c4e9eb33aaec6bcbc8d14df7677d9dc`; runtime equals the local build with
+immutables masked; `seenTip` checked on chain with ten real headers. Keeper, watcher and the terminal's
+"ZK · 挑战窗口" tab moved here. Batch 1 on the first deployment was left pending.
+
 ### Not done
 
 - Run a second watcher on another machine.
-- Terminal: the "ZK · 挑战窗口" tab (`apps/terminal/index.html`, `ZK_RELEASE`) reads the finalized state and
-  every pending batch straight from Sepolia at one block; update its address with the redeployment.
-- Redeploy with `refute` (WUJI-08), which also brings `lastTime()` and `seenTip(headers)`, the views T11
-  pools on this index need (T11 doc, Update 2026-10-01).
+
 - Independent review of the queue and dispute paths.

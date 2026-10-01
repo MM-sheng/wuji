@@ -287,7 +287,8 @@ deployment) were completed on 2026-09-29; see T10_DESIGN.md.
 ## T12 · Challenge window for ZK folds — live on Sepolia (2026-10-01)
 
 Design, build notes, measurements and deployment: [T12_CHALLENGE_WINDOW.md](T12_CHALLENGE_WINDOW.md).
-`0x0ee930Fe689a29Fde478a5fE995e17AE0Fd06B47`; keeper and watcher running. Remaining: a second watcher machine,
+`0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7` (with `refute`); keeper and watcher running; first full
+proof → window → finalize cycle recorded on the first deployment. Remaining: a second watcher machine,
 independent review.
 
 ## Explicitly not now
