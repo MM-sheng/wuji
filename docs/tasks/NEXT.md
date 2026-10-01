@@ -240,7 +240,7 @@ The v3 comparison keeper is currently stopped for insufficient test fuel; its re
 ## T10 · ZK relay — Groth16 verified on chain (2026-09-29); keeper automation and public deployment remain
 
 A real Groth16 proof of 100 mainnet headers verifies against SP1's unmodified v6.1.0 verifier: 453,888 gas
-for the batch vs 7,956,964 on the header path (`contracts/test/ZkWujiGroth16.t.sol`, details in
+for the batch vs 1,928,070 on the header path (`contracts/test/ZkWujiGroth16.t.sol`, details in
 T10_DESIGN.md). Remaining: keeper proves and submits batches (falls back to headers); deploy on Sepolia with
 the real verifier; best-height source for T11 pools on a ZK index.
 
@@ -256,8 +256,8 @@ Done:
 - `contracts/src/ZkWujiIndex.sol` — `foldProof` (one proof per batch) and `foldHeaders` (raw headers in
   Solidity, the escape hatch) advancing one state machine. 10 differential tests: both paths reach the
   same S, height, hash, work and median-time-past window over real headers, and interleave freely.
-  Measured: 99k gas **per header** on the header path vs **86k for 256 heights** on the proof path
-  (verifier excluded). Runtime size 10,779 bytes.
+  Measured: ≈19k gas **per header** on the header path vs **86k for 256 heights** on the proof path
+  (verifier excluded). (First recorded as 99k per header; that included the test's own header copying.) Runtime size 10,779 bytes.
 - `zk/program`, `zk/script` — SP1 guest and host written.
 
 Two design corrections found while building, both now in the code and its comments:
@@ -291,6 +291,11 @@ Remaining:
   stop the protocol (escape hatch); a broken *verifier* could corrupt it.
 - Deploy to a testnet and reconcile against the non-ZK deployment.
 ---
+
+## T12 · Challenge window for ZK folds — implemented in source, not deployed
+
+Design, build notes and measurements: [T12_CHALLENGE_WINDOW.md](T12_CHALLENGE_WINDOW.md). Remaining: Sepolia
+deployment beside the T10 contract, the watcher on two machines, independent review.
 
 ## Explicitly not now
 

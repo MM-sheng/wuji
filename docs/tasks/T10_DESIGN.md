@@ -100,9 +100,12 @@ on this machine (217 s total, of which 18 s for the Groth16 step; 31 GB peak mem
 
 | path | gas to advance 100 headers |
 |---|---:|
-| `foldHeaders` (Solidity rules, per header) | 7,956,964 |
+| `foldHeaders` (Solidity rules, per header) | 1,928,070 |
 | `foldProof` with a real Groth16 proof | 453,888 |
 | of which `SP1Verifier.verifyProof` | 357,037 |
+
+Correction 2026-10-01: this table first reported 7,956,964 for `foldHeaders`; that measurement included the
+test's own byte-by-byte copy of the headers. Measured on the contract alone it is 1,928,070 (≈19k per header).
 
 The proof path reaches the same height, hash, S and work as the header path. A tampered journal, a tampered
 proof and a wrong program key are each rejected. The proof cost is flat in the batch size, so a day (144

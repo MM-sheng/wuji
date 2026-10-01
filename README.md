@@ -9,7 +9,7 @@ proof-of-work without trusting anyone, plus a public index derived from it:
 - a Solidity Bitcoin header relay that enforces the header consensus rules (PoW, linkage, retargeting,
   median-time-past, heaviest work) from a public checkpoint;
 - a zero-knowledge light client (SP1, Groth16) that proves a whole batch of headers: **100 real mainnet
-  headers for 453,888 gas instead of 7,956,964** checked one by one, running on Ethereum Sepolia since
+  headers for 453,888 gas instead of 1,928,070** checked one by one in Solidity, running on Ethereum Sepolia since
   2026-09-29 (first live proof: 42 headers, 323,385 gas);
 - a public index `S` computed from Bitcoin block hashes that anyone can recompute, and a deep-reorg rule
   that freezes consumers at the last consistent state.

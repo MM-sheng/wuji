@@ -10,8 +10,8 @@ without trusting anyone: a Solidity Bitcoin header relay that enforces the full 
 zero-knowledge light client (SP1) that proves a whole batch of headers for a fixed on-chain cost, and a
 public index derived from Bitcoin block hashes that any contract can read and anyone can recompute. The
 relay and index run today on two testnets, and a Groth16 proof of 100 real mainnet headers already verifies
-on chain against SP1's own verifier contract for 453,888 gas, against 7,956,964 gas for the same headers
-checked one by one. The ZK path has run on Ethereum Sepolia since 2026-09-29, proving live Bitcoin
+on chain against SP1's own verifier contract for 453,888 gas, against 1,928,070 gas for the same headers
+checked one by one in Solidity. The ZK path has run on Ethereum Sepolia since 2026-09-29, proving live Bitcoin
 headers from the peer-to-peer network (first batch: 42 headers, 323,385 gas). We ask for funding to add a
 challenge window so that a flaw in the proof system alone cannot corrupt the index, pay for an independent
 security review, and operate the public deployment for a year.
@@ -38,7 +38,8 @@ dependency), wrapped as an SP1 guest. The Rust crate, the Solidity relay and a J
 produce identical results over the real-header fixtures. Measured on a laptop (14-core, 64 GB):
 ≈27.5k RISC-V cycles per header; a Groth16 proof of 100 real headers in 217 s (31 GB peak memory),
 verified on chain by SP1's unmodified v6.1.0 verifier: **453,888 gas for the whole batch** (357,037 of it
-the verifier) versus 7,956,964 gas on the per-header path, with identical resulting state. Tampered
+the verifier) versus 1,928,070 gas on the per-header Solidity path (`foldHeaders`, no per-header storage), with
+identical resulting state. Tampered
 journals, tampered proofs and a wrong program key are rejected. The cost is flat in batch size. The
 Solidity header path stays deployed as a permissionless escape hatch, so liveness never depends on a
 prover.

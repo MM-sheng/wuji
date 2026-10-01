@@ -1,16 +1,17 @@
-# Proving Bitcoin headers on Ethereum: 100 headers for 454k gas instead of 8M
+# Proving Bitcoin headers on Ethereum: 100 headers for 454k gas instead of 1.9M
 
 Draft for ethresear.ch, 2026-10-01. All numbers are measured; links point into the repository.
 
 ## TL;DR
 
 We verify Bitcoin proof-of-work on Ethereum with no owner, no multisig and no oracle. A Solidity relay checks
-the header consensus rules one header at a time (≈90k gas each). An SP1 program checks the same rules for a
+the header consensus rules one header at a time (≈90k gas each with its per-header storage; ≈19k when only
+the batch's end state is stored). An SP1 program checks the same rules for a
 whole batch, and a Groth16 proof of that batch is verified on chain by SP1's unmodified v6.1.0 verifier:
 
 | path | gas to advance 100 real mainnet headers |
 |---|---:|
-| Solidity rules, per header | 7,956,964 |
+| Solidity rules, per header (`foldHeaders`) | 1,928,070 |
 | one Groth16 proof | 453,888 (357,037 of it the verifier) |
 
 The proof cost does not grow with the batch. Since 2026-09-29 a keeper proves live headers from the Bitcoin
