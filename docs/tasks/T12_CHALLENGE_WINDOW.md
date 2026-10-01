@@ -164,6 +164,10 @@ dispute; disputed and matching → back; disputed, unbacked, past `R` → reject
   `0x8be19702b22053ac7eac499a2d114a0373c6bec90cd21ee59c64147fca37404b`, pending until 09:11 UTC.
 - The watcher runs as the deployer account with P2P + mempool.space and reported batch 0 as matching the
   chain within two minutes of submission.
+- **First finalization:** batch 0 finalized at 09:13:50 UTC, three minutes after its window closed, by the
+  keeper's routine `finalize` (112,056 gas, tx `0xe7b01651a08c6e9eee3abd5981bc5f0bff531bfa5ab6496cdd1728a9f2b15df4`).
+  Finalized height 969375, S = −0.02178; the stored hash equals mempool.space's block 969375. Full cycle for
+  244 heights: `foldProof` 459,162 + `finalize` 112,056 gas.
 
 ### After deployment: WUJI-08
 
@@ -175,7 +179,7 @@ needs a redeployment to take effect on Sepolia.
 
 ### Not done
 
-- Record the first finalization; run a second watcher on another machine.
+- Run a second watcher on another machine.
 - Terminal: the "ZK · 挑战窗口" tab (`apps/terminal/index.html`, `ZK_RELEASE`) reads the finalized state and
   every pending batch straight from Sepolia at one block; update its address with the redeployment.
 - Redeploy with `refute` (WUJI-08), which also brings `lastTime()` and `seenTip(headers)`, the views T11

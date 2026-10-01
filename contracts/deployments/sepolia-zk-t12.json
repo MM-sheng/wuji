@@ -11,7 +11,11 @@
   "anchorHeight": 969131,
   "genesisHeight": 969132,
   "checkpointInterval": 4320,
-  "challenge": { "window": 21600, "responseWindow": 21600, "bond": "50000000000000000" },
+  "challenge": {
+    "window": 21600,
+    "responseWindow": 21600,
+    "bond": "50000000000000000"
+  },
   "rewards": "none (address(0))",
   "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
   "transaction": {
@@ -27,5 +31,19 @@
   "operators": {
     "keeper": "indexer/zk-keeper.mjs as 0x2302992F8ef33a3561bf26E19994Cf12E76F53E4 (wuji-sepolia-v4), BITCOIN_SOURCE=p2p; moved here from the T10 contract, which now stays at 969347",
     "watcher": "indexer/zk-watcher.mjs as the deployer 0x8596…e8Fd (wuji-sepolia), WATCH_SOURCES=p2p,http"
+  },
+  "firstFinalize": {
+    "batch": 0,
+    "heights": "969132-969375",
+    "proveTx": "0x8be19702b22053ac7eac499a2d114a0373c6bec90cd21ee59c64147fca37404b",
+    "finalizeTx": "0xe7b01651a08c6e9eee3abd5981bc5f0bff531bfa5ab6496cdd1728a9f2b15df4",
+    "finalizeBlock": 11820853,
+    "finalizeGas": 112056,
+    "caller": "0x2302992F8ef33a3561bf26E19994Cf12E76F53E4 (zk-keeper)",
+    "finalizedAt": "2026-10-01 09:13:50 UTC (window closed 09:11)",
+    "lastHeight": 969375,
+    "S": "-21780000000000000",
+    "lastHash": "0000000000000000000194552869f79875547b5060d02060dd0ca7ec2b31543c (display order; equals mempool.space block 969375)",
+    "watcher": "reported batch 0 as matching the chain on every round from 03:13 to 09:09 UTC; no dispute"
   }
 }
