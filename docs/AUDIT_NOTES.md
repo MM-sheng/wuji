@@ -89,6 +89,26 @@ the relayer reserve, and honest refuters pay header gas (≈ 20k per header). A 
 attacker pay, at the price of locking capital for every honest batch. Deferred; revisit with mainnet
 economics.
 
+### WUJI-10 — Medium — Fixed — the accounts factory could not create pools on Ethereum or Sepolia
+
+Found 2026-10-01 deploying T11 pools on Sepolia. `WujiAccountsFactory.create(asset)` deployed all three tier
+pools in one transaction (≈ 18.5M gas), above the 2^24 per-transaction gas cap of EIP-7825 (enforced on
+Sepolia, and on Ethereum after Fusaka): the RPC refused it, leaving a factory with no pools
+(`0x5a394b46…A0bc`, recorded as abandoned). Fix: `create(asset, tier)`, one pool per call (≈ 4.25M gas
+measured); the menu and create-once rule are unchanged. A test asserts each call stays under the cap.
+
+### WUJI-11 — Medium — Fixed — P2P header source rewound before validating, with no work comparison
+
+Found 2026-10-01 in keeper logs. When a peer answered `getheaders` from a point below our tip, the client
+rewound to that point *first* and then appended the peer's headers. A peer on a minority branch (valid work
+961632–961639, invalid difficulty at 961640) thus made every keeper and indexer drop ≈ 8,200 validated
+headers, fail, and re-download them — several hundred times a day across the running stacks. A lighter but
+valid branch would have been adopted outright: there was no cumulative-work comparison, contrary to the
+README. Fix (`applyHeaders` in `indexer/bitcoin-p2p.mjs`): a competing branch is built and validated on a
+copy, extended while lighter, and adopted only with more cumulative work; an invalid branch leaves the chain
+untouched. Tests cover extension, lighter, heavier, invalid, multi-reply and unknown branches. Processes
+started before the fix keep the old behaviour until restarted.
+
 ## Verification performed
 
 - 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.

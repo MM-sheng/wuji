@@ -26,7 +26,9 @@ export async function readPool(read, pool) {
       read(pool, SEL.K), read(pool, SEL.EPOCH), read(pool, SEL.DELAY), read(pool, SEL.FEE_BPS), read(pool, SEL.asset),
       read(pool, SEL.index), read(pool, SEL.principalOf + word(0)), read(pool, SEL.principalOf + word(1)),
       read(pool, SEL.buffer), read(pool, SEL.badDebt), read(pool, SEL.head), read(pool, SEL.queueLength),
-      read(pool, SEL.nextPricingHeight), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
+      // Reverts on relay-less pools while their index's finalized tip is too old to price from (A); processing,
+      // retiring and sweeping must not depend on it.
+      read(pool, SEL.nextPricingHeight).catch(() => null), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
     ]);
   const assetAddr = '0x' + asset.slice(-40), indexAddr = '0x' + index.slice(-40);
   const [balance, folded] = await Promise.all([read(assetAddr, SEL.balanceOf + addr(pool)), read(indexAddr, SEL.lastHeight)]);
@@ -42,7 +44,7 @@ export async function readPool(read, pool) {
     buffer_wad: uint(buffer).toString(), badDebt_wad: uint(badDebt).toString(), balance_wad: uint(balance).toString(),
     pendingEpochs: Number(n - h), nextEpoch: nextEpoch === null ? null : Number(nextEpoch),
     nextEpochReady: nextEpoch !== null && nextEpoch <= uint(folded),
-    nextPricingHeight: Number(uint(next)), lastS_wad: int(lastS).toString(),
+    nextPricingHeight: next === null ? null : Number(uint(next)), lastS_wad: int(lastS).toString(),
     frozen: uint(frozen) === 1n, accountsCreated: Number(uint(nextId) - 1n),
   };
 }

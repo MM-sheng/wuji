@@ -534,7 +534,8 @@ function exitActionAllowed(state, action) {
   function validatePool(p){
     for(const k of ['address','asset','index'])if(!ADDRESS.test(p[k]))throw Error('Invalid pool address');
     for(const k of ['k_wad','yin_wad','yang_wad','matched_wad','idle_wad','buffer_wad','badDebt_wad','balance_wad','lastS_wad'])if(!WAD_STR.test(p[k]))throw Error('Invalid pool amount');
-    for(const k of ['epoch','delay','feeBps','pendingEpochs','nextPricingHeight','accountsCreated'])if(!Number.isSafeInteger(p[k]))throw Error('Invalid pool number');
+    for(const k of ['epoch','delay','feeBps','pendingEpochs','accountsCreated'])if(!Number.isSafeInteger(p[k]))throw Error('Invalid pool number');
+    if(p.nextPricingHeight!==null&&!Number.isSafeInteger(p.nextPricingHeight))throw Error('Invalid pool number');
     if(!(p.annualVol>0)||![null,'yin','yang'].includes(p.idleSide))throw Error('Invalid pool');
   }
   function validateAccount(a){
@@ -979,7 +980,7 @@ function exitActionAllowed(state, action) {
       <div class="yy"><div class="yang" style="width:${100*y/t}%">阳 ${fmtAmount(y)}</div><div class="yin">${fmtAmount(n)} 阴</div></div>
       <div class="kv"><span>在押 · 闲置</span><b>${fmtW(p.matched_wad)} · ${p.idleSide?(p.idleSide==='yang'?'阳':'阴')+' '+fmtW(p.idle_wad):'无'}</b></div>
       <div class="kv"><span>排队中的定价</span><b>${p.pendingEpochs?p.pendingEpochs+' 个 · 下一个 #'+p.nextEpoch+(p.nextEpochReady?' · 可处理':''):'无'}</b></div>
-      <div class="kv"><span>新申请将定价于</span><b>#${p.nextPricingHeight.toLocaleString()}</b></div>
+      <div class="kv"><span>新申请将定价于</span><b>${p.nextPricingHeight===null?'暂不接受（指数终结高度过旧）':'#'+p.nextPricingHeight.toLocaleString()}</b></div>
       <div class="kv"><span>缓冲金 · 未覆盖亏空</span><b class="${BigInt(p.badDebt_wad)>0n?'bad':'ok'}">${fmtW(p.buffer_wad)} · ${fmtW(p.badDebt_wad)}</b></div>
       <div class="kv"><span>手续费 · 账户数</span><b>${p.feeBps/100}% · ${p.accountsCreated}</b></div>
       <div class="kv"><span>池子</span><b>${p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');

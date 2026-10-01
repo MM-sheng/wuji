@@ -129,3 +129,13 @@ test('relay-less pools: ready epochs are marked from headers, highest first, bri
   assert.deepEqual(f.sends, []);
   assert.match(logs.join('\n'), /no header source/);
 });
+
+test('a pool whose pricing view reverts (index tip too old for A) is still read and maintained', async () => {
+  const f = fixture();
+  const read = async (to, data) => { if (to === pool && data === '0x7dd7307d') throw Error('execution reverted: index stale'); return f.read(to, data); };
+  const p = await readPool(read, pool);
+  assert.equal(p.nextPricingHeight, null);
+  assert.equal(p.nextEpochReady, true);
+  await maintainPool({ ...f, read, pool });
+  assert.deepEqual(f.sends.map(s => s[0]), ['processMany(uint256)']);
+});

@@ -293,6 +293,17 @@ Bitcoin source. Checked end to end on anvil against a header-path `ZkWujiIndex` 
 processed them, and the recorded S at both heights equals an independent recomputation from the headers.
 Note: `WujiAccountsFactory` is 24,288 bytes, 288 under the EIP-170 limit.
 
+### Live on Sepolia over the ZK index (2026-10-01)
+
+Factory `0x26b62b96416D17BBDeA4243FC84E4B616a8A64B8` on `ZkWujiIndex` `0x0350ff37…1DC7`, collateral Sepolia
+WETH, pools 5% `0xd5d318C7009e8fadE2d4997ed3bD2943533d59CA`, 10% `0x59f585aC267195350B7080e51f700B4aDD17c1e7`,
+25% `0x7bdfCf4ad29388FC5238099Ec07A82eD1fbF3093` (`contracts/deployments/sepolia-zk-t12-v2.json` → `accounts`).
+Fees go to the v4 FeeRouter: the ZK index has no relayer reserve, and one bound to it could never pay out.
+Runtimes match the local build; B was probed on chain with 310 real headers (would price at 969462). A opens
+when the index's first batch finalizes (17:08 UTC): until then its finalized tip is the two-day-old anchor
+and requests without headers are refused. The ZK keeper maintains the pools (`ACCOUNTS`). The first factory
+attempt hit the EIP-7825 gas cap (AUDIT_NOTES WUJI-10).
+
 ## Step 5 (2026-09-25) — live on BSC testnet
 
 Deployed against the running BSC testnet stack (index `0xe26b…d19b`, timestamps-v3, P2P source, keeper live)

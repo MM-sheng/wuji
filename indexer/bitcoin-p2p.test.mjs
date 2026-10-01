@@ -107,3 +107,86 @@ test('a peer that never completes the handshake cannot crash the process', async
     server.close();
   }
 });
+
+// ---------------------------------------------------------------- fork choice (applyHeaders)
+
+/// Same bookkeeping as HeaderChain, but "work" is byte 72 and byte 76 = 0xff marks an invalid header, so
+/// branches can be built without mining. Fork choice is what is under test, not the header rules.
+async function forkChoice() {
+  const { HeaderChain, applyHeaders } = await import('./bitcoin-p2p.mjs');
+  const { sha256d } = await import('./bitcoin.mjs');
+  class TestChain extends HeaderChain {
+    append(raw) {
+      const height = this.headers.length;
+      if (height > 0 && raw.subarray(4, 36).toString('hex') !== sha256d(this.headers[height - 1]).toString('hex')) throw Error(`linkage at ${height}`);
+      if (raw[76] === 0xff) throw Error(`difficulty at ${height}`);
+      this.headers.push(raw); this.hashes.push(Buffer.from(sha256d(raw)).reverse().toString('hex'));
+      this.work += this.headerWork(raw); return height;
+    }
+    headerWork(raw) { return BigInt(raw[72]); }
+  }
+  const header = (parent, work, salt, bad = false) => {
+    const h = Buffer.alloc(80); h.writeUInt32LE(salt, 0);
+    if (parent) sha256d(parent).copy(h, 4);
+    h[72] = work; if (bad) h[76] = 0xff; return h;
+  };
+  const branch = (from, n, work, salt, badAt = -1) => {
+    const out = []; let p = from;
+    for (let i = 0; i < n; i++) { p = header(p, work, salt + i, i === badAt); out.push(p); }
+    return out;
+  };
+  const chain = new TestChain();
+  chain.append(header(null, 1, 0));
+  for (const h of branch(chain.headers[0], 20, 10, 100)) chain.append(h);   // heights 1..20, work 10 each
+  return { chain, branch, applyHeaders };
+}
+
+test('a reply that extends the tip is appended', async () => {
+  const { chain, branch, applyHeaders } = await forkChoice();
+  const r = await applyHeaders(chain, branch(chain.headers[20], 3, 10, 500), async () => []);
+  assert.equal(r.added, 3); assert.equal(chain.height, 23);
+});
+
+test('a lighter fork is ignored and the chain keeps every validated header', async () => {
+  const { chain, branch, applyHeaders } = await forkChoice();
+  const tip = chain.hashes[20], logs = [];
+  // From 12: nine headers of work 5 (45) against our eight of work 10 (80) above 12.
+  const r = await applyHeaders(chain, branch(chain.headers[12], 9, 5, 900), async () => [], m => logs.push(m));
+  assert.equal(r.added, 0); assert.equal(chain.height, 20); assert.equal(chain.hashes[20], tip);
+  assert.match(logs.join('\n'), /ignored a branch from 12/);
+});
+
+test('a heavier fork from below the tip replaces it', async () => {
+  const { chain, branch, applyHeaders } = await forkChoice();
+  const logs = [];
+  // From 12: nine headers of work 10 (90) against 80.
+  const r = await applyHeaders(chain, branch(chain.headers[12], 9, 10, 900), async () => [], m => logs.push(m));
+  assert.ok(r.added > 0); assert.equal(chain.height, 21);
+  assert.match(logs.join('\n'), /reorg at 12, 20 → 21/);
+});
+
+test('an invalid fork throws and leaves the chain untouched (the 961640 case)', async () => {
+  const { chain, branch, applyHeaders } = await forkChoice();
+  const tip = chain.hashes[20], work = chain.work;
+  await assert.rejects(applyHeaders(chain, branch(chain.headers[5], 30, 10, 700, 8), async () => []), /difficulty at 14/);
+  assert.equal(chain.height, 20); assert.equal(chain.hashes[20], tip); assert.equal(chain.work, work);
+});
+
+test('a heavier fork is adopted, fetching more replies while it is still lighter', async () => {
+  const { chain, branch, applyHeaders } = await forkChoice();
+  // 2000 headers of work 0 cannot beat 15 × 10; the next reply (work 10 each) does.
+  const first = branch(chain.headers[5], 2000, 0, 10_000);
+  let asked = 0;
+  const more = async () => { asked++; return branch(first.at(-1), 20, 10, 50_000); };
+  const r = await applyHeaders(chain, first, more);
+  assert.equal(asked, 1);
+  assert.equal(chain.height, 5 + 2000 + 20);
+  assert.ok(r.added > 0);
+});
+
+test('a reply from an unknown branch changes nothing', async () => {
+  const { chain, branch, applyHeaders } = await forkChoice();
+  const stranger = branch(Buffer.alloc(80, 7), 5, 50, 1);
+  const r = await applyHeaders(chain, stranger, async () => []);
+  assert.equal(r.added, 0); assert.equal(chain.height, 20);
+});
