@@ -2,21 +2,23 @@
 //
 //   RPC=... CHAIN_ID=... ZK_INDEX=<ZkWujiIndex> KEYSTORE_ACCOUNT=... PASSWORD_FILE=... node indexer/zk-keeper.mjs
 //
-// Each round: read the contract's continuity(), fetch the next headers from the Bitcoin source, and once
-// a batch is worth proving (ZK_MIN_BATCH headers, or ZK_MAX_WAIT_MIN minutes since the tip last moved)
-// run the SP1 host (`zk/script prove-input`), then submit foldProof. If proving fails, fall back to
+// Each round: finalize any pending batch whose challenge window has passed (T12), read the contract's
+// continuity() (the newest pending batch's end, or the finalized state), fetch the next headers from the
+// Bitcoin source, and once a batch is worth proving (ZK_MIN_BATCH headers, or ZK_MAX_WAIT_MIN minutes
+// since the head last moved) run the SP1 host (`zk/script prove-input`), then submit foldProof, which
+// queues the batch for its challenge window. If proving fails and nothing is pending, fall back to
 // foldHeaders with the same headers so the index never depends on a prover (ZK_FALLBACK=0 disables).
 // Signs with `cast` and an encrypted keystore; never handles a key. On anvil only (chain 31337),
 // ZK_UNLOCKED_FROM=<address> signs with anvil's unlocked account instead.
-import { execFile, execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { rpcRequest } from './evm-rpc.mjs';
 import { assertChain } from './networks.mjs';
 import { createBitcoinSource } from './bitcoin-source.mjs';
 import { step } from './bitcoin.mjs';
+import { contractClient, decodeContinuity, sel, uint } from './zk-challenge.mjs';
+export { decodeContinuity };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = process.env;
@@ -24,7 +26,8 @@ const RPC = (env.RPC || '').split(',')[0];
 const CHAIN_ID = Number(env.CHAIN_ID || 0);
 const INDEX = (env.ZK_INDEX || '').toLowerCase();
 const MIN_BATCH = Number(env.ZK_MIN_BATCH || 42);          // 36 folded heights + 6 confirmations ≈ 6 hours
-const MAX_BATCH = Number(env.ZK_MAX_BATCH || 1008);        // ≈ 1 week; proving time and memory grow linearly
+// Capped on chain by MAX_PROOF_HEADERS (250) so a disputed batch can be backed in one transaction.
+const MAX_BATCH = Number(env.ZK_MAX_BATCH || 250);
 const MAX_WAIT_MIN = Number(env.ZK_MAX_WAIT_MIN || 720);   // prove a smaller batch rather than let the tip age
 const INTERVAL = Number(env.INTERVAL || 120);
 // Bitcoin source calls get a deadline: on 2026-09-29 one P2P request never settled and the keeper sat
@@ -34,43 +37,14 @@ const within = (promise, what) => Promise.race([promise,
   new Promise((_, reject) => setTimeout(() => reject(Error(`${what} timed out after ${SOURCE_TIMEOUT_MS / 1000} s`)), SOURCE_TIMEOUT_MS).unref())]);
 const FALLBACK = env.ZK_FALLBACK !== '0';
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
-const CAST = env.CAST || path.join(os.homedir(), '.foundry/bin/cast');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
-const UNLOCKED = env.ZK_UNLOCKED_FROM;
-if (UNLOCKED && CHAIN_ID !== 31337) throw Error('ZK_UNLOCKED_FROM is for anvil (chain 31337) only');
-if (!UNLOCKED && (!env.KEYSTORE_ACCOUNT || !env.PASSWORD_FILE)) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE');
+const chain = contractClient({ rpc: RPC, chainId: CHAIN_ID, to: INDEX, env });
 fs.mkdirSync(WORK, { recursive: true });
 
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
-const rpc = (m, p) => rpcRequest(RPC, m, p);
-const call = async (data) => rpc('eth_call', [{ to: INDEX, data }, 'latest']);
-const word = (hex, i) => BigInt('0x' + hex.slice(2 + 64 * i, 66 + 64 * i));
-const signed = v => (v >= 1n << 255n ? v - (1n << 256n) : v);
-const sel = sig => execFileSync(CAST, ['sig', sig], { encoding: 'utf8' }).trim();
-
-/// continuity() returns (Continuity{hash,height,bits,time,epochStart,u}, uint32[11], uint256 work): 18 words.
-export function decodeContinuity(hex) {
-  if (!/^0x[0-9a-f]{1152}$/i.test(hex)) throw Error('unexpected continuity() encoding');
-  return {
-    hash: '0x' + hex.slice(2, 66),
-    height: Number(word(hex, 1)), bits: Number(word(hex, 2)), time: Number(word(hex, 3)),
-    epochStart: Number(word(hex, 4)), u: signed(word(hex, 5)).toString(),
-    recentTimes: Array.from({ length: 11 }, (_, i) => Number(word(hex, 6 + i))),
-    work: '0x' + hex.slice(2 + 64 * 17, 66 + 64 * 17),
-  };
-}
-
-async function send(sig, gas, ...args) {
-  assertChain(await rpc('eth_chainId', []), CHAIN_ID);
-  const who = UNLOCKED ? ['--unlocked', '--from', UNLOCKED] : ['--account', env.KEYSTORE_ACCOUNT, '--password-file', env.PASSWORD_FILE];
-  const price = env.KEEPER_GAS_PRICE ? ['--legacy', '--gas-price', env.KEEPER_GAS_PRICE] : [];
-  const out = await new Promise((resolve, reject) => execFile(CAST, ['send', INDEX, sig, ...args, '--rpc-url', RPC, '--chain', String(CHAIN_ID),
-    '--gas-limit', String(gas), ...who, ...price, '--json'], { maxBuffer: 64 << 20 }, (e, so, se) => e ? reject(Error(String(se || e.message).split('\n').find(Boolean))) : resolve(so)));
-  const r = JSON.parse(out);
-  if (r.status !== '0x1' && r.status !== 1) throw Error(sig.split('(')[0] + ' reverted ' + r.transactionHash);
-  return { hash: r.transactionHash, gas: parseInt(r.gasUsed, 16) };
-}
+const { rpc, call } = chain;
+const send = (sig, gas, ...args) => chain.send(sig, gas, args);
 
 function prove(inputFile, outFile) {
   return new Promise((resolve, reject) => execFile(HOST, ['prove-input', '--input', inputFile, '--out', outFile, '--mode', 'groth16'],
@@ -86,7 +60,14 @@ export async function round(source) {
     interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
     confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
     maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
+    maxProofHeaders: Number(BigInt(await call(sel('MAX_PROOF_HEADERS()')))),
   };
+  // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
+  const pending = Number(BigInt(await call(sel('pendingCount()'))));
+  if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
+    const tx = await send('finalize(uint256)', 1_500_000, '8');
+    log(`finalize gas ${tx.gas} ${tx.hash}`);
+  }
   const start = decodeContinuity(await call(sel('continuity()')));
   if (start.height !== lastHeight) { lastHeight = start.height; lastProgress = Date.now(); }
   const tip = await within(source.tip(), 'Bitcoin tip');
@@ -95,7 +76,7 @@ export async function round(source) {
   if (available <= immut.confirmations || (available < MIN_BATCH && waited < MAX_WAIT_MIN)) {
     return { action: 'wait', height: start.height, available };
   }
-  const count = Math.min(available, MAX_BATCH);
+  const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders);
   const headers = [];
   let prev = start.hash.slice(2);
   for (let h = start.height + 1; h <= start.height + count; h++) {
@@ -124,6 +105,8 @@ export async function round(source) {
   } catch (e) {
     log('proof path failed:', e.message);
     if (!FALLBACK) throw e;
+    // The header path runs only from the finalized state; while batches are pending it would revert.
+    if (pending > 0) throw Error('proof path failed with batches pending; header fallback waits for them');
     const n = Math.min(count, immut.maxHeaders);
     const tx = await send('foldHeaders(bytes,address[])', 60_000_000, '0x' + headers.slice(0, n).join(''), '[]');
     log(`fallback foldHeaders ${n} headers gas ${tx.gas} ${tx.hash}`);

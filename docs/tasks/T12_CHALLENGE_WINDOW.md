@@ -1,6 +1,7 @@
 # T12 design: a challenge window for ZK folds
 
-Status: design, 2026-10-01. Not implemented. Applies to `ZkWujiIndex` (T10).
+Status: implemented in source 2026-10-01 (build steps 1–3 below, except the Sepolia deployment); not
+deployed, not audited. Applies to `ZkWujiIndex` (T10). Implementation notes and measurements are at the end.
 
 ## Why
 
@@ -55,8 +56,8 @@ batch is pending, so it cannot race a dispute.
 |---|---|---|
 | `W` challenge window | 6 hours | Watchers need to be online a few times a day, not continuously; S consumers already wait 3–4 h (T11) |
 | `R` response window | 6 hours | Enough to fetch and submit headers during an Ethereum gas spike |
-| `B` dispute bond | enough to pay backing at 10 gwei (≈ 0.05 ETH for 42+6 headers) | A wrong dispute costs the disputer the backing gas, so griefing is not free |
-| batch cap | 250 headers | Backing must fit in one transaction: ≈ 99k gas × (250 + 6) ≈ 25M gas |
+| `B` dispute bond | 0.05 ETH: pays a full 250-header backing (≈ 5M gas) at 10 gwei | A wrong dispute costs the disputer the backing gas, so griefing is not free |
+| batch cap | 250 headers, folded + confirmations | Backing must fit in one transaction: measured ≈ 20k gas per header, ≈ 5M gas at the cap |
 | reward on `reject` | a share of the relayer reserve | Watching has to pay something, however little |
 
 ## What changes for consumers
@@ -92,3 +93,66 @@ so; anyone else can run the same script.
    verifier never finalizes when disputed; an honest batch always can be backed; bonds are conserved.
 3. Watcher script, then Sepolia deployment beside the current `ZkWujiIndex` (a new address: the deployed
    contract is immutable).
+
+## Implementation (2026-10-01)
+
+`contracts/src/ZkWujiIndex.sol`, `contracts/src/RelayerRewards.sol` (`award`), `indexer/zk-watcher.mjs`,
+`indexer/zk-challenge.mjs`; `indexer/zk-keeper.mjs` finalizes and caps its batches.
+
+Where the build differs from, or fills in, the design above:
+
+- **Batch cap** is `MAX_PROOF_HEADERS = 250` headers *including* the 6 confirmations (244 folded heights).
+  The design's "≈ 99k gas per header" came from a test that measured its own byte-copy loop together with
+  the contract; measured correctly, the Solidity rules cost ≈ 19–20k gas per header (`back` with 60 headers:
+  1,193,343 gas; 100 headers on anvil: 1,915,880).
+- **Checkpoint heights are the contract's.** `foldProof` requires the journal's checkpoint heights to be exactly
+  the series boundaries in `(from, to]` (the guest's rule `(h + 1 − genesis) % interval == 0`), so a proof is
+  trusted only for the U values there. `back` compares those values with the replay.
+- **Token lists are fixed at submission.** The prover's relayer-bounty tokens are stored with the batch and
+  the disputer's with the dispute, both validated (≤ 8, sorted, unique) up front. Whoever calls `finalize`
+  or `reject` cannot choose them, and a stored list can never make either revert.
+- **Reject reward:** `RelayerRewards.award` (index-only) pays the disputer the bounty the batch would have
+  earned, consuming no heights. `reject` calls it in `try/catch`: the reward must never keep a forged batch
+  queued. A griefer who proves an honest batch, disputes it and finds nobody backing it within `R` collects
+  this reward; that requires every watcher to be offline for `R`, and is bounded by one batch's bounty per
+  `W + R`.
+- **Queue cap** `MAX_PENDING = 32`, so `reject` can always delete the tail it invalidates in one transaction.
+- **Payments are pulled:** bonds go to `owed[...]`, withdrawn with `withdraw()`.
+- `continuity()` now returns the head a prover must extend (newest pending batch, else finalized);
+  `stateBefore(id)` returns the start of batch `id`. `tip`, `S()`, `lastHeight()` stay finalized-only.
+- `foldHeaders` records checkpoints with the same boundary rule; the `nextCheckpointHeight` storage
+  variable is gone (nothing read it).
+- Windows and bond are constructor parameters (`Challenge{window, responseWindow, bond}`), required
+  non-zero when a verifier is set. `DeployZkIndex.s.sol` defaults to 6 h / 6 h / 0.05 ETH and can reuse the
+  deployed SP1 verifier (`SP1_VERIFIER`).
+
+### Watcher
+
+`indexer/zk-watcher.mjs` replays each pending batch from its starting state over headers from the first
+source, cross-checks the header at the claimed height with a second source (`WATCH_SOURCES`, default
+`p2p,http`; it does nothing when they disagree), and compares every field. Mismatch inside the window →
+dispute; disputed and matching → back; disputed, unbacked, past `R` → reject; ready → finalize.
+`WATCH_DRY_RUN=1` only logs. The JavaScript replay reproduces the Rust guest's journals exactly
+(`zk-challenge.test.mjs`).
+
+### Tests and measurements
+
+- Foundry: `ZkWujiChallenge.t.sol` (20 tests: pending/finalize, chaining, header path blocked while
+  pending, caps, boundary rule, dispute/back/reject rules, cascading reject, bounties on finalize and
+  reject) and `ZkWujiChallenge.invariant.t.sol` (32 runs × 300 calls, a verifier that accepts anything, an
+  honest watcher, random griefers): the finalized state is always the real chain, bonds are conserved
+  (`balance == owed + open bonds`), an honest disputed batch can always be backed, the queue stays bounded.
+  Full suite: 203 Foundry tests green; Node 85 pass, 1 skipped (needs a synced P2P header file).
+- Node: `zk-challenge.test.mjs` (9 tests) and `zk-keeper.test.mjs`.
+- End to end on anvil against the compiled contract: forged batch → watcher disputes → rejects after `R`,
+  S unchanged; honest batch griefed → watcher backs with 100 headers → finalizes; watcher owed both bonds.
+- Gas, 100 real headers with SP1's Groth16 verifier: `foldProof` 589,259 + `finalize` 135,574 = 724,833
+  (T10 without the window: 453,888). The header path for the same headers: **1,928,070**, not the
+  7,956,964 first reported in T10 (same measurement error as above; corrected in README, T10 design,
+  grant proposal, related work and the ethresear.ch draft).
+
+### Not done
+
+- Sepolia deployment (a new address beside the T10 contract; needs ≈ 0.02 ETH plus the bond float for the
+  watcher) and running the watcher on two machines.
+- Independent review of the queue and dispute paths.

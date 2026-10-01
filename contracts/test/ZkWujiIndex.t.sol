@@ -49,8 +49,20 @@ contract ZkWujiIndexTest is Test {
             times,
             0,
             genesis,
-            4320
+            4320,
+            _challenge()
         );
+    }
+
+    function _challenge() internal pure returns (ZkWujiIndex.Challenge memory) {
+        return ZkWujiIndex.Challenge({window: 6 hours, responseWindow: 6 hours, bond: 0.05 ether});
+    }
+
+    /// Submit a proof and let its challenge window pass undisputed.
+    function _proveAndFinalize(ZkWujiIndex target, ZkWujiIndex.Journal memory j) internal {
+        target.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        vm.warp(block.timestamp + target.CHALLENGE_WINDOW());
+        target.finalize(type(uint256).max);
     }
 
     function _read32(bytes memory h, uint256 at) internal pure returns (uint32) {
@@ -150,7 +162,7 @@ contract ZkWujiIndexTest is Test {
         }
         return new ZkWujiIndex(
             new AcceptingVerifier(), bytes32(uint256(1)), RelayerRewards(address(0)), anchor, anchorHeight,
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, genesis, interval
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, genesis, interval, _challenge()
         );
     }
 
@@ -187,7 +199,7 @@ contract ZkWujiIndexTest is Test {
 
         ZkWujiIndex viaProof = _deploy(new AcceptingVerifier());
         ZkWujiIndex.Journal memory j = _journal(viaProof, 0, count);
-        viaProof.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        _proveAndFinalize(viaProof, j);
 
         assertEq(viaProof.S(), viaHeaders.S(), "S");
         assertEq(viaProof.lastHeight(), viaHeaders.lastHeight(), "height");
@@ -204,7 +216,7 @@ contract ZkWujiIndexTest is Test {
         ZkWujiIndex mixed = _deploy(new AcceptingVerifier());
         mixed.foldHeaders(_slice(0, 100), new address[](0));
         ZkWujiIndex.Journal memory j = _journal(mixed, 94, 100);
-        mixed.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        _proveAndFinalize(mixed, j);
 
         ZkWujiIndex plain = _deploy(new AcceptingVerifier());
         plain.foldHeaders(_slice(0, 100), new address[](0));
@@ -235,8 +247,8 @@ contract ZkWujiIndexTest is Test {
 
         v = abi.decode(abi.encode(j), (ZkWujiIndex.Journal));
         v.newHash = bytes32(uint256(1));
-        target.foldProof(hex"00", abi.encode(v), new address[](0));
-        assertEq(target.lastHash(), bytes32(uint256(1)), "an accepting verifier is trusted completely");
+        _proveAndFinalize(target, v);
+        assertEq(target.lastHash(), bytes32(uint256(1)), "undisputed, an accepting verifier is trusted completely");
     }
 
     function test_aFailingVerifierCannotAdvanceTheIndex() public {
@@ -276,7 +288,7 @@ contract ZkWujiIndexTest is Test {
         // and the contract accepts it as a proof journal, reaching the identical state
         ZkWujiIndex viaProof = _deploy(new AcceptingVerifier());
         j.maxTime = uint32(block.timestamp);
-        viaProof.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        _proveAndFinalize(viaProof, j);
         assertEq(viaProof.S(), viaHeaders.S());
         assertEq(viaProof.lastHash(), viaHeaders.lastHash());
     }
@@ -294,7 +306,7 @@ contract ZkWujiIndexTest is Test {
 
         ZkWujiIndex proved = _deployWithInterval(100);
         j.maxTime = uint32(block.timestamp);
-        proved.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        _proveAndFinalize(proved, j);
         assertTrue(proved.checkpointed(genesis + 99), "the proof records the boundary");
         assertEq(proved.checkpointS(genesis + 99), small.checkpointS(genesis + 99));
         assertEq(proved.S(), small.S());
@@ -308,7 +320,7 @@ contract ZkWujiIndexTest is Test {
         vm.expectRevert(ZkWujiIndex.NoVerifier.selector);
         new ZkWujiIndex(
             ISP1Verifier(address(0xdead)), bytes32(uint256(1)), RelayerRewards(address(0)), anchor,
-            anchorHeight, 1, times, 0, genesis, 4320
+            anchorHeight, 1, times, 0, genesis, 4320, _challenge()
         );
 
         // address(0) is allowed, and means "header path only"
@@ -321,18 +333,24 @@ contract ZkWujiIndexTest is Test {
     }
 
     function test_gas() public {
+        bytes memory raw = _slice(0, 250); // built first: the byte-copy loop is not the contract's cost
         uint256 g = gasleft();
-        idx.foldHeaders(_slice(0, 262), new address[](0));
+        idx.foldHeaders(raw, new address[](0));
         uint256 headerPath = g - gasleft();
-        emit log_named_uint("foldHeaders gas per header (256 folded)", headerPath / 262);
+        emit log_named_uint("foldHeaders gas per header (244 folded)", headerPath / 250);
 
         ZkWujiIndex proofIdx = _deploy(new AcceptingVerifier());
-        ZkWujiIndex.Journal memory j = _journal(proofIdx, 0, 262);
+        ZkWujiIndex.Journal memory j = _journal(proofIdx, 0, 250);
         bytes memory pv = abi.encode(j);
         g = gasleft();
         proofIdx.foldProof(hex"c0ffee", pv, new address[](0));
         uint256 proofPath = g - gasleft();
-        emit log_named_uint("foldProof gas for the same 256 heights (verifier excluded)", proofPath);
-        assertLt(proofPath, headerPath / 4, "the proof path must be far cheaper");
+        vm.warp(block.timestamp + proofIdx.CHALLENGE_WINDOW());
+        g = gasleft();
+        proofIdx.finalize(1);
+        uint256 finalizeGas = g - gasleft();
+        emit log_named_uint("foldProof gas for the same 244 heights (verifier excluded)", proofPath);
+        emit log_named_uint("finalize gas after the window", finalizeGas);
+        assertLt(proofPath + finalizeGas, headerPath / 4, "the proof path must be far cheaper");
     }
 }

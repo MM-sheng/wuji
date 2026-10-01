@@ -31,7 +31,13 @@ contract ZkFixture is Script {
             times,
             0,
             uint64(vm.parseJsonUint(meta, ".start")),
-            4320
+            4320,
+            // short windows so a local run can finalize after an anvil time jump
+            ZkWujiIndex.Challenge({
+                window: uint64(vm.envOr("CHALLENGE_WINDOW", uint256(600))),
+                responseWindow: uint64(vm.envOr("RESPONSE_WINDOW", uint256(600))),
+                bond: vm.envOr("DISPUTE_BOND", uint256(0.01 ether))
+            })
         );
         vm.stopBroadcast();
         console.log("ZK_INDEX", address(idx));

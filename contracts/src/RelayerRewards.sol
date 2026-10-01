@@ -53,6 +53,18 @@ contract RelayerRewards is ReentrancyGuard {
         uint256 count = uint256(to) - from + 1;
         require(tokens.length == 0 || count <= MAX_HEIGHTS, "height limit");
         lastHeight = to;
+        _allocate(worker, count, tokens, from, to);
+    }
+    /// @notice Index-only: pay a watcher whose dispute removed a batch (T12) the bounty that batch would have
+    ///         earned. Consumes no heights: they stay payable to whoever later folds them for real.
+    function award(address worker, uint256 count, address[] calldata tokens) external nonReentrant {
+        require(msg.sender == index, "index only");
+        require(worker != address(0) && count != 0 && count <= MAX_HEIGHTS, "award count");
+        require(tokens.length <= MAX_TOKENS, "token limit");
+        _allocate(worker, count, tokens, 0, 0);
+    }
+    /// @dev `from == to == 0` marks a dispute award in the Bounty event; folded heights are never 0.
+    function _allocate(address worker, uint256 count, address[] calldata tokens, uint64 from, uint64 to) internal {
         address previous;
         for (uint256 i; i < tokens.length; ++i) {
             address token = tokens[i];

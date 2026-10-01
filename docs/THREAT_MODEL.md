@@ -54,6 +54,12 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
   constructor rejects any verifier address that holds no code, because `verifyProof` returns nothing and
   Solidity emits no extcodesize check for such a call: a misconfigured verifier would otherwise accept
   every proof silently.
+  **T12 (source, not deployed) narrows this:** a proof only opens a pending batch; it becomes final after a
+  challenge window unless disputed with a bond, and a disputed batch survives only if its raw headers,
+  replayed by the Solidity rules, reproduce it exactly. A broken verifier then moves the index only if no
+  honest watcher disputes within the window. Residual risks: watcher absence for `W` (loss), griefing that
+  delays honest batches by `W + R` per lost bond, and a reject reward a griefer can collect if nobody
+  backs an honest batch within `R`.
 - **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
   height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
   local Core/Esplora. HTTP success is not proof of Bitcoin consensus. `BITCOIN_SOURCE=p2p` removes the HTTP
