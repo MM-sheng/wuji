@@ -204,6 +204,29 @@ contract ZkWujiIndex {
         return tip.hash;
     }
 
+    /// @notice Timestamp of the finalized tip's header.
+    function lastTime() external view returns (uint32) {
+        return tip.time;
+    }
+
+    /// @notice Validate `headers` on top of the finalized state with every header rule and return the last
+    ///         height and its timestamp. Writes nothing. Any chain that passes carries real proof of work at the
+    ///         real difficulty, so its height is a lower bound on the Bitcoin tip: what a consumer needs to
+    ///         schedule work at a height that cannot exist yet (T11 pools on this index).
+    function seenTip(bytes calldata headers) external view returns (uint64 height, uint32 time) {
+        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
+        uint256 count = headers.length / 80;
+        if (count > MAX_HEADERS) revert TooManyHeaders();
+        Continuity memory state = tip;
+        uint32[11] memory times = recentTimes;
+        uint256 work = chainWork;
+        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        for (uint256 i = 0; i < count; ++i) {
+            work = _apply(state, times, work, headers[i * 80:(i + 1) * 80], maxTime);
+        }
+        return (state.height, state.time);
+    }
+
     /// @notice The exact tuple the next proof must start from: the newest pending batch's end, or the
     ///         finalized state when nothing is pending. A prover reads this and nothing else.
     function continuity() external view returns (Continuity memory, uint32[11] memory, uint256) {

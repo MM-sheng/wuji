@@ -176,5 +176,6 @@ needs a redeployment to take effect on Sepolia.
 ### Not done
 
 - Record the first finalization; run a second watcher on another machine.
-- Redeploy with `refute` (WUJI-08).
+- Redeploy with `refute` (WUJI-08), which also brings `lastTime()` and `seenTip(headers)`, the views T11
+  pools on this index need (T11 doc, Update 2026-10-01).
 - Independent review of the queue and dispute paths.

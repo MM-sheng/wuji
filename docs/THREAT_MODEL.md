@@ -219,6 +219,16 @@ deployed 30 min / 16 blocks, worst case. Residual: a best header stamped in the 
 2 h) looks fresher than it is. Honest headers are close to real time, and making a future-stamped tip costs a
 real block. This hole existed in the first implementation and was found while building, not by review.
 
+**Pools on an index without a relay (ZK, 2026-10-01).** There is no relay best to price from, and a pending
+proof's view of the tip is untrusted for the T12 window. Default pricing A uses the *finalized* tip plus a
+margin from its age: P(pricing block already exists) ≤ 1e-7 under a Poisson model at 1.25× the nominal block
+rate with 2 h of timestamp skew. Residuals: a block rate above 1.25× for the tip's whole age, and a finalized
+tip stamped in the future (it then looks younger; Bitcoin allows 2 h, which the skew term covers once).
+Fast path B prices from requester-supplied headers that the index validates with every header rule (`seenTip`),
+with the same `MAX_TIP_AGE`/`DELAY` bound as a relay; a requester can only show *more* real work than exists
+by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it
+relies on the index's own confirmation depth, as the index does.
+
 **Floor overshoot.** A loser can cross 0 between two priced epochs; the winner is still credited the full
 move. The shortfall is charged to the pool's fee buffer first and only then recorded as `badDebt`, which is
 public. After every payout the buffer is clamped to the pool's real balance, so a winner paid out of a

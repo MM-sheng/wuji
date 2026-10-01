@@ -263,9 +263,30 @@ B. **Requester supplies headers.** The request carries the raw headers from the 
    45–80 headers ≈ 0.9–1.6M gas per request on top of the request itself.
 C. **A thin header relay for the best tip only** (option 3 above): per-header gas forever.
 
-Recommendation: **A** for the testnet pools (no new trust, no index change, simple), and keep B as an optional
-fast path a requester can pay for. Not implemented; this needs a decision because it changes the user-facing
-wait from about 3–4 h to about 9–11 h.
+**Decided 2026-10-01: A by default, B and C kept.** Implemented in `WujiAccounts.sol`; the pool detects at
+construction whether its index has a relay (`RELAY_TIP`):
+
+- relay index → **C**, unchanged (relay best + `DELAY`, best header ≤ `MAX_TIP_AGE`; queue only grows);
+- index without a relay → **A** for `requestEnter`/`requestExit` (`finalizedMargin()`: the table below, in
+  the contract as constants; requests stop once the finalized tip is 24 h old), and **B** for
+  `requestEnterWithHeaders`/`requestExitWithHeaders` (headers from the finalized tip, validated by the
+  index's new `seenTip`, last one ≤ `MAX_TIP_AGE` old, priced at its height + `DELAY`).
+
+A and B price the same moment differently, so on these pools the pending-epoch queue is kept sorted and
+unique (each epoch is still priced once, in height order). Epochs below the finalized tip are marked with
+`markWithHeaders`; one exactly at the tip is read from the index.
+
+The margin uses a 1.25× block rate on top of the 2 h skew, which lengthens A's wait beyond the first table:
+
+| finalized tip age (h, rounded up) | 0 | 1 | 3 | 6 | 7 | 9 | 12 | 18 | 24 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| margin `m` (heights) | 40 | 52 | 74 | 105 | 115 | 135 | 163 | 219 | 273 |
+| expected wait at 1×, h | 6.7 | 7.7 | 9.3 | 11.5 | 12.2 | 13.5 | 15.2 | 18.5 | 21.5 |
+
+With the T12 window the finalized tip is usually 7–13 h old, so A means roughly 12–15 h; B keeps 3–4 h for
+≈ 20k gas per supplied header. Tests: `test/WujiAccounts.zk.t.sol` (real `ZkWujiIndex`, mainnet headers).
+Remaining: the accounts keeper (`indexer/accounts.mjs`) does not yet call `markWithHeaders` for these pools;
+`WujiAccountsFactory` is 24,288 bytes, 288 under the EIP-170 limit.
 
 ## Step 5 (2026-09-25) — live on BSC testnet
 
