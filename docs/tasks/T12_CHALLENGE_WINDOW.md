@@ -176,6 +176,8 @@ needs a redeployment to take effect on Sepolia.
 ### Not done
 
 - Record the first finalization; run a second watcher on another machine.
+- Terminal: the "ZK · 挑战窗口" tab (`apps/terminal/index.html`, `ZK_RELEASE`) reads the finalized state and
+  every pending batch straight from Sepolia at one block; update its address with the redeployment.
 - Redeploy with `refute` (WUJI-08), which also brings `lastTime()` and `seenTip(headers)`, the views T11
   pools on this index need (T11 doc, Update 2026-10-01).
 - Independent review of the queue and dispute paths.
