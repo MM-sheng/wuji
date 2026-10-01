@@ -65,6 +65,30 @@ Minting and redeeming complete pairs constrains aggregate pair value. It does no
 YIN pool individually tracks the live claim value. The UI must distinguish contract claim value from
 secondary-market execution price.
 
+### WUJI-08 — Medium — Fixed in source, deployed contract affected — forged proofs could hold the ZK index (T12)
+
+Found 2026-10-01 reviewing T12 after its Sepolia deployment (`0x0ee930Fe…6B47`). Assumes a broken proof
+system (the case T12 exists for). New proofs must extend the head of the pending queue, and `foldHeaders`
+is closed while anything is pending. An attacker who keeps one forged batch at the head (re-proposing on
+the finalized state each time the previous one is rejected, one proof per `W + R`) blocks every honest
+proof and the header path: the index cannot be corrupted (watchers dispute) but cannot advance either,
+breaking the T10 property that liveness never depends on the proof system.
+
+Fix: `refute(id, headers, tokens)`. For a disputed, unbacked batch, the real headers over its range,
+replayed from its starting state, must reach a different end state; the batch and its successors are
+removed as in `reject`, at once, and for the oldest batch the replayed state is folded exactly as
+`foldHeaders` would. Each forgery is then answered in one transaction that also advances the index.
+Tests: `test_forgedProofsCannotHoldTheIndex`, refute unit tests, and a refute action in the T12 invariant
+suite (forged batches on a real start can always be refuted; honest ones never). The watcher now refutes
+right after disputing. The deployed T12 contract predates the fix and keeps the issue until redeployed.
+
+### WUJI-09 — Informational — Accepted — forging costs the attacker only gas (T12)
+
+With a broken verifier, a forged batch costs the attacker gas and nothing else; its disputer is paid from
+the relayer reserve, and honest refuters pay header gas (≈ 20k per header). A prover bond would make the
+attacker pay, at the price of locking capital for every honest batch. Deferred; revisit with mainnet
+economics.
+
 ## Verification performed
 
 - 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.

@@ -46,6 +46,9 @@ struct Pending { Continuity from; Continuity to; uint32[11] toTimes; uint256 toW
    caller of `back`. Otherwise it reverts.
 5. `reject(i)` (anyone, after `respondBy` with no successful `back`) deletes batch `i` and every pending batch
    after it, and returns the bond to the disputer plus a reward.
+6. `refute(i, headers)` (anyone, any time while `i` is disputed and unbacked; added after review, WUJI-08)
+   does the same at once when the real headers over the batch's range replay to a *different* state, and for
+   the oldest batch folds that real state, so forged proofs at the head of the queue cannot hold the index.
 
 The raw-header path (`foldHeaders`) stays available, but only from the last *finalized* state and only when no
 batch is pending, so it cannot race a dispute.
@@ -162,7 +165,16 @@ dispute; disputed and matching → back; disputed, unbacked, past `R` → reject
 - The watcher runs as the deployer account with P2P + mempool.space and reported batch 0 as matching the
   chain within two minutes of submission.
 
+### After deployment: WUJI-08
+
+Reviewing the deployed contract found that, with a broken verifier, an attacker keeping one forged batch at
+the head of the queue (one proof per `W + R`) would block honest proofs and the header path indefinitely.
+Fixed in source with `refute` (step 6 above; `docs/AUDIT_NOTES.md` WUJI-08). The watcher refutes right after
+disputing and falls back to `reject` on contracts without `refute`, such as the one deployed above. The fix
+needs a redeployment to take effect on Sepolia.
+
 ### Not done
 
 - Record the first finalization; run a second watcher on another machine.
+- Redeploy with `refute` (WUJI-08).
 - Independent review of the queue and dispute paths.

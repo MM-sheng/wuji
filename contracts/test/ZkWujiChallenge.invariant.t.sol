@@ -11,6 +11,8 @@ import {AnyProof} from "./ZkWujiChallenge.t.sol";
 contract ZkChallengeHandler is Test {
     uint256 constant K = 8; // honest batches of 40 headers precomputed from the anchor
     uint256 constant BATCH = 40;
+    /// Headers whose real (hash, U) the model knows; back/refute stay inside it so "real" is decidable.
+    uint256 constant KNOWN = K * (BATCH - 6) + 6 + 200;
 
     ZkWujiIndex public idx;
     bytes headers;
@@ -27,6 +29,7 @@ contract ZkChallengeHandler is Test {
     uint256 public forgedProposed;
     uint256 public backs;
     uint256 public rejects;
+    uint256 public refutes;
     uint256 public finalized;
 
     constructor(ZkWujiIndex idx_, ZkWujiIndex shadow, bytes memory headers_, uint64 anchorHeight_) {
@@ -40,6 +43,18 @@ contract ZkChallengeHandler is Test {
         (ZkWujiIndex.Continuity memory c, uint32[11] memory t, uint256 w) = shadow.continuity();
         isReal[c.hash] = true;
         realU[c.hash] = c.u;
+        // Every real height, not only batch ends: `refute` folds real state at whatever height a forgery claimed.
+        {
+            int64 u = c.u;
+            for (uint256 i = 0; i < KNOWN; i++) {
+                bytes memory h = new bytes(80);
+                for (uint256 k = 0; k < 80; k++) h[k] = headers_[i * 80 + k];
+                bytes32 hash = sha256(abi.encodePacked(sha256(h)));
+                u += int64(int256(idx_.byteSum(sha256(abi.encodePacked(hash)))) - 4080);
+                isReal[hash] = true;
+                realU[hash] = u;
+            }
+        }
         for (uint256 k = 0; k < K; k++) {
             ZkWujiIndex.Journal storage j = honest[k];
             j.prevHash = c.hash; j.prevHeight = c.height; j.prevBits = c.bits; j.prevTime = c.time;
@@ -144,7 +159,7 @@ contract ZkChallengeHandler is Test {
         ZkWujiIndex.Continuity memory from = _from(id);
         if (!_real(from)) return; // nothing real to replay from; it will be rejected
         uint256 count = uint256(b.to.height - from.height) + 6;
-        if (from.height - anchorHeight + count > headers.length / 80) return;
+        if (from.height - anchorHeight + count > KNOWN) return;
         bytes memory raw = _headers(from.height, count);
         vm.prank(actors[actorSeed % 3]);
         if (_real(b.to)) {
@@ -154,6 +169,29 @@ contract ZkChallengeHandler is Test {
             try idx.back(id, raw) {
                 revert("a forged batch was backed");
             } catch {}
+        }
+    }
+
+    /// Refute a disputed batch with real headers: forged ones always go, honest ones never.
+    function refute(uint256 idSeed, uint256 actorSeed) external {
+        uint256 n = idx.pendingCount();
+        if (n == 0) return;
+        uint256 id = idx.firstPending() + idSeed % n;
+        ZkWujiIndex.Batch memory b = idx.batch(id);
+        if (b.disputer == address(0) || b.backed) return;
+        ZkWujiIndex.Continuity memory from = _from(id);
+        if (!_real(from)) return;
+        uint256 count = uint256(b.to.height - from.height) + 6;
+        if (from.height - anchorHeight + count > KNOWN) return;
+        bytes memory raw = _headers(from.height, count);
+        vm.prank(actors[actorSeed % 3]);
+        if (_real(b.to)) {
+            try idx.refute(id, raw, new address[](0)) {
+                revert("an honest batch was refuted");
+            } catch {}
+        } else {
+            idx.refute(id, raw, new address[](0)); // a forgery on a real start can always be refuted
+            ++refutes;
         }
     }
 
@@ -249,6 +287,7 @@ contract ZkWujiChallengeInvariantTest is Test {
         emit log_named_uint("forged proposed", handler.forgedProposed());
         emit log_named_uint("honest backs", handler.backs());
         emit log_named_uint("rejects", handler.rejects());
+        emit log_named_uint("refutes", handler.refutes());
         emit log_named_uint("batches finalized", handler.finalized());
     }
 }

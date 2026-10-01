@@ -385,6 +385,64 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         assertEq(idx.lastHash(), honest.newHash);
     }
 
+    // ---------------------------------------------------------------- refute
+
+    function test_aForgedBatchIsRefutedAtOnceAndTheHeaderPathAdvances() public {
+        ZkWujiIndex.Journal memory honest = _honest(idx, 60);
+        _propose(idx, _forge(honest));
+        _dispute(0);
+
+        address refuter = address(0xF00D);
+        vm.prank(refuter);
+        uint64 folded = idx.refute(0, _headers(anchorHeight, 60), new address[](0));
+        assertEq(folded, 54);
+        assertEq(idx.pendingCount(), 0, "the forgery is gone without waiting for the response window");
+        assertEq(idx.lastHash(), honest.newHash, "and the real state is folded in its place");
+        assertEq(idx.S(), int256(honest.newU) * idx.UNIT());
+        assertEq(idx.owed(WATCHER), BOND, "the disputer was right and gets the bond back");
+    }
+
+    function test_refutingAnHonestBatchFails() public {
+        _propose(idx, _honest(idx, 60));
+        _dispute(0);
+        vm.expectRevert(ZkWujiIndex.NotForged.selector);
+        idx.refute(0, _headers(anchorHeight, 60), new address[](0));
+    }
+
+    function test_refuteNeedsADispute() public {
+        _propose(idx, _forge(_honest(idx, 60)));
+        vm.expectRevert(ZkWujiIndex.NotDisputed.selector);
+        idx.refute(0, _headers(anchorHeight, 60), new address[](0));
+    }
+
+    function test_refutingALaterBatchRemovesItAndLeavesTheEarlierOnes() public {
+        ZkWujiIndex.Journal memory first = _honest(idx, 40);
+        _propose(idx, first);
+        ZkWujiIndex.Journal memory second = _honest(idx, 40);
+        _propose(idx, _forge(second));
+        _dispute(1);
+        idx.refute(1, _headers(first.newHeight, 40), new address[](0));
+        assertEq(idx.pendingCount(), 1, "only the forged batch went");
+        assertEq(idx.lastHeight(), anchorHeight, "nothing is folded past an unfinalized batch");
+        vm.warp(block.timestamp + W);
+        idx.finalize(1);
+        assertEq(idx.lastHash(), first.newHash);
+    }
+
+    /// The liveness property the header path exists for: a broken verifier and an attacker who always
+    /// occupies the head of the queue cannot stop the index, because every forgery is refuted with real headers.
+    function test_forgedProofsCannotHoldTheIndex() public {
+        for (uint256 round = 0; round < 3; round++) {
+            uint64 before = idx.lastHeight();
+            ZkWujiIndex.Journal memory honest = _honest(idx, 40);
+            _propose(idx, _forge(honest));
+            _dispute(idx.firstPending());
+            idx.refute(idx.firstPending(), _headers(before, 40), new address[](0));
+            assertEq(idx.lastHash(), honest.newHash, "advanced past the forgery");
+        }
+        assertEq(idx.lastHeight(), anchorHeight + 3 * 34);
+    }
+
     function test_rejectNeedsAnUnansweredDispute() public {
         _propose(idx, _honest(idx, 40));
         vm.expectRevert(ZkWujiIndex.NotDisputed.selector);

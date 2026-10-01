@@ -6,9 +6,10 @@
 // result with what the batch claims (hash, height, bits, time, epoch start, U, work, median-time-past
 // window, checkpoints). The header at the claimed height must agree between two independent Bitcoin
 // sources (WATCH_SOURCES, default "p2p,http") before the watcher acts on it.
-//   * mismatch, window open, not yet disputed → dispute (posts DISPUTE_BOND)
+//   * mismatch, window open                    → dispute if needed (posts DISPUTE_BOND), then refute with
+//                                                the real headers at once (bond back; oldest batch: the
+//                                                real state is folded in its place); reject as a fallback
 //   * disputed, matches, response window open  → back with the raw headers (earns the bond)
-//   * disputed, unbacked, response window over  → reject (returns the disputer's bond)
 //   * past its window and undisputed, or backed → finalize
 // Anyone can run this; the protocol is only as safe as the most attentive watcher. WATCH_DRY_RUN=1 logs
 // what it would send and sends nothing.
@@ -75,12 +76,19 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
 
     if (diff.length) {
       log(`batch ${id} (${start.height + 1}..${b.to.height}) does not match the chain: ${diff.join(', ')}`);
-      if (!disputed && now < b.finalAt) {
-        await act(`dispute batch ${id}`, 'dispute(uint256,address[])', 300_000, [String(id), '[]'], bond);
-      } else if (disputed && !b.backed && now > b.respondBy) {
-        await act(`reject batch ${id}`, 'reject(uint256)', 3_000_000, [String(id)]);
-      } else if (!disputed) {
+      if (!disputed && now >= b.finalAt) {
         log(`batch ${id}: MISMATCH PAST ITS WINDOW — it will finalize; this is the loss case`);
+        break;
+      }
+      if (!disputed) await act(`dispute batch ${id}`, 'dispute(uint256,address[])', 300_000, [String(id), '[]'], bond);
+      // Refute at once with the real headers (no need to wait out the response window); for the oldest
+      // batch this also folds the real state, so forged proofs at the head of the queue cannot hold the index.
+      try {
+        await act(`refute batch ${id} with ${count} headers`, 'refute(uint256,bytes,address[])', 600_000 + 120_000 * count,
+          [String(id), '0x' + headers.join(''), '[]']);
+      } catch (e) {
+        log(`refute batch ${id} failed: ${e.message}`);
+        if (disputed && !b.backed && now > b.respondBy) await act(`reject batch ${id}`, 'reject(uint256)', 3_000_000, [String(id)]);
       }
       break; // everything after it is built on it
     }

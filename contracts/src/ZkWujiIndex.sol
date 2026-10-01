@@ -133,6 +133,7 @@ contract ZkWujiIndex {
     error WindowOpen();
     error WrongBond();
     error Mismatch();
+    error NotForged();
     error TransferFailed();
 
     /// @param anchorHeader the 80-byte header at `anchorHeight`; an immutable, publicly auditable starting point
@@ -272,10 +273,17 @@ contract ZkWujiIndex {
         w.times = recentTimes;
         w.work = chainWork;
         (uint64[] memory heights, int64[] memory us) = _replay(w, headers);
+        folded = _commitReplay(w, heights, us, rewardTokens);
+    }
+
+    /// @dev Make a replay from the finalized state the new finalized state, as the header path always has.
+    function _commitReplay(Working memory w, uint64[] memory heights, int64[] memory us, address[] calldata rewardTokens)
+        internal
+        returns (uint64 folded)
+    {
         for (uint256 i = 0; i < heights.length; ++i) {
             _recordCheckpoint(heights[i], int256(us[i]) * UNIT);
         }
-
         tip = w.committed;
         recentTimes = w.committedTimes;
         chainWork = w.committedWork;
@@ -481,7 +489,33 @@ contract ZkWujiIndex {
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         if (block.timestamp <= b.respondBy) revert WindowOpen();
+        _reject(id);
+    }
 
+    /// @notice Prove a disputed batch false at once, instead of waiting out the response window: the real
+    ///         headers over the batch's range, replayed by the Solidity rules from its starting state, reach a
+    ///         different end state. The batch and everything after it go as in `reject`. For the oldest batch
+    ///         the replayed state is then folded exactly as `foldHeaders` would fold it, so a stream of forged
+    ///         proofs holding the head of the queue cannot hold the index: the header path stays live.
+    /// @dev Same trust as `foldHeaders`: any branch with valid proof of work and CONFIRMATIONS descendants.
+    function refute(uint256 id, bytes calldata headers, address[] calldata rewardTokens)
+        external
+        returns (uint64 folded)
+    {
+        Batch storage b = _pending(id);
+        if (b.disputer == address(0) || b.backed) revert NotDisputed();
+        Working memory w;
+        (w.state, w.times, w.work) = _stateBefore(id);
+        if (headers.length != (uint256(b.to.height - w.state.height) + CONFIRMATIONS) * 80) revert BadLength();
+        (uint64[] memory heights, int64[] memory us) = _replay(w, headers);
+        if (_matches(w, b, us)) revert NotForged();
+        bool oldest = id == firstPending;
+        _reject(id);
+        if (oldest) folded = _commitReplay(w, heights, us, rewardTokens);
+    }
+
+    function _reject(uint256 id) internal {
+        Batch storage b = batches[id];
         address disputer = b.disputer;
         address[] memory tokens = b.disputerTokens;
         (Continuity memory from,,) = _stateBefore(id);

@@ -96,12 +96,12 @@ function setup({ forge, disputed, now }) {
   return { chain, sources: [source, source] };
 }
 
-test('the watcher disputes a forged batch inside its window, with the bond', async () => {
+test('the watcher disputes a forged batch inside its window, with the bond, and refutes it at once', async () => {
   const { chain, sources } = setup({ forge: true, disputed: false, now: 500 });
   await watch({ chain, sources });
-  assert.equal(chain.sent.length, 1);
-  assert.equal(chain.sent[0].sig, 'dispute(uint256,address[])');
+  assert.deepEqual(chain.sent.map(s => s.sig), ['dispute(uint256,address[])', 'refute(uint256,bytes,address[])']);
   assert.equal(chain.sent[0].value, 5n * 10n ** 16n);
+  assert.equal(chain.sent[1].args[1].length, 2 + 100 * 160, 'the same headers back would use');
 });
 
 test('the watcher backs an honest disputed batch with the exact headers', async () => {
@@ -113,10 +113,22 @@ test('the watcher backs an honest disputed batch with the exact headers', async 
   assert.equal(chain.sent.length, 1);
 });
 
-test('the watcher rejects a forged disputed batch once nobody could back it', async () => {
-  const { chain, sources } = setup({ forge: true, disputed: true, now: 2001 });
+test('the watcher refutes a batch someone else disputed, and falls back to reject after the window', async () => {
+  let { chain, sources } = setup({ forge: true, disputed: true, now: 1500 });
+  await watch({ chain, sources });
+  assert.deepEqual(chain.sent.map(s => s.sig), ['refute(uint256,bytes,address[])']);
+
+  ({ chain, sources } = setup({ forge: true, disputed: true, now: 2001 }));
+  const send = chain.send;
+  chain.send = async (sig, ...rest) => { if (sig.startsWith('refute')) throw Error('reverted'); return send(sig, ...rest); };
   await watch({ chain, sources });
   assert.deepEqual(chain.sent.map(s => s.sig), ['reject(uint256)']);
+});
+
+test('the watcher only reports a forgery whose window has closed undisputed', async () => {
+  const { chain, sources } = setup({ forge: true, disputed: false, now: 1000 });
+  await watch({ chain, sources });
+  assert.deepEqual(chain.sent, []);
 });
 
 test('the watcher finalizes an honest batch past its window and leaves honest open ones alone', async () => {
