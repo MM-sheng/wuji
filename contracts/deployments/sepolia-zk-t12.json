@@ -1,0 +1,31 @@
+{
+  "version": "t12-zk-sepolia-v1",
+  "chainId": 11155111,
+  "deployedAt": "2026-10-01",
+  "sourceCommit": "e9b1c21 (branch t12-challenge-window)",
+  "ZkWujiIndex": "0x0ee930Fe689a29Fde478a5fE995e17AE0Fd06B47",
+  "SP1Verifier": "0x3de0B34c4516AF875b8619Ca893dF9Be44C4ca6a",
+  "SP1VerifierNote": "reused from the T10 deployment (contracts/deployments/sepolia-zk.json), v6.1.0 unmodified",
+  "programVKey": "0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8",
+  "anchor": "contracts/deployments/sepolia-zk-anchor.json (same anchor as T10, so the two contracts can be compared height by height)",
+  "anchorHeight": 969131,
+  "genesisHeight": 969132,
+  "checkpointInterval": 4320,
+  "challenge": { "window": 21600, "responseWindow": 21600, "bond": "50000000000000000" },
+  "rewards": "none (address(0))",
+  "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "transaction": {
+    "hash": "0x7f2d3a3293f0a0ea5d8c90700491cc083d87abf13644f92986b16dea8525183b",
+    "block": 11819031,
+    "gasUsed": 4319178,
+    "effectiveGasPrice": 1027267988
+  },
+  "verification": {
+    "runtimeBytecode": "19,005 bytes; identical to forge build of the source commit with the 1,024 immutable bytes masked",
+    "views": "verifier, programVKey, GENESIS_HEIGHT, CHECKPOINT_INTERVAL, CHALLENGE_WINDOW, RESPONSE_WINDOW, DISPUTE_BOND, MAX_PROOF_HEADERS=250, lastHeight=969131, lastHash = anchor hash, pendingCount=0 read back after deployment"
+  },
+  "operators": {
+    "keeper": "indexer/zk-keeper.mjs as 0x2302992F8ef33a3561bf26E19994Cf12E76F53E4 (wuji-sepolia-v4), BITCOIN_SOURCE=p2p; moved here from the T10 contract, which now stays at 969347",
+    "watcher": "indexer/zk-watcher.mjs as the deployer 0x8596…e8Fd (wuji-sepolia), WATCH_SOURCES=p2p,http"
+  }
+}

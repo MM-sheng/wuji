@@ -84,6 +84,7 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
       }
       break; // everything after it is built on it
     }
+    log(`batch ${id} (${start.height + 1}..${b.to.height}) matches the chain${disputed ? ' (disputed)' : `; final at ${new Date(b.finalAt * 1000).toISOString().slice(0, 16)}Z`}`);
     if (disputed && !b.backed && now <= b.respondBy) {
       const gas = 600_000 + 120_000 * count;
       await act(`back batch ${id} with ${count} headers`, 'back(uint256,bytes)', gas, [String(id), '0x' + headers.join('')]);

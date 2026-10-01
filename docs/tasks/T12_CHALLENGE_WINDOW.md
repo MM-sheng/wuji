@@ -1,7 +1,7 @@
 # T12 design: a challenge window for ZK folds
 
-Status: implemented in source 2026-10-01 (build steps 1–3 below, except the Sepolia deployment); not
-deployed, not audited. Applies to `ZkWujiIndex` (T10). Implementation notes and measurements are at the end.
+Status: implemented 2026-10-01 and deployed on Sepolia the same day
+(`0x0ee930Fe689a29Fde478a5fE995e17AE0Fd06B47`, `contracts/deployments/sepolia-zk-t12.json`); not audited. Applies to `ZkWujiIndex` (T10). Implementation notes and measurements are at the end.
 
 ## Why
 
@@ -151,8 +151,18 @@ dispute; disputed and matching → back; disputed, unbacked, past `R` → reject
   7,956,964 first reported in T10 (same measurement error as above; corrected in README, T10 design,
   grant proposal, related work and the ethresear.ch draft).
 
+### Sepolia (2026-10-01)
+
+- Deployed from `e9b1c21` with the T10 anchor (969131) and SP1's v6.1.0 verifier reused; 4,319,178 gas,
+  tx `0x7f2d3a3293f0a0ea5d8c90700491cc083d87abf13644f92986b16dea8525183b`. Runtime bytecode equals the local
+  build with immutables masked; every binding read back.
+- The ZK keeper moved here from the T10 contract (which stays at 969347 as a comparison). First batch: 250
+  live headers 969132–969381 proved in 294 s; `foldProof` 459,162 gas, tx
+  `0x8be19702b22053ac7eac499a2d114a0373c6bec90cd21ee59c64147fca37404b`, pending until 09:11 UTC.
+- The watcher runs as the deployer account with P2P + mempool.space and reported batch 0 as matching the
+  chain within two minutes of submission.
+
 ### Not done
 
-- Sepolia deployment (a new address beside the T10 contract; needs ≈ 0.02 ETH plus the bond float for the
-  watcher) and running the watcher on two machines.
+- Record the first finalization; run a second watcher on another machine.
 - Independent review of the queue and dispute paths.

@@ -292,10 +292,11 @@ Remaining:
 - Deploy to a testnet and reconcile against the non-ZK deployment.
 ---
 
-## T12 · Challenge window for ZK folds — implemented in source, not deployed
+## T12 · Challenge window for ZK folds — live on Sepolia (2026-10-01)
 
-Design, build notes and measurements: [T12_CHALLENGE_WINDOW.md](T12_CHALLENGE_WINDOW.md). Remaining: Sepolia
-deployment beside the T10 contract, the watcher on two machines, independent review.
+Design, build notes, measurements and deployment: [T12_CHALLENGE_WINDOW.md](T12_CHALLENGE_WINDOW.md).
+`0x0ee930Fe689a29Fde478a5fE995e17AE0Fd06B47`; keeper and watcher running. Remaining: a second watcher machine,
+independent review.
 
 ## Explicitly not now
 
