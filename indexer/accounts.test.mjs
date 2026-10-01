@@ -93,3 +93,39 @@ test('keeper does nothing when idle, and freezes after the index does', async ()
   await maintainPool({ ...done, pool });
   assert.deepEqual(done.sends, []);
 });
+
+test('relay-less pools: ready epochs are marked from headers, highest first, bridging gaps over 1024', async () => {
+  const { markFromHeaders, maintainPool } = await import('./accounts.mjs');
+  const run = async ({ queue, head = 0, folded, marked = [] }) => {
+    const calls = [];
+    const read = async (to, data) => {
+      const sel = data.slice(0, 10), arg = data.length > 10 ? BigInt('0x' + data.slice(10, 74)) : 0n;
+      if (to === index) return word(folded);
+      if (sel === '0x8f7dcfa3') return word(head);
+      if (sel === '0xab91c7b0') return word(queue.length);
+      if (sel === '0xddf0b009') return word(queue[Number(arg)]);
+      if (sel === '0x515f805e') return word(marked.includes(Number(arg)) ? 1 : 0);
+      throw Error('unexpected ' + sel);
+    };
+    const headersFor = async (from, to) => '0x' + 'ab'.repeat(80 * (to - from + 1));
+    const send = async (to, sig, gas, h, top, hex) => calls.push([Number(h), Number(top), (hex.length - 2) / 160]);
+    await markFromHeaders({ read, simulate: async () => '0', send, pool, index, headersFor });
+    return calls;
+  };
+  // 2000 is the tip (read from the index, no headers); 2010 is not folded yet.
+  assert.deepEqual(await run({ queue: [500, 1000, 1990, 2000, 2010], folded: 2000 }),
+    [[1990, 2000, 10], [1000, 1990, 990], [500, 1000, 500]]);
+  // One epoch far below the tip: bridged in MAX_WALK steps, each anchored on the mark above it.
+  assert.deepEqual(await run({ queue: [100], folded: 2500 }),
+    [[1476, 2500, 1024], [452, 1476, 1024], [100, 452, 352]]);
+  // Already marked heights are anchors, not work.
+  assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990] }), [[1000, 1990, 990]]);
+
+  // maintainPool asks for a header source rather than sending processMany that could not progress.
+  const f = fixture({ queue: [1008], folded: 1010 });
+  const read = async (to, data) => (to === pool && data === '0x59cfd7b0' ? word(0) : f.read(to, data));
+  const logs = [];
+  await maintainPool({ ...f, read, pool, log: (...a) => logs.push(a.join(' ')) });
+  assert.deepEqual(f.sends, []);
+  assert.match(logs.join('\n'), /no header source/);
+});

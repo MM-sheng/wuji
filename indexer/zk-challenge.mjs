@@ -127,17 +127,22 @@ export function contractClient({ rpc, chainId, to, env = process.env }) {
   const unlocked = env.ZK_UNLOCKED_FROM;
   if (unlocked && chainId !== 31337) throw Error('ZK_UNLOCKED_FROM is for anvil (chain 31337) only');
   if (!unlocked && (!env.KEYSTORE_ACCOUNT || !env.PASSWORD_FILE)) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE');
-  async function send(sig, gas, args = [], value) {
+  const send = (sig, gas, args = [], value) => sendTo(to, sig, gas, args, value);
+  async function sendTo(target, sig, gas, args = [], value) {
     assertChain(await rpcRequest(rpc, 'eth_chainId', []), chainId);
     const who = unlocked ? ['--unlocked', '--from', unlocked] : ['--account', env.KEYSTORE_ACCOUNT, '--password-file', env.PASSWORD_FILE];
     const price = env.KEEPER_GAS_PRICE ? ['--legacy', '--gas-price', env.KEEPER_GAS_PRICE] : [];
     const paid = value ? ['--value', String(value)] : [];
-    const out = await new Promise((resolve, reject) => execFile(CAST, ['send', to, sig, ...args, '--rpc-url', rpc,
+    const out = await new Promise((resolve, reject) => execFile(CAST, ['send', target, sig, ...args, '--rpc-url', rpc,
       '--chain', String(chainId), '--gas-limit', String(gas), ...who, ...price, ...paid, '--json'], { maxBuffer: 64 << 20 },
     (e, so, se) => e ? reject(Error(castError(so) || String(se || e.message).split('\n').find(Boolean))) : resolve(so)));
     const r = JSON.parse(out);
     if (r.status !== '0x1' && r.status !== 1) throw Error(sig.split('(')[0] + ' reverted ' + r.transactionHash);
     return { hash: r.transactionHash, gas: parseInt(r.gasUsed, 16) };
   }
-  return { call, send, rpc: (m, p) => rpcRequest(rpc, m, p) };
+  /// Dry-run a call (reverts throw), returning cast's decoded output; `sig` may carry return types.
+  const simulate = (target, sig, ...args) => new Promise((resolve, reject) => execFile(CAST, ['call', target, sig, ...args,
+    '--rpc-url', rpc, ...(unlocked ? ['--from', unlocked] : [])], { maxBuffer: 64 << 20 },
+  (e, so, se) => e ? reject(Error(String(se || e.message).split('\n').find(Boolean))) : resolve(so.trim())));
+  return { call, send, sendTo, simulate, rpc: (m, p) => rpcRequest(rpc, m, p) };
 }

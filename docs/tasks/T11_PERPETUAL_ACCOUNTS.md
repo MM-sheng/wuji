@@ -285,8 +285,13 @@ The margin uses a 1.25× block rate on top of the 2 h skew, which lengthens A's 
 
 With the T12 window the finalized tip is usually 7–13 h old, so A means roughly 12–15 h; B keeps 3–4 h for
 ≈ 20k gas per supplied header. Tests: `test/WujiAccounts.zk.t.sol` (real `ZkWujiIndex`, mainnet headers).
-Remaining: the accounts keeper (`indexer/accounts.mjs`) does not yet call `markWithHeaders` for these pools;
-`WujiAccountsFactory` is 24,288 bytes, 288 under the EIP-170 limit.
+Keeper: `indexer/accounts.mjs` marks a relay-less pool's ready epochs from raw headers before `processMany`,
+highest first, each anchored at the finalized tip or the mark above it, bridging gaps over `MAX_WALK` (1024)
+with intermediate marks; `indexer/zk-keeper.mjs` maintains such pools with `ACCOUNTS=<pool,...>` from its own
+Bitcoin source. Checked end to end on anvil against a header-path `ZkWujiIndex` and a real pool: a B entry
+(priced 798468) and an A entry (798540) queued in height order, the keeper marked both from headers and
+processed them, and the recorded S at both heights equals an independent recomputation from the headers.
+Note: `WujiAccountsFactory` is 24,288 bytes, 288 under the EIP-170 limit.
 
 ## Step 5 (2026-09-25) — live on BSC testnet
 

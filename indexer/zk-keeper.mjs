@@ -10,6 +10,7 @@
 // foldHeaders with the same headers so the index never depends on a prover (ZK_FALLBACK=0 disables).
 // Signs with `cast` and an encrypted keystore; never handles a key. On anvil only (chain 31337),
 // ZK_UNLOCKED_FROM=<address> signs with anvil's unlocked account instead.
+// ACCOUNTS=<pool,...> also maintains T11 pools on this index (mark epochs from headers, process, retire, sweep).
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,6 +20,7 @@ import { createBitcoinSource } from './bitcoin-source.mjs';
 import { step } from './bitcoin.mjs';
 import { contractClient, decodeContinuity, sel, uint } from './zk-challenge.mjs';
 import { watch } from './zk-watcher.mjs';
+import { maintainPool } from './accounts.mjs';
 export { decodeContinuity };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -124,12 +126,37 @@ export async function round(source) {
   }
 }
 
+const ACCOUNTS = (env.ACCOUNTS || '').split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+if (ACCOUNTS.some(a => !/^0x[0-9a-f]{40}$/.test(a))) throw Error('ACCOUNTS must be pool addresses');
+const accountCursor = new Map();
+
+/// T11 pools on this index: same duties as the relay keeper, with epochs marked from this keeper's headers.
+export async function maintainAccounts(source, pools = ACCOUNTS) {
+  const headersFor = async (from, to) => {
+    let hex = '0x';
+    for (let h = from; h <= to; h++) hex += (await within(source.at(h), `Bitcoin header ${h}`)).header;
+    return hex;
+  };
+  for (const pool of pools) {
+    try {
+      const r = await maintainPool({
+        pool, cursor: accountCursor.get(pool) || 1, log, headersFor,
+        read: (to, data) => rpc('eth_call', [{ to, data }, 'latest']),
+        simulate: (to, sig, ...args) => chain.simulate(to, sig, ...args),
+        send: async (to, sig, gas, ...args) => { const tx = await chain.sendTo(to, sig, gas, args); log('accounts', sig.split('(')[0], pool.slice(0, 10), tx.hash); },
+      });
+      accountCursor.set(pool, r.cursor);
+    } catch (e) { log('accounts:', pool.slice(0, 10), e.message); }
+  }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const source = env.ZK_FIXTURE_SOURCE ? fixtureSource(env.ZK_FIXTURE_SOURCE) : createBitcoinSource();
   log(`zk keeper on ${INDEX} (chain ${CHAIN_ID}); batch ${MIN_BATCH}..${MAX_BATCH}, max wait ${MAX_WAIT_MIN} min, fallback ${FALLBACK}`);
   for (;;) {
     try { const r = await round(source); if (r.action === 'wait') log(`waiting: ${r.available} headers past ${r.height}`); }
     catch (e) { log('error:', e.message); }
+    if (ACCOUNTS.length) await maintainAccounts(source);
     if (env.ZK_ONCE) break;
     await new Promise(r => setTimeout(r, INTERVAL * 1000));
   }
