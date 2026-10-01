@@ -10,7 +10,9 @@ proof-of-work without trusting anyone, plus a public index derived from it:
   median-time-past, heaviest work) from a public checkpoint;
 - a zero-knowledge light client (SP1, Groth16) that proves a whole batch of headers: **100 real mainnet
   headers for 453,888 gas instead of 1,928,070** checked one by one in Solidity, running on Ethereum Sepolia since
-  2026-09-29 (first live proof: 42 headers, 323,385 gas);
+  2026-09-29 (first live proof: 42 headers, 323,385 gas). Since 2026-10-01 a proof only opens a pending
+  batch that finalizes after a 6-hour [challenge window](docs/tasks/T12_CHALLENGE_WINDOW.md), so a flaw in
+  the proof system cannot move the index while one honest watcher is online;
 - a public index `S` computed from Bitcoin block hashes that anyone can recompute, and a deep-reorg rule
   that freezes consumers at the last consistent state.
 

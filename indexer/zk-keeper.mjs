@@ -18,6 +18,7 @@ import { assertChain } from './networks.mjs';
 import { createBitcoinSource } from './bitcoin-source.mjs';
 import { step } from './bitcoin.mjs';
 import { contractClient, decodeContinuity, sel, uint } from './zk-challenge.mjs';
+import { watch } from './zk-watcher.mjs';
 export { decodeContinuity };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -67,6 +68,15 @@ export async function round(source) {
   if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
     const tx = await send('finalize(uint256)', 1_500_000, '8');
     log(`finalize gas ${tx.gas} ${tx.hash}`);
+  }
+  // Never prove on top of a pending batch that does not match the chain: that proof would be removed with
+  // it. (A forgery claiming a real hash with a wrong U still links, so the header check below cannot tell.)
+  if (pending > 0) {
+    const planned = await watch({ chain, sources: [source, source], dryRun: true });
+    if (planned.some(a => /^(dispute|refute|reject)/.test(a.sig))) {
+      log('pending batches do not match the chain; not extending them (the watcher disputes and refutes)');
+      return { action: 'blocked' };
+    }
   }
   const start = decodeContinuity(await call(sel('continuity()')));
   if (start.height !== lastHeight) { lastHeight = start.height; lastProgress = Date.now(); }
