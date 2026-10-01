@@ -1,5 +1,15 @@
 # T11 wallet test — in progress
 
+## Task C checkpoint — 2026-10-01, round 2 target reached
+
+**Today's 0.05 Sepolia ETH was received. Second-round confirmed receipts total 0.15 / 0.15 ETH: the additional funding target is now reached.** This total counts only September 29, September 30 and October 1 receipts; the first round is excluded. Current wallet balance is a separate measurement.
+
+The first attempt was rate-limited until **2026-10-01 17:36:20 Asia/Shanghai**. One retry after that time succeeded using the existing Google session, with no CAPTCHA, new login or terms acceptance. The page displayed `Transaction complete! Check your wallet address`. [Transaction](https://sepolia.etherscan.io/tx/0xe7887d1a3a84dfab4c50012077cae129a309de104142793d59d3b4d0c4628296) was verified via the public Sepolia RPC: chain ID `11155111`, receipt status `0x1`, recipient `0x85967858e2464535A12031103ABA38f2795Fe8Fd`, value **50000000000000000 wei**. Balance at observation block `0xb45faa` was **0.129274571374042189 ETH**.
+
+Raw transaction, receipt, balance and earlier cooldown response: [t11-sepolia-fuel-2026-10-01.json](../../contracts/deployments/t11-sepolia-fuel-2026-10-01.json). [Completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-01.jpg). Today's collection is complete; do not submit another October 1 claim. Previously ineligible channels were not retried. No outgoing transfer, deployment or Task A signature was performed.
+
+The October 1 handoff now reports that the per-header Sepolia keeper is retired and the ZK keeper spends approximately 0.001 ETH/day, permitting weekly collection. That estimate comes from the handoff, not a new operational measurement in this faucet run. The existing automation schedule was not changed in this run. Task D's BSC collection was outside this Sepolia-only heartbeat.
+
 ## Task C checkpoint — 2026-09-30, collection complete
 
 **Today's 0.05 Sepolia ETH was received. Second-round confirmed receipts now total 0.10 / 0.15 ETH; another 0.05 ETH is needed.** Wallet balance is tracked separately from cumulative receipts.
@@ -89,6 +99,8 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-29, approximately 17:21 attempt | Google daily limit; eligible after 17:30:01 | 0 ETH (attempt only) | None | 0.003111176757578118 ETH |
 | 2026-09-29, after 17:35 | Google Cloud Web3 | 0.05 ETH | `0x050c598710f8a316c10ed888ec1dde478d5b30ae7074301ae26645f6dd0eed9d` | 0.053111176757578118 ETH; round 2 receipts 0.05 / 0.15 ETH |
 | 2026-09-30, after 17:35 | Google Cloud Web3 | 0.05 ETH | `0xb1431def2bceaa6ca8050d166bb22b8d13d005e46fe2f7d44939f3dc1d3479f8` | 0.083711524667916053 ETH; round 2 receipts 0.10 / 0.15 ETH |
+| 2026-10-01, before 17:36:20 | Google daily limit | 0 ETH (attempt only) | None | 0.079274571374042189 ETH |
+| 2026-10-01, after 17:36:20 retry | Google Cloud Web3 | 0.05 ETH | `0xe7887d1a3a84dfab4c50012077cae129a309de104142793d59d3b4d0c4628296` | 0.129274571374042189 ETH; **round 2 receipts 0.15 / 0.15 ETH — target reached** |
 
 ## Historical report — 2026-09-26, v3
 
