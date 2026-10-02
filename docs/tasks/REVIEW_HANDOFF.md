@@ -1,10 +1,42 @@
-# T12 + T11-on-ZK · independent review handoff
+# Independent review handoff: the mainnet path (T13) first, then T12 / T11-on-ZK
 
-Prepared 2026-10-02 by the authoring session. Internal tests, invariants and the self-review findings below do
-not replace an independent review. Review the source, not these notes; treat every claim here as something to
-check.
+Prepared 2026-10-02 by the authoring session, updated the same day for T13. Internal tests, invariants and the
+self-review findings below do not replace an independent review. Review the source, not these notes; treat every
+claim here as something to check.
 
-## 1. What to review
+## 0. Priority: T13, the planned mainnet path
+
+The project decided ([decision](../decisions/2026-10-02-header-path-first.md), [T13](T13_ZK_REORG_EXIT.md)) that
+mainnet runs a **header-path-only `ZkWujiIndex`** (no verifier, no challenge window, no watchers) under three
+rules. This is what must be reviewed before mainnet; §1–§3 (the ZK challenge window) are a testnet option.
+
+| object | identifier |
+|---|---|
+| deployed index (Sepolia) | `0xc076e54b7c6Cc999883908453BBF7b349fc3Ea78`, K = 100 — [manifest](../../contracts/deployments/sepolia-t13.json) |
+| its reserve and fee router | `RelayerRewards` `0x72C276A12bb3b3E642216BcB67DE40e26e24Cb79`, `FeeRouter` `0x20B4367795a3886aE69dec0127Ebc8492E49cFC2` |
+| T11 pools on it (WETH) | factory `0x1f1773D691987833eEB3007FD9e404F66EA89985`, pools in the manifest |
+| source | `a79e176` for all of the above; branch `t12-challenge-window` |
+
+Scope, with the questions the authors most want answered:
+
+1. **Rule 2, `CONFIRMATIONS` (100).** Header validation in `_apply` / `_replay` / `foldHeaders` against Bitcoin
+   Core (bits encoding, retarget clamp, MTP, future bound, work). Is 100 the right depth for a permanent
+   index, and is the "honest submissions arrive in time" assumption stated correctly (T13 §剩下的假设)?
+2. **Rule 3, `freezeOnReorg`.** Fork base only from `committedAt`; branch must avoid the finalized tip and
+   out-work it by `(CONFIRMATIONS + 144) × work(tip.bits)`. Can a cheaper branch seal it (difficulty changes
+   inside the branch, a base far below the tip, timestamp games)? Can a real deep reorg ever fail to seal
+   (gas: `MAX_REORG_HEADERS` 800 vs the 2^24 transaction cap; folds capped at 250 heights by the keeper)?
+3. **`seenHeight` / `seenTime` and pool pricing.** Pools price at `seenHeight + margin(age of seenTime)`.
+   The header is validated, but its timestamp is a miner's; the margin assumes ≤ 2 h skew and 1.25× rate.
+4. **Consumers after a seal.** `WujiAccounts.freezePool` on this index (tested), and whether `WujiVault`
+   should ever bind to it (not wired today).
+5. **Economics.** Submitters are paid per height from pool fees through the reserve; see the economics
+   note when it lands.
+
+Tests: `test/ZkWujiReorg.t.sol` (real forks mined on a test-only low-difficulty subclass),
+`test/WujiAccounts.zk.t.sol`, and the T13 run recorded in the manifest.
+
+## 1. What to review (T12 / T11-on-ZK, testnet option)
 
 | object | identifier |
 |---|---|
@@ -61,7 +93,7 @@ two fixes (WUJI-13, WUJI-14), the rest unchanged with numbers. Check those numbe
 ## 4. Reproduce
 
 ```sh
-cd contracts && forge test                     # 221 tests; ZkWujiChallenge*.t.sol, WujiAccounts.zk.t.sol
+cd contracts && forge test                     # 227 tests; ZkWujiReorg.t.sol, ZkWujiChallenge*.t.sol, WujiAccounts.zk.t.sol
 forge test --mc ZkWujiChallengeInvariantTest -vv   # 32 runs × 300 calls, accept-anything verifier
 cd .. && node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs
 ```

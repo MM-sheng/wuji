@@ -1,7 +1,7 @@
 # Self-review: the open questions of the T12 review handoff
 
 Author: the T12 session itself, 2026-10-02, working through §3 of
-[T12_REVIEW_HANDOFF.md](../tasks/T12_REVIEW_HANDOFF.md). **Not an independent review**; it is here so an
+[REVIEW_HANDOFF.md](../tasks/REVIEW_HANDOFF.md). **Not an independent review**; it is here so an
 independent reviewer can start from the numbers and check them. Source before fixes: `2904b9e`.
 
 ## 1. Disputing honest batches paid (fixed → WUJI-13)
