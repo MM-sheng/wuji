@@ -103,13 +103,16 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
   return actions;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+/// Run the watcher loop with configuration from `env` (the CLI and the container entrypoint both use this).
+export async function main(env = process.env) {
   const RPC = (env.RPC || '').split(',')[0], CHAIN_ID = Number(env.CHAIN_ID || 0), INDEX = (env.ZK_INDEX || '').toLowerCase();
   if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
   const kinds = (env.WATCH_SOURCES || 'p2p,http').split(',').map(s => s.trim());
   if (kinds.length !== 2 || kinds[0] === kinds[1]) throw Error('WATCH_SOURCES needs two different sources, e.g. p2p,http');
   const sources = kinds.map(source => createBitcoinSource({ source }));
   const chain = contractClient({ rpc: RPC, chainId: CHAIN_ID, to: INDEX, env });
+  // Without a key the watcher still checks every batch and logs mismatches loudly: an alarm, not a guard.
+  if (!chain.canSign && !env.WATCH_DRY_RUN) { env.WATCH_DRY_RUN = '1'; log('no KEYSTORE_ACCOUNT/PASSWORD_FILE: alert-only (dry run)'); }
   const interval = Number(env.INTERVAL || 300);
   log(`zk watcher on ${INDEX} (chain ${CHAIN_ID}); sources ${kinds.join(' + ')}; every ${interval} s${env.WATCH_DRY_RUN ? ' (dry run)' : ''}`);
   for (;;) {
@@ -118,3 +121,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     await new Promise(r => setTimeout(r, interval * 1000));
   }
 }
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

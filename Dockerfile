@@ -8,6 +8,7 @@ WORKDIR /app
 COPY indexer/*.mjs ./indexer/
 COPY apps/terminal/index.html ./apps/terminal/index.html
 COPY contracts/deployments/*-v3.json ./contracts/deployments/
+COPY contracts/deployments/sepolia-zk-t12-v2.json ./contracts/deployments/
 COPY scripts/container-entrypoint.mjs ./scripts/
 RUN mkdir -p /data /home/node/.foundry/keystores && chown node:node /data /home/node/.foundry/keystores
 USER node

@@ -136,9 +136,11 @@ export function contractClient({ rpc, chainId, to, env = process.env }) {
   const call = async data => rpcRequest(rpc, 'eth_call', [{ to, data }, 'latest']);
   const unlocked = env.ZK_UNLOCKED_FROM;
   if (unlocked && chainId !== 31337) throw Error('ZK_UNLOCKED_FROM is for anvil (chain 31337) only');
-  if (!unlocked && (!env.KEYSTORE_ACCOUNT || !env.PASSWORD_FILE)) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE');
+  // Reading needs no key: an alert-only watcher runs without one and fails only if it tries to send.
+  const canSign = !!unlocked || (!!env.KEYSTORE_ACCOUNT && !!env.PASSWORD_FILE);
   const send = (sig, gas, args = [], value) => sendTo(to, sig, gas, args, value);
   async function sendTo(target, sig, gas, args = [], value) {
+    if (!canSign) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE to send');
     assertChain(await rpcRequest(rpc, 'eth_chainId', []), chainId);
     const who = unlocked ? ['--unlocked', '--from', unlocked] : ['--account', env.KEYSTORE_ACCOUNT, '--password-file', env.PASSWORD_FILE];
     const price = env.KEEPER_GAS_PRICE ? ['--legacy', '--gas-price', env.KEEPER_GAS_PRICE] : [];
@@ -154,5 +156,5 @@ export function contractClient({ rpc, chainId, to, env = process.env }) {
   const simulate = (target, sig, ...args) => new Promise((resolve, reject) => execFile(CAST, ['call', target, sig, ...args,
     '--rpc-url', rpc, ...(unlocked ? ['--from', unlocked] : [])], { maxBuffer: 64 << 20 },
   (e, so, se) => e ? reject(Error(String(se || e.message).split('\n').find(Boolean))) : resolve(so.trim())));
-  return { call, send, sendTo, simulate, rpc: (m, p) => rpcRequest(rpc, m, p) };
+  return { call, send, sendTo, simulate, canSign, rpc: (m, p) => rpcRequest(rpc, m, p) };
 }

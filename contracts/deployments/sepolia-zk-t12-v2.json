@@ -1,6 +1,7 @@
 {
   "version": "t12-zk-sepolia-v2",
   "chainId": 11155111,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
   "deployedAt": "2026-10-01",
   "sourceCommit": "047156c (branch t12-challenge-window)",
   "ZkWujiIndex": "0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7",

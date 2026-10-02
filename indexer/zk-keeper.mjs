@@ -43,6 +43,7 @@ const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-sc
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
 const chain = contractClient({ rpc: RPC, chainId: CHAIN_ID, to: INDEX, env });
+if (!chain.canSign) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE');
 fs.mkdirSync(WORK, { recursive: true });
 
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
