@@ -1,5 +1,13 @@
 # T11 wallet test — in progress
 
+## Task C checkpoint — 2026-10-02, browser unavailable
+
+**Today's scheduled attempt did not submit a faucet claim and produced no receipt.** The browser connection failed twice while loading its request-header policy, before the Google page could be inspected or operated. No CAPTCHA, login or current cooldown state could be determined. No alternate browser-control mechanism or previously ineligible faucet was used.
+
+Public Sepolia RPC confirmed chain ID `11155111` and balance **0.033244908190292601 ETH** at block `0xb47ba6`. This balance does not establish whether another actor claimed today. The second-round **0.15 ETH** target was already completed on October 1; today's attempt adds **0 ETH** to recorded receipts. No funds were sent out, contracts deployed or Task A wallet signatures requested.
+
+[Attempt and balance evidence](../../contracts/deployments/t11-sepolia-fuel-2026-10-02.json). A future retry must first recheck today's log and the actual faucet state to avoid duplicates. The existing automation schedule remains unchanged.
+
 ## Task C checkpoint — 2026-10-01, round 2 target reached
 
 **Today's 0.05 Sepolia ETH was received. Second-round confirmed receipts total 0.15 / 0.15 ETH: the additional funding target is now reached.** This total counts only September 29, September 30 and October 1 receipts; the first round is excluded. Current wallet balance is a separate measurement.
@@ -101,6 +109,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-09-30, after 17:35 | Google Cloud Web3 | 0.05 ETH | `0xb1431def2bceaa6ca8050d166bb22b8d13d005e46fe2f7d44939f3dc1d3479f8` | 0.083711524667916053 ETH; round 2 receipts 0.10 / 0.15 ETH |
 | 2026-10-01, before 17:36:20 | Google daily limit | 0 ETH (attempt only) | None | 0.079274571374042189 ETH |
 | 2026-10-01, after 17:36:20 retry | Google Cloud Web3 | 0.05 ETH | `0xe7887d1a3a84dfab4c50012077cae129a309de104142793d59d3b4d0c4628296` | 0.129274571374042189 ETH; **round 2 receipts 0.15 / 0.15 ETH — target reached** |
+| 2026-10-02, approximately 17:36 | Google browser connection failed twice; claim not submitted | 0 ETH received by this attempt | None | 0.033244908190292601 ETH observed; round 2 already complete |
 
 ## Historical report — 2026-09-26, v3
 
