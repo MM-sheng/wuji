@@ -18,12 +18,12 @@ import { fileURLToPath } from 'node:url';
 import { createBitcoinSource } from './bitcoin-source.mjs';
 import { step } from './bitcoin.mjs';
 import { contractClient, decodeBatch, decodeContinuity, differences, replay, sel, uint } from './zk-challenge.mjs';
+import { within as withinMs } from './zk-challenge.mjs';
 
 const env = process.env;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
-const within = (promise, what) => Promise.race([promise,
-  new Promise((_, reject) => setTimeout(() => reject(Error(`${what} timed out after ${SOURCE_TIMEOUT_MS / 1000} s`)), SOURCE_TIMEOUT_MS).unref())]);
+const within = (promise, what) => withinMs(promise, SOURCE_TIMEOUT_MS, what);
 
 /// One watcher round. `chain` is a contractClient; `sources` are two independent Bitcoin sources
 /// ({tip(), at(h) → {header, hash}}); `dryRun` returns the planned actions without sending them.

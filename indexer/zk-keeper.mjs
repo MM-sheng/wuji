@@ -19,6 +19,7 @@ import { assertChain } from './networks.mjs';
 import { createBitcoinSource } from './bitcoin-source.mjs';
 import { step } from './bitcoin.mjs';
 import { contractClient, decodeContinuity, sel, uint } from './zk-challenge.mjs';
+import { within as withinMs } from './zk-challenge.mjs';
 import { watch } from './zk-watcher.mjs';
 import { maintainPool } from './accounts.mjs';
 export { decodeContinuity };
@@ -36,8 +37,7 @@ const INTERVAL = Number(env.INTERVAL || 120);
 // Bitcoin source calls get a deadline: on 2026-09-29 one P2P request never settled and the keeper sat
 // silently for eight hours with the process still alive. Proving has its own (longer) timeout.
 const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
-const within = (promise, what) => Promise.race([promise,
-  new Promise((_, reject) => setTimeout(() => reject(Error(`${what} timed out after ${SOURCE_TIMEOUT_MS / 1000} s`)), SOURCE_TIMEOUT_MS).unref())]);
+const within = (promise, what) => withinMs(promise, SOURCE_TIMEOUT_MS, what);
 const FALLBACK = env.ZK_FALLBACK !== '0';
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');

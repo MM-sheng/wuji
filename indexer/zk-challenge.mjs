@@ -2,6 +2,7 @@
 // the contract's fold (so a watcher can say what a batch *should* claim), and a cast-based sender.
 // Zero dependencies; pure functions are unit-tested in zk-challenge.test.mjs.
 import { execFile, execFileSync } from 'node:child_process';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { sha256, sha256d } from './bitcoin.mjs';
@@ -107,9 +108,18 @@ export function differences(claimed, truth) {
   return out;
 }
 
+/// Reject `promise` after `ms` unless it settles first. The timer is cleared on settlement rather than
+/// unref'd: an unref'd timer lets the process exit while a source still hangs (it did, in CI).
+export function within(promise, ms, what) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(Error(`${what} timed out after ${ms / 1000} s`)), ms); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 // ---------------------------------------------------------------- chain access
 
-const CAST = process.env.CAST || path.join(os.homedir(), '.foundry/bin/cast');
+// foundryup installs to ~/.foundry/bin; CI's foundry-toolchain puts cast on PATH instead.
+const CAST = process.env.CAST || [path.join(os.homedir(), '.foundry/bin/cast')].find(f => fs.existsSync(f)) || 'cast';
 const selectors = new Map();
 export const sel = sig => {
   if (!selectors.has(sig)) selectors.set(sig, execFileSync(CAST, ['sig', sig], { encoding: 'utf8' }).trim());
