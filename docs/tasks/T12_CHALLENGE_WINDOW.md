@@ -185,6 +185,8 @@ needs a redeployment to take effect on Sepolia.
 `0x471e1f611a822c467c040ae9ba70f7c40c4e9eb33aaec6bcbc8d14df7677d9dc`; runtime equals the local build with
 immutables masked; `seenTip` checked on chain with ten real headers. Keeper, watcher and the terminal's
 "ZK · 挑战窗口" tab moved here. Batch 1 on the first deployment was left pending.
+By 2026-10-02 00:49 UTC three batches here had finalized without dispute (to 969470): `finalize` 112,056
+for the first, 80,969 for each later one; `foldProof` ≈ 443k–459k.
 
 ### Not done
 

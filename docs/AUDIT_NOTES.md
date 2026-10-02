@@ -106,8 +106,11 @@ headers, fail, and re-download them — several hundred times a day across the r
 valid branch would have been adopted outright: there was no cumulative-work comparison, contrary to the
 README. Fix (`applyHeaders` in `indexer/bitcoin-p2p.mjs`): a competing branch is built and validated on a
 copy, extended while lighter, and adopted only with more cumulative work; an invalid branch leaves the chain
-untouched. Tests cover extension, lighter, heavier, invalid, multi-reply and unknown branches. Processes
-started before the fix keep the old behaviour until restarted.
+untouched. Tests cover extension, lighter, heavier, invalid, multi-reply and unknown branches. In
+production: the ZK keeper (on the fix since 2026-10-01 11:50 UTC) ignored lighter branches forking at
+961257, 961286 and 936720 with no rewind; the BSC indexer and keeper and the Sepolia v4 indexer were
+restarted on the fix at 2026-10-02 00:48 UTC with their original launch environments (the BSC indexer
+had logged 1,086 rewinds before that).
 
 ## Verification performed
 
