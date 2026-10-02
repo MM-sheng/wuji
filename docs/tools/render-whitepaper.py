@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Render the six-page Markdown paper. Optional documentation tooling, not a protocol dependency.
+"""Render the Markdown paper to PDF. Optional documentation tooling, not a protocol dependency.
 Requires ReportLab and pypdf; WUJI_PDF_FONT selects an embeddable TTF with Chinese/Greek glyphs.
 """
-import hashlib
+import hashlib, io
 import html
 import os
 from pathlib import Path
@@ -26,8 +26,7 @@ pdfmetrics.registerFont(TTFont('Wuji', str(font_path)))
 pdfmetrics.registerFontFamily('Wuji',normal='Wuji',bold='Wuji',italic='Wuji',boldItalic='Wuji')
 source = SOURCE.read_text()
 pages = source.split('<!-- pagebreak -->')
-if len(pages)!=6:
-    raise SystemExit('The paper must contain exactly six authored pages.')
+# `<!-- pagebreak -->` comments start a new page; there is no fixed page count (owner decision, 2026-10-02).
 ink=colors.HexColor('#182838');muted=colors.HexColor('#5C6975');accent=colors.HexColor('#906423');line=colors.HexColor('#CCD5DD')
 body=ParagraphStyle('body',fontName='Wuji',fontSize=10.3,leading=16,wordWrap='CJK',textColor=ink,spaceAfter=8)
 styles={
@@ -85,11 +84,15 @@ def render_page(text):
         result.append(paragraph(text,style))
     return result
 
-story=[]
-for n,page in enumerate(pages):
-    if n:story.append(PageBreak())
-    story.extend(render_page(page))
+def make_story():
+    # Built afresh for every pass: ReportLab splits and mutates flowables while laying them out.
+    story=[]
+    for n,page in enumerate(pages):
+        if n:story.append(PageBreak())
+        story.extend(render_page(page))
+    return story
 source_hash=hashlib.sha256(source.encode()).hexdigest()[:12]
+total_pages=0
 def frame(canvas,doc):
     canvas.saveState();w,h=A4
     canvas.setFillColor(muted);canvas.setFont('Wuji',8)
@@ -97,15 +100,16 @@ def frame(canvas,doc):
     canvas.drawRightString(w-44,h-27,'v0.1 · TESTNET RESEARCH')
     canvas.setStrokeColor(line);canvas.line(44,37,w-44,37)
     canvas.drawString(44,24,'2026-09-21 · MD SHA256 '+source_hash)
-    canvas.drawRightString(w-44,24,f'{doc.page} / 6')
+    canvas.drawRightString(w-44,24,f'{doc.page} / {total_pages}' if total_pages else f'{doc.page}')
     canvas.restoreState()
 OUTPUT.parent.mkdir(parents=True,exist_ok=True)
-SimpleDocTemplate(str(OUTPUT),pagesize=A4,leftMargin=44,rightMargin=44,topMargin=47,bottomMargin=50,
- title='WUJI · 无极 — 可验证的随机结算指数与公开市场基准',author='WUJI',subject='Technical whitepaper v0.1; testnet research',invariant=1).build(story,onFirstPage=frame,onLaterPages=frame)
+def build(target):
+    SimpleDocTemplate(target,pagesize=A4,leftMargin=44,rightMargin=44,topMargin=47,bottomMargin=50,
+     title='WUJI · 无极 — 可验证的随机结算指数与公开市场基准',author='WUJI',subject='Technical whitepaper v0.1; testnet research',invariant=1).build(make_story(),onFirstPage=frame,onLaterPages=frame)
+# First pass counts the pages so every footer can say "n / total"; the second writes the file.
+probe=io.BytesIO();build(probe);total_pages=len(PdfReader(probe).pages)
+build(str(OUTPUT))
 pdf=PdfReader(OUTPUT)
-if len(pdf.pages)!=6:
-    OUTPUT.unlink()
-    raise SystemExit(f'Pagination overflow: got {len(pdf.pages)} pages, require 6. Adjust the text/layout, not the page limit.')
 # Catch broken CJK font mapping or accidentally omitted sections before announcing an artifact.
 text='\n'.join(p.extract_text() for p in pdf.pages)
 for term in ['无极生太极','972145','0.50165','公开基准','独立核对','R_h','Deriv']:
