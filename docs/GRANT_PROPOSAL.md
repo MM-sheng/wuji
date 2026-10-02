@@ -12,9 +12,10 @@ public index derived from Bitcoin block hashes that any contract can read and an
 relay and index run today on two testnets, and a Groth16 proof of 100 real mainnet headers already verifies
 on chain against SP1's own verifier contract for 453,888 gas, against 1,928,070 gas for the same headers
 checked one by one in Solidity. The ZK path has run on Ethereum Sepolia since 2026-09-29, proving live Bitcoin
-headers from the peer-to-peer network (first batch: 42 headers, 323,385 gas). We ask for funding to add a
-challenge window so that a flaw in the proof system alone cannot corrupt the index, pay for an independent
-security review, and operate the public deployment for a year.
+headers from the peer-to-peer network (first batch: 42 headers, 323,385 gas). A challenge window, so that a flaw in the proof system
+alone cannot corrupt the index, runs there too (proofs finalize after a window unless disputed; disputes are
+settled by checking raw headers on chain). We ask for funding to pay for an independent security review,
+deploy the reviewed contracts, and operate the public deployment for a year.
 
 ## The problem
 
@@ -84,16 +85,15 @@ Full survey with sources: `docs/RELATED_WORK.md`. In short:
 
 | # | Deliverable | Acceptance | Estimate |
 |---|---|---|---|
-| 1 | Challenge window for ZK folds (`docs/tasks/T12_CHALLENGE_WINDOW.md`): proofs finalize after 6 h unless disputed; a dispute is settled by checking the raw headers on chain | A forged proof accepted by a mock verifier never finalizes when disputed (invariant tests); watcher script; Sepolia deployment | [USD 4,000–8,000] |
-| 2 | Mainnet deployment of the reviewed contracts | Deployed bytecode reproduced from the audited source; addresses published | [USD 1,000–2,000] gas and verification |
-| 3 | Independent security review of relay, index, ZK index, SP1 guest and the reference application | Public report; every finding fixed or answered in writing | [USD 20,000–45,000, pending quotes] |
-| 4 | Twelve months of public operation | Two independent keepers, public dashboard, monthly status notes | [USD 3,000–6,000] gas and servers |
-| 5 | Documentation for integrators | Guide and example contract that reads the relay and the index | [USD 2,000–4,000] |
-| | **Total** | | **[USD 30,000–65,000]** |
+| 1 | Mainnet deployment of the reviewed contracts | Deployed bytecode reproduced from the audited source; addresses published | [USD 1,000–2,000] gas and verification |
+| 2 | Independent security review of relay, index, ZK index, SP1 guest and the reference application | Public report; every finding fixed or answered in writing | [USD 20,000–45,000, pending quotes] |
+| 3 | Twelve months of public operation | Two independent keepers, public dashboard, monthly status notes | [USD 3,000–6,000] gas and servers |
+| 4 | Documentation for integrators | Guide and example contract that reads the relay and the index | [USD 2,000–4,000] |
+| | **Total** | | **[USD 26,000–57,000]** |
 
 Already done without funding, and therefore not requested: the Groth16 verifier path, the keeper proving
-pipeline and the Sepolia deployment. Milestones: 1 in the first two months; 3 once 1 is frozen; 2 after 3;
-4 and 5 run throughout.
+pipeline, the challenge window with its watcher, and the Sepolia deployments. Milestones: the review (2) first;
+mainnet deployment (1) after it; operation (3) and documentation (4) throughout.
 
 ## Why it is a public good
 
