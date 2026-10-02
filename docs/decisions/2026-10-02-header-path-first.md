@@ -130,3 +130,19 @@ session.
 
 If mainnet is header-only, redeploying the Sepolia ZK index for WUJI-13 matters less (it is ZK-only); WUJI-14
 (B pricing) applies to any relay-less pool and should ship with whatever index the pools move to.
+
+## Owner decision (2026-10-02)
+
+**ZK is not part of the mainnet plan.**
+
+- **Mainnet:** header path only (`foldHeaders`-style folding), with a deep-reorg freeze rule added first, as the
+  development session's response requires. No verifier, no challenge window, no watcher needed for safety.
+- **Testnet, transitional only:** the Sepolia ZK keeper keeps running until a header-only index with the reorg
+  rule is live on Sepolia; then the ZK keeper stops and the ZK deployments are left as historical records.
+- **Code:** T10 (SP1 guest, verifier path) and T12 (challenge window, watcher) stay in the repository as
+  measured research results. No further development or maintenance effort on them.
+- **Next development task:** the deep-reorg rule for the header-only index (option 1 in the response above),
+  then its Sepolia deployment, T11 pools moved onto it, fold cadence ≈ every 6 h.
+- **Documentation session:** rewrite the grant proposal and the ethresear.ch draft around the header path
+  ("ZK was built, measured on a public testnet and deliberately not adopted for mainnet; here is why"), once
+  the development session confirms the reorg-rule plan.
