@@ -562,7 +562,7 @@ contract ZkWujiChallengeRewardsTest is ZkChallengeBase {
 
     function _bountyFor(uint256 balance, uint256 count) internal pure returns (uint256) {
         uint256 remaining = balance;
-        for (uint256 i; i < count; ++i) remaining -= remaining / 10_000;
+        for (uint256 i; i < count; ++i) remaining -= remaining / 100_000; // RelayerRewards.BOUNTY_DIVISOR
         return balance - remaining;
     }
 }

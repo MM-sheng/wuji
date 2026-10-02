@@ -9,7 +9,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///      Allocation only touches accounting; token callbacks cannot block unrelated index progress.
 contract RelayerRewards is ReentrancyGuard {
     using SafeERC20 for IERC20;
-    uint256 public constant BOUNTY_DIVISOR = 10_000;
+    /// @notice Each folded height pays reserve / BOUNTY_DIVISOR. At 144 heights a day that is ≈ 0.14% of the reserve per
+    /// day (half-life ≈ 1.3 years), so a one-off donation pays submitters for years rather than weeks
+    /// (docs/decisions/2026-10-02-submitter-economics.md). Deployments before 2026-10-02 use 10,000.
+    uint256 public constant BOUNTY_DIVISOR = 100_000;
     uint256 public constant MAX_TOKENS = 8;
     uint256 public constant MAX_HEIGHTS = 256;
     address public immutable index;

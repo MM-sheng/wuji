@@ -178,7 +178,7 @@ Specification, implementation boundaries and tests: [T9_DESIGN.md](tasks/T9_DESI
 
 Current source routes 100% of fees into an immutable operations reserve. Only the immutable index can
 allocate bounties for the next contiguous range of folded heights. Per selected token and per height it
-reserves floor(available reserve / 10000). Allocated but unpaid claims are excluded from available reserves.
+reserves floor(available reserve / 10000) (1/100000 for deployments from 2026-10-02). Allocated but unpaid claims are excluded from available reserves.
 There are no lifetime points, historical fee shares or burns. Funding and syncing a direct donation can
 only benefit future fold calls; delayed withdrawals receive their previously fixed amount.
 

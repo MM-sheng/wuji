@@ -197,7 +197,7 @@ existing path. Neither procedure establishes full-node validity from scratch.
 ### Operations reserve — also retained at port 8791
 
 The immutable router sends 100% of each vault's fees into the operations reserve. Each newly folded Bitcoin
-height allocates floor(available reserve / 10000) per selected token, sequentially across a batch. The folder
+height allocates floor(available reserve / 10000) per selected token (1/100000 in deployments from 2026-10-02 on), sequentially across a batch. The folder
 can claim that fixed amount; past work never gains a share of later fees or donations. There is no burn or
 lifetime-points scheme in this deployment. Funded mock balances have no economic value.
 
