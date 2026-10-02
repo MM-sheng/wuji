@@ -291,6 +291,12 @@ Design, build notes, measurements and deployment: [T12_CHALLENGE_WINDOW.md](T12_
 proof → window → finalize cycle recorded on the first deployment. Remaining: a second watcher machine,
 independent review.
 
+## T13 · Mainnet rules for a relay-less index — implemented in source
+
+[T13_ZK_REORG_EXIT.md](T13_ZK_REORG_EXIT.md): three rules (valid headers; count only K = 100 deep; a branch that
+out-works the finalized chain by K + 144 blocks seals the index), one pricing rule for pools, keeper header-only
+mode. Remaining: testnet deployment, independent review, the mainnet economics (who pays the submitters).
+
 ## Explicitly not now
 
 - Changing the pair rule, fee rate, series length, confirmations or UNIT.

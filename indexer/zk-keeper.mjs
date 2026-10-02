@@ -39,6 +39,12 @@ const INTERVAL = Number(env.INTERVAL || 120);
 const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
 const within = (promise, what) => withinMs(promise, SOURCE_TIMEOUT_MS, what);
 const FALLBACK = env.ZK_FALLBACK !== '0';
+// Header-path-only index (verifier = 0, the mainnet plan in T13): fold once ZK_MIN_FOLD heights are past the
+// confirmation depth, at most ZK_MAX_FOLD per call, keeping a freeze proof inside one transaction later.
+const MIN_FOLD = Number(env.ZK_MIN_FOLD || 36);
+const MAX_FOLD = Number(env.ZK_MAX_FOLD || 250);
+// Every transaction must stay under the 2^24 per-transaction gas cap (EIP-7825); ≈ 18.7k gas per header.
+const headerGas = n => Math.min(16_000_000, 200_000 + 22_000 * n);
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
@@ -65,6 +71,7 @@ export async function round(source) {
     confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
     maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
     maxProofHeaders: Number(BigInt(await call(sel('MAX_PROOF_HEADERS()')))),
+    headerOnly: BigInt(await call(sel('verifier()'))) === 0n,
   };
   // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
   const pending = Number(BigInt(await call(sel('pendingCount()'))));
@@ -86,19 +93,33 @@ export async function round(source) {
   const tip = await within(source.tip(), 'Bitcoin tip');
   const available = tip - start.height;
   const waited = (Date.now() - lastProgress) / 60_000;
+  const fetchHeaders = async count => {
+    const out = [];
+    let prev = start.hash.slice(2);
+    for (let h = start.height + 1; h <= start.height + count; h++) {
+      const b = await within(source.at(h), `Bitcoin header ${h}`);
+      const s = step(b.header);
+      if (b.header.slice(8, 72) !== prev) throw Error(`header ${h} does not link to ${h - 1}; source may be on another branch`);
+      if (s.hash !== b.hash) throw Error(`source hash mismatch at ${h}`);
+      out.push(b.header); prev = s.internalHash;
+    }
+    return out;
+  };
+  if (immut.headerOnly) {
+    if (available <= immut.confirmations || (available < immut.confirmations + MIN_FOLD && waited < MAX_WAIT_MIN)) {
+      return { action: 'wait', height: start.height, available };
+    }
+    const n = Math.min(available, immut.confirmations + MAX_FOLD, immut.maxHeaders);
+    const headers = await fetchHeaders(n);
+    const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.join(''), '[]');
+    log(`foldHeaders ${n} headers (folds ${n - immut.confirmations}) gas ${tx.gas} ${tx.hash}`);
+    return { action: 'headers', ...tx, headers: n };
+  }
   if (available <= immut.confirmations || (available < MIN_BATCH && waited < MAX_WAIT_MIN)) {
     return { action: 'wait', height: start.height, available };
   }
   const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders);
-  const headers = [];
-  let prev = start.hash.slice(2);
-  for (let h = start.height + 1; h <= start.height + count; h++) {
-    const b = await within(source.at(h), `Bitcoin header ${h}`);
-    const s = step(b.header);
-    if (b.header.slice(8, 72) !== prev) throw Error(`header ${h} does not link to ${h - 1}; source may be on another branch`);
-    if (s.hash !== b.hash) throw Error(`source hash mismatch at ${h}`);
-    headers.push(b.header); prev = s.internalHash;
-  }
+  const headers = await fetchHeaders(count);
   const input = {
     start, headers: '0x' + headers.join(''),
     // The contract accepts maxTime ≤ its block time + 2h; 90 minutes ahead leaves room for proving and inclusion.
@@ -121,7 +142,7 @@ export async function round(source) {
     // The header path runs only from the finalized state; while batches are pending it would revert.
     if (pending > 0) throw Error('proof path failed with batches pending; header fallback waits for them');
     const n = Math.min(count, immut.maxHeaders);
-    const tx = await send('foldHeaders(bytes,address[])', 60_000_000, '0x' + headers.slice(0, n).join(''), '[]');
+    const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.slice(0, n).join(''), '[]');
     log(`fallback foldHeaders ${n} headers gas ${tx.gas} ${tx.hash}`);
     return { action: 'headers', ...tx, headers: n };
   }

@@ -257,11 +257,11 @@ contract ZkWujiChallengeInvariantTest is Test {
         ZkWujiIndex.Challenge memory c = ZkWujiIndex.Challenge({window: 6 hours, responseWindow: 6 hours, bond: 0.05 ether});
         idx = new ZkWujiIndex(
             new AnyProof(), bytes32(uint256(1)), RelayerRewards(address(0)), anchor, anchorHeight, epochStart, times,
-            0, genesis, 4320, c
+            0, ZkWujiIndex.Schedule(genesis, 4320, 6), c
         );
         ZkWujiIndex shadow = new ZkWujiIndex(
             ISP1Verifier(address(0)), bytes32(0), RelayerRewards(address(0)), anchor, anchorHeight, epochStart, times,
-            0, genesis, 4320, c
+            0, ZkWujiIndex.Schedule(genesis, 4320, 6), c
         );
         handler = new ZkChallengeHandler(idx, shadow, headers, anchorHeight);
         targetContract(address(handler));

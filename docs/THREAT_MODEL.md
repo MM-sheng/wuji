@@ -63,8 +63,9 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
   backing costs more gas than the bond, though no longer paid: `reject` pays no bounty, WUJI-13), forgeries that cost the attacker only
   gas (WUJI-09), and the header path's bar itself: ≈ 7 privately mined blocks at the real difficulty (a
   branch with valid work and 6 descendants) can be folded by `foldHeaders` when nothing is pending or used
-  to `refute` an honest pending batch (WUJI-12). Raising it is a mainnet decision (deeper confirmations
-  for the whole header path, or a challenge game between branches).
+  to `refute` an honest pending batch (WUJI-12). T13 raises it for the mainnet plan: the confirmation depth
+  is a deployment parameter (100 proposed, Bitcoin's coinbase maturity), and a branch that out-works the
+  finalized chain by K + 144 blocks seals the index (`freezeOnReorg`) instead of stranding it.
 - **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
   height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
   local Core/Esplora. HTTP success is not proof of Bitcoin consensus. `BITCOIN_SOURCE=p2p` removes the HTTP
@@ -227,7 +228,9 @@ proof's view of the tip is untrusted for the T12 window. Default pricing A uses 
 margin from its age: P(pricing block already exists) ≤ 1e-7 under a Poisson model at 1.25× the nominal block
 rate with 2 h of timestamp skew. Residuals: a block rate above 1.25× for the tip's whole age, and a finalized
 tip stamped in the future (it then looks younger; Bitcoin allows 2 h, which the skew term covers once).
-Fast path B prices from requester-supplied headers that the index validates with every header rule (`seenTip`),
+Since T13 (2026-10-02) A and B are replaced by one rule: the index's newest validated header plus the same
+margin for its age, so none of the requester-chosen stopping points below remain. Historically, fast path B
+priced from requester-supplied headers that the index validated with every header rule (`seenTip`),
 at the supplied tip plus A's margin for that tip's age. Not the relay's `DELAY`/`MAX_TIP_AGE` bound: the
 requester chooses where the supplied chain stops and could pick a recent block stamped in the future
 (WUJI-14). A requester can only show *more* real work than exists by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it

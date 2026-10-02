@@ -5,10 +5,11 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {WujiIndex} from "./WujiIndex.sol";
 
-/// @notice What a pool needs from an index that keeps no header relay (ZkWujiIndex).
+/// @notice What a pool needs from an index that keeps no header relay (ZkWujiIndex): the newest Bitcoin
+/// header it has validated, folded or not.
 interface IZkTip {
-    function lastTime() external view returns (uint32);
-    function seenTip(bytes calldata headers) external view returns (uint64 height, uint32 time);
+    function seenHeight() external view returns (uint64);
+    function seenTime() external view returns (uint32);
 }
 
 /// @notice T11 perpetual accounts. Fixed principal, additive P&L = principal·side·ΔS/k, value in
@@ -19,19 +20,18 @@ interface IZkTip {
 ///
 /// Where "not yet mined" comes from depends on the index (fixed at construction):
 ///  C. an index with a header relay (WujiIndex): the relay's best height + DELAY, best header ≤ MAX_TIP_AGE old;
-///  A. an index without one (ZkWujiIndex), by default: the finalized height + a margin that bounds the chance
-///     that the pricing block already exists by 1e-7 given the finalized tip's age (`finalizedMargin`);
-///  B. the same index, fast path: the requester supplies headers from the finalized tip, validated by the
-///     index's own rules (`seenTip`); their last height + the same margin as A, by that header's age.
+///  S. an index without one (ZkWujiIndex): the newest header the index has validated (`seenHeight`) + a margin
+///     that bounds the chance that the pricing block already exists by 1e-7 given that header's age
+///     (`seenMargin`). One rule; nothing for the requester to supply (T13).
 contract WujiAccounts is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     int256 internal constant ONE = 1e18;
     int256 internal constant ACC = 1e27;   // accumulator precision per unit of principal
     uint256 public constant MAX_WALK = 1024;
-    /// @notice Index-only pools (A) refuse requests once the finalized tip is older than this.
-    uint256 public constant MAX_FINALIZED_AGE = 24 hours;
-    /// @dev Margin for A, by the finalized tip's age rounded up to whole hours (0..24 h), as big-endian uint16:
+    /// @notice Pools on an index without a relay refuse requests once its newest validated header is older.
+    uint256 public constant MAX_SEEN_AGE = 24 hours;
+    /// @dev Margin by the newest validated header's age rounded up to whole hours (0..24 h), as big-endian uint16:
     /// the smallest m with P(Poisson(λ) ≥ m) ≤ 1e-7, λ = 1.25 × 6 blocks/h × (age + 2 h). The 1.25 allows for
     /// blocks faster than one per ten minutes between retargets; the 2 h for header timestamps ahead of real
     /// time. Recompute: docs/tasks/T11_PERPETUAL_ACCOUNTS.md (Update 2026-10-01).
@@ -138,36 +138,25 @@ contract WujiAccounts is ReentrancyGuard {
 
     // ---------------------------------------------------------------- requests
 
-    /// @notice The height a request made now would be priced at (C, or A on an index without a relay).
+    /// @notice The height a request made now would be priced at.
     function nextPricingHeight() public view returns (uint64) {
-        uint64 h = RELAY_TIP ? index.relay().bestHeight() + DELAY : index.lastHeight() + finalizedMargin();
+        uint64 h = RELAY_TIP ? index.relay().bestHeight() + DELAY : IZkTip(address(index)).seenHeight() + seenMargin();
         return _roundUp(h);
     }
 
-    /// @notice A: how far past the finalized height a request is priced, given the finalized tip's age.
-    function finalizedMargin() public view returns (uint64) {
-        return marginForAge(IZkTip(address(index)).lastTime());
+    /// @notice How far past the index's newest validated header a request is priced, given that header's age.
+    /// @dev The header is one the index validated, but its timestamp is a miner's (up to 2 h ahead is valid);
+    ///      the table's skew term covers that. A relay's `DELAY`/`MAX_TIP_AGE` bound would not.
+    function seenMargin() public view returns (uint64) {
+        return marginForAge(IZkTip(address(index)).seenTime());
     }
 
-    /// @notice The Poisson margin for a tip stamped `t` (MARGINS; includes 2 h of timestamp skew).
+    /// @notice The Poisson margin for a header stamped `t` (MARGINS; includes 2 h of timestamp skew).
     function marginForAge(uint256 t) public view returns (uint64) {
         uint256 age = block.timestamp > t ? block.timestamp - t : 0;
         uint256 b = (age + 1 hours - 1) / 1 hours;
         require(b <= 24, "index stale");
         return uint64(uint8(MARGINS[2 * b])) << 8 | uint64(uint8(MARGINS[2 * b + 1]));
-    }
-
-    /// @notice B: the height a request carrying `headers` (from the finalized tip on) would be priced at: the
-    ///         supplied tip plus the same margin as A, by the supplied tip's age.
-    /// @dev Not tip + DELAY with a MAX_TIP_AGE check, as for a relay: Bitcoin accepts timestamps up to 2 h
-    ///      ahead, and here the requester chooses where the supplied chain stops, so they could stop at any
-    ///      recent block stamped in the future and look fresh while ≈ 15 blocks already followed it. A relay's
-    ///      best header has to be mined to be skewed; a stopping point only has to be found.
-    function pricingHeightWithHeaders(bytes calldata headers) public view returns (uint64) {
-        require(!RELAY_TIP, "relay pool");
-        (uint64 h, uint32 t) = IZkTip(address(index)).seenTip(headers);
-        require(t <= block.timestamp + 2 hours, "headers stale");
-        return _roundUp(h + marginForAge(t));
     }
 
     function _roundUp(uint64 h) internal view returns (uint64) {
@@ -181,8 +170,8 @@ contract WujiAccounts is ReentrancyGuard {
 
     function _tipFresh() internal view returns (bool) {
         if (!RELAY_TIP) {
-            uint256 f = IZkTip(address(index)).lastTime();
-            return f <= block.timestamp + 2 hours && block.timestamp <= f + MAX_FINALIZED_AGE;
+            uint256 f = IZkTip(address(index)).seenTime();
+            return f <= block.timestamp + 2 hours && block.timestamp <= f + MAX_SEEN_AGE;
         }
         uint256 t = index.relay().timestampOf(index.relay().bestHash());
         return block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours;
@@ -196,11 +185,6 @@ contract WujiAccounts is ReentrancyGuard {
         return _enqueue(nextPricingHeight());
     }
 
-    function _scheduleWithHeaders(bytes calldata headers) internal returns (uint64) {
-        require(!frozen && !_indexFrozen() && _historyConsistent(), "pool frozen");
-        return _enqueue(pricingHeightWithHeaders(headers));
-    }
-
     function _enqueue(uint64 e) internal returns (uint64) {
         uint256 n = queue.length;
         if (RELAY_TIP) {
@@ -211,7 +195,8 @@ contract WujiAccounts is ReentrancyGuard {
             queue.push(e);
             return e;
         }
-        // A and B price the same moment differently, so a later request can price earlier. Keep the pending
+        // A later request can price earlier (a fresh header with a small margin can land below an old one with
+        // a large margin). Keep the pending
         // epochs sorted and unique instead: each is still priced once, in height order. Every pending epoch is
         // above the finalized height and every processed one at or below it, so order with the processed
         // part is kept too. Pending epochs are bounded by the pricing horizon (≈ a day of heights / EPOCH).
@@ -235,16 +220,6 @@ contract WujiAccounts is ReentrancyGuard {
     function requestEnter(bool yang, uint128 amount) external nonReentrant returns (uint256 id) {
         _checkAmount(amount);
         return _enter(yang, amount, _schedule());
-    }
-
-    /// @notice B: as `requestEnter`, priced from `headers` that extend the index's finalized tip to now.
-    function requestEnterWithHeaders(bool yang, uint128 amount, bytes calldata headers)
-        external
-        nonReentrant
-        returns (uint256 id)
-    {
-        _checkAmount(amount);
-        return _enter(yang, amount, _scheduleWithHeaders(headers));
     }
 
     function _checkAmount(uint128 amount) internal view {
@@ -275,12 +250,6 @@ contract WujiAccounts is ReentrancyGuard {
     function requestExit(uint256 id) external nonReentrant {
         _checkExit(id);
         _exit(id, _schedule());
-    }
-
-    /// @notice B: as `requestExit`, priced from `headers` that extend the index's finalized tip to now.
-    function requestExitWithHeaders(uint256 id, bytes calldata headers) external nonReentrant {
-        _checkExit(id);
-        _exit(id, _scheduleWithHeaders(headers));
     }
 
     function _checkExit(uint256 id) internal view {

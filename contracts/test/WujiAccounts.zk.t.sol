@@ -34,7 +34,7 @@ contract WujiAccountsZkTest is Test {
         // Header path only: these tests are about the pool, not the proof system.
         idx = new ZkWujiIndex(
             ISP1Verifier(address(0)), bytes32(0), RelayerRewards(address(0)), anchor, anchorHeight,
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, anchorHeight + 1, 4320,
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, ZkWujiIndex.Schedule(anchorHeight + 1, 4320, 6),
             ZkWujiIndex.Challenge({window: 0, responseWindow: 0, bond: 0})
         );
         vm.warp(1_800_000_000);
@@ -73,136 +73,72 @@ contract WujiAccountsZkTest is Test {
 
     // ---------------------------------------------------------------- mode detection
 
-    function test_aPoolOnAnIndexWithoutARelayPricesByAOrB() public view {
+    function test_aPoolOnAnIndexWithoutARelayPricesFromItsNewestValidatedHeader() public view {
         assertFalse(pool.RELAY_TIP());
-        assertFalse(pool.INDEX_CAN_FREEZE());
+        assertTrue(pool.INDEX_CAN_FREEZE(), "ZkWujiIndex has frozen() (T13 rule 3), so pools can exit");
     }
 
-    // ---------------------------------------------------------------- A
+    // ---------------------------------------------------------------- the one pricing rule
 
-    function test_APricesPastTheFinalizedTipByAMarginThatGrowsWithItsAge() public {
-        uint64 last = idx.lastHeight();
-        vm.warp(idx.lastTime() + 3 hours);
-        assertEq(pool.finalizedMargin(), 74);
+    function test_aFoldRecordsTheNewestValidatedHeaderBeyondTheFinalizedTip() public view {
+        assertEq(idx.lastHeight(), anchorHeight + 100);
+        assertEq(idx.seenHeight(), anchorHeight + 106, "the K trailing headers were validated too");
+        assertEq(idx.seenTime(), _timeAt(anchorHeight + 106));
+    }
+
+    function test_requestsArePricedPastTheNewestValidatedHeaderByTheMarginForItsAge() public {
+        uint64 seen = idx.seenHeight();
+        vm.warp(idx.seenTime() + 3 hours);
+        assertEq(pool.seenMargin(), 74);
         assertTrue(pool.acceptingRequests());
         vm.prank(alice);
         uint256 id = pool.requestEnter(true, 100e18);
         (,, uint64 e,,) = pool.accounts(id);
-        assertEq(e, _round(last + 74));
-
-        vm.warp(idx.lastTime() + 12 hours);
-        assertEq(pool.finalizedMargin(), 163);
-        vm.warp(idx.lastTime());
-        assertEq(pool.finalizedMargin(), 40, "even a brand-new tip waits for 2 h of skew at a fast rate");
+        assertEq(e, _round(seen + 74));
+        vm.warp(idx.seenTime());
+        assertEq(pool.seenMargin(), 40, "even a brand-new header carries 2 h of skew at a fast rate");
     }
 
     /// The table itself is computed off chain (docs/tasks/T11_PERPETUAL_ACCOUNTS.md); here: it grows with age
     /// and always exceeds the expected number of blocks at the fast rate it assumes.
-    function test_AMarginGrowsWithAgeAndExceedsTheExpectedBlocks() public {
+    function test_theMarginGrowsWithAgeAndExceedsTheExpectedBlocks() public {
         uint64 previous;
         for (uint256 h = 0; h <= 24; h++) {
-            vm.warp(idx.lastTime() + h * 1 hours);
-            uint64 m = pool.finalizedMargin();
+            vm.warp(idx.seenTime() + h * 1 hours);
+            uint64 m = pool.seenMargin();
             assertGt(m, previous, "monotone");
             assertGt(uint256(m) * 4, 5 * 6 * (h + 2), "above the mean at 1.25 x 6 blocks/h over age + 2 h");
             previous = m;
         }
-        vm.warp(idx.lastTime() + 1 hours + 1); // a second past a whole hour rounds up
-        assertEq(pool.finalizedMargin(), 64);
+        vm.warp(idx.seenTime() + 1 hours + 1); // a second past a whole hour rounds up
+        assertEq(pool.seenMargin(), 64);
     }
 
-    function test_AStopsWhenTheFinalizedTipIsADayOld() public {
-        vm.warp(idx.lastTime() + 24 hours);
+    function test_requestsStopWhenTheNewestValidatedHeaderIsADayOld() public {
+        vm.warp(idx.seenTime() + 24 hours);
         assertTrue(pool.acceptingRequests());
-        vm.warp(idx.lastTime() + 24 hours + 1);
+        vm.warp(idx.seenTime() + 24 hours + 1);
         assertFalse(pool.acceptingRequests());
         vm.prank(alice);
         vm.expectRevert(bytes("index stale"));
         pool.requestEnter(true, 100e18);
     }
 
-    // ---------------------------------------------------------------- B
-
-    function test_BPricesFromSuppliedHeadersWithTheMarginForTheirAge() public {
-        uint64 last = idx.lastHeight();
-        bytes memory seen = _headers(last, 30);
-        vm.warp(_timeAt(last + 30) + 10 minutes);
-        uint64 margin = pool.marginForAge(_timeAt(last + 30));
-        assertEq(margin, 52, "a 10-minute-old tip falls in the 1 h bucket");
-        assertEq(pool.pricingHeightWithHeaders(seen), _round(last + 30 + margin));
-        vm.prank(alice);
-        uint256 id = pool.requestEnterWithHeaders(true, 100e18, seen);
-        (,, uint64 e,,) = pool.accounts(id);
-        assertEq(e, _round(last + 30 + margin));
-        assertLt(e, last + pool.finalizedMargin(), "still sooner than A, which counts from the older finalized tip");
-    }
-
-    /// The requester chooses where the supplied chain stops, so the margin must cover a stopping header whose
-    /// timestamp runs up to 2 h ahead (Bitcoin's limit): at least as many heights as A gives a fresh tip.
-    function test_BMarginCoversAStoppingHeaderStampedInTheFuture() public {
-        uint64 last = idx.lastHeight();
-        bytes memory seen = _headers(last, 30);
-        vm.warp(_timeAt(last + 30) - 2 hours); // the stopping header claims to be 2 h in the future
-        assertEq(pool.pricingHeightWithHeaders(seen), _round(last + 30 + 40), "bucket-0 margin (40), not DELAY (2)");
-        vm.warp(_timeAt(last + 30) - 2 hours - 1);
-        vm.expectRevert(ZkWujiIndex.FutureTime.selector); // the index's own header rule rejects it first
-        pool.pricingHeightWithHeaders(seen);
-    }
-
-    function test_BRejectsStaleOrInvalidHeaders() public {
-        uint64 last = idx.lastHeight();
-        bytes memory seen = _headers(last, 30);
-        vm.warp(_timeAt(last + 30) + 24 hours + 1);
-        vm.prank(alice);
-        vm.expectRevert(bytes("index stale"));
-        pool.requestEnterWithHeaders(true, 100e18, seen);
-
-        vm.warp(_timeAt(last + 30) + 1 minutes);
-        bytes memory forged = _headers(last, 30);
-        forged[29 * 80 + 76] = bytes1(uint8(forged[29 * 80 + 76]) ^ 1); // last header's nonce: no work
-        vm.prank(alice);
-        vm.expectRevert(ZkWujiIndex.BadWork.selector);
-        pool.requestEnterWithHeaders(true, 100e18, forged);
-
-        bytes memory unlinked = _headers(last + 1, 30);
-        vm.prank(alice);
-        vm.expectRevert(ZkWujiIndex.Linkage.selector);
-        pool.requestEnterWithHeaders(true, 100e18, unlinked); // does not start at the tip
-    }
-
-    function test_BIsOnlyForPoolsWithoutARelay() public {
-        FrozenExitRelayMock r = new FrozenExitRelayMock();
-        WujiIndex relayIndex = new WujiIndex(BitcoinRelay(address(r)), 1000, 4320, RelayerRewards(address(0)));
-        WujiAccounts relayPool = new WujiAccounts(WujiAccounts.Config(
-            asset, relayIndex, 11.5e18, EPOCH, DELAY, 30 minutes, address(0xFEE), 0, 0, 1_000));
-        assertTrue(relayPool.RELAY_TIP());
-        bytes memory seen = _headers(idx.lastHeight(), 30); // built first: expectRevert binds the next call
-        vm.expectRevert(bytes("relay pool"));
-        relayPool.requestEnterWithHeaders(true, 100e18, seen);
-    }
-
-    // ---------------------------------------------------------------- A and B together
-
-    /// A later B request prices before an earlier A request; both are processed once each, in height order.
-    function test_ARequestsAndFasterBRequestsAreProcessedInHeightOrder() public {
-        uint64 last = idx.lastHeight();
-        vm.warp(_timeAt(last + 30) + 10 minutes);
+    /// An old header with a large margin can price later than a fresh one with a small margin; both epochs are
+    /// queued once, in height order, and processed in that order.
+    function test_aLaterRequestCanPriceEarlierAndIsProcessedInHeightOrder() public {
+        vm.warp(idx.seenTime() + 20 hours);
         vm.prank(alice);
         uint256 slow = pool.requestEnter(true, 100e18);
+        idx.foldHeaders(_headers(idx.lastHeight(), 60), new address[](0)); // the seen header moves 54 ahead
         vm.prank(bob);
-        uint256 fast = pool.requestEnterWithHeaders(false, 100e18, _headers(last, 30));
-        vm.prank(bob);
-        uint256 fast2 = pool.requestEnterWithHeaders(true, 50e18, _headers(last, 30));
+        uint256 fast = pool.requestEnter(false, 100e18);
         (,, uint64 eSlow,,) = pool.accounts(slow);
         (,, uint64 eFast,,) = pool.accounts(fast);
-        (,, uint64 eFast2,,) = pool.accounts(fast2);
-        assertLt(eFast, eSlow);
-        assertEq(eFast, eFast2, "same epoch, queued once");
-        assertEq(pool.queueLength(), 2);
+        assertLt(eFast, eSlow, "the fresher header prices earlier");
         assertEq(pool.queue(0), eFast, "sorted: the earlier height first");
         assertEq(pool.queue(1), eSlow);
 
-        // Fold past both, mark each epoch from raw headers, process in order.
         vm.warp(1_800_000_000);
         idx.foldHeaders(_headers(idx.lastHeight(), eSlow - idx.lastHeight() + 20), new address[](0));
         uint64 tipH = idx.lastHeight();
@@ -212,14 +148,12 @@ contract WujiAccountsZkTest is Test {
         (,, bool p1) = pool.epochAcc(eFast);
         (,, bool p2) = pool.epochAcc(eSlow);
         assertTrue(p1 && p2);
-        assertGt(pool.valueOf(fast), 0);
     }
 
     function test_anEpochAtTheFinalizedTipNeedsNoHeaders() public {
-        uint64 last = idx.lastHeight();
-        vm.warp(_timeAt(last + 30) + 10 minutes);
+        vm.warp(idx.seenTime() + 10 minutes);
         vm.prank(alice);
-        uint256 id = pool.requestEnterWithHeaders(true, 100e18, _headers(last, 30));
+        uint256 id = pool.requestEnter(true, 100e18);
         (,, uint64 e,,) = pool.accounts(id);
         vm.warp(1_800_000_000);
         assertFalse(pool.process(), "not folded yet");
@@ -230,10 +164,9 @@ contract WujiAccountsZkTest is Test {
     }
 
     function test_anEpochBelowTheTipWaitsForHeaders() public {
-        uint64 last = idx.lastHeight();
-        vm.warp(_timeAt(last + 30) + 10 minutes);
+        vm.warp(idx.seenTime() + 10 minutes);
         vm.prank(alice);
-        uint256 id = pool.requestEnterWithHeaders(true, 100e18, _headers(last, 30));
+        uint256 id = pool.requestEnter(true, 100e18);
         (,, uint64 e,,) = pool.accounts(id);
         vm.warp(1_800_000_000);
         idx.foldHeaders(_headers(idx.lastHeight(), e - idx.lastHeight() + 20), new address[](0));

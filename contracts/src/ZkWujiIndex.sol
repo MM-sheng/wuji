@@ -35,7 +35,11 @@ contract ZkWujiIndex {
     uint32 public constant TARGET_TIMESPAN = 14 days;
     int256 public constant UNIT = 1.2e13;
     int256 public constant MEAN = 4080;
-    uint64 public constant CONFIRMATIONS = 6;
+    /// @notice Rule 3 (T13): a branch must out-work the finalized chain by CONFIRMATIONS + this many blocks
+    ///         to seal the index. A real deep reorg reaches it in about a day; a fake one costs that much mining.
+    uint64 public constant REORG_MARGIN = 144;
+    /// @notice Cap on headers in one `freezeOnReorg` (≈ 15M gas, inside the 2^24 per-transaction cap).
+    uint256 public constant MAX_REORG_HEADERS = 800;
     /// @notice Cap on headers per `foldHeaders` call, so the escape hatch cannot be given an unbounded batch.
     uint256 public constant MAX_HEADERS = 512;
     /// @notice Cap on headers behind one proof (folded heights + CONFIRMATIONS), so backing it with raw
@@ -49,6 +53,9 @@ contract ZkWujiIndex {
     RelayerRewards public immutable rewards;
     uint64 public immutable GENESIS_HEIGHT;
     uint64 public immutable CHECKPOINT_INTERVAL;
+    /// @notice Rule 2 (T13): a height counts only once CONFIRMATIONS valid headers follow it. Mainnet: 100,
+    ///         Bitcoin's own coinbase maturity.
+    uint64 public immutable CONFIRMATIONS;
     uint64 public immutable CHALLENGE_WINDOW;
     uint64 public immutable RESPONSE_WINDOW;
     /// @notice Native-currency bond a disputer posts; it pays whoever backs the batch if the dispute was wrong.
@@ -62,6 +69,13 @@ contract ZkWujiIndex {
         uint32 time;
         uint32 epochStart;
         int64 u; // exact integer accumulator; S = u * UNIT
+    }
+
+    /// @notice Index schedule, fixed at construction: first height of the index, series length, confirmation depth.
+    struct Schedule {
+        uint64 genesisHeight;
+        uint64 checkpointInterval;
+        uint64 confirmations;
     }
 
     /// @notice Challenge-window parameters, fixed at construction.
@@ -104,12 +118,24 @@ contract ZkWujiIndex {
     /// @notice Native currency owed to disputers and backers; pulled with `withdraw`.
     mapping(address => uint256) public owed;
 
+    /// @notice Commitment to the finalized state after every advance (and the anchor), by height: the only
+    ///         places a branch may fork from in `freezeOnReorg`. Written once per height, never changed.
+    mapping(uint64 => bytes32) public committedAt;
+    /// @notice The highest header ever validated by the rules here, folded or not (it may be among the last
+    ///         CONFIRMATIONS of a fold). A lower bound on the Bitcoin tip, for consumers that must schedule at a
+    ///         height that cannot exist yet. Never counted in S.
+    uint64 public seenHeight;
+    uint32 public seenTime;
+    /// @notice Rule 3 (T13): sealed after a proven deep reorg. Irreversible; nothing advances afterwards.
+    bool public frozen;
+
     event Fold(uint64 indexed fromHeight, uint64 indexed toHeight, int256 S, bool proved);
     event Checkpoint(uint64 indexed height, int256 S);
     event Proposed(uint256 indexed id, uint64 fromHeight, uint64 toHeight, bytes32 toHash, int256 S, uint64 finalAt);
     event Disputed(uint256 indexed id, address indexed disputer, uint64 respondBy);
     event Backed(uint256 indexed id, address indexed backer);
     event Rejected(uint256 indexed id, uint256 removed, address indexed disputer);
+    event Frozen(uint64 indexed lastHeight, bytes32 lastHash, int256 S, uint64 forkBase, uint64 branchHeight);
 
     error BadLength();
     error Linkage();
@@ -135,6 +161,8 @@ contract ZkWujiIndex {
     error Mismatch();
     error NotForged();
     error TransferFailed();
+    error IndexFrozen();
+    error NoReorg();
 
     /// @param anchorHeader the 80-byte header at `anchorHeight`; an immutable, publicly auditable starting point
     /// @param ancestorTimes timestamps of the 11 headers ending at `anchorHeight`, oldest first
@@ -147,12 +175,13 @@ contract ZkWujiIndex {
         uint32 anchorEpochStart,
         uint32[11] memory ancestorTimes,
         uint256 anchorWork, // cumulative work is measured *from this anchor*; the guest starts at 0 too
-        uint64 genesisHeight,
-        uint64 checkpointInterval,
+        Schedule memory schedule,
         Challenge memory challenge
     ) {
         if (anchorHeader.length != 80) revert BadLength();
-        if (checkpointInterval == 0 || genesisHeight == 0) revert ConfigMismatch();
+        if (schedule.checkpointInterval == 0 || schedule.genesisHeight == 0 || schedule.confirmations == 0) {
+            revert ConfigMismatch();
+        }
         // A proof path without a window, a response time or a bond would let any dispute (or none) decide.
         if (
             address(verifier_) != address(0)
@@ -164,13 +193,17 @@ contract ZkWujiIndex {
         // then refuses outright.
         if (address(verifier_) != address(0) && address(verifier_).code.length == 0) revert NoVerifier();
         if (address(rewards_) != address(0)) {
-            require(rewards_.index() == address(this) && rewards_.GENESIS_HEIGHT() == genesisHeight, "reward index mismatch");
+            require(
+                rewards_.index() == address(this) && rewards_.GENESIS_HEIGHT() == schedule.genesisHeight,
+                "reward index mismatch"
+            );
         }
         verifier = verifier_;
         programVKey = programVKey_;
         rewards = rewards_;
-        GENESIS_HEIGHT = genesisHeight;
-        CHECKPOINT_INTERVAL = checkpointInterval;
+        GENESIS_HEIGHT = schedule.genesisHeight;
+        CHECKPOINT_INTERVAL = schedule.checkpointInterval;
+        CONFIRMATIONS = schedule.confirmations;
         CHALLENGE_WINDOW = challenge.window;
         RESPONSE_WINDOW = challenge.responseWindow;
         DISPUTE_BOND = challenge.bond;
@@ -188,6 +221,9 @@ contract ZkWujiIndex {
         });
         recentTimes = ancestorTimes;
         chainWork = anchorWork;
+        committedAt[anchorHeight] = _commitment(tip, ancestorTimes, anchorWork);
+        seenHeight = anchorHeight;
+        seenTime = time;
     }
 
     // ------------------------------------------------------------------ views
@@ -202,29 +238,6 @@ contract ZkWujiIndex {
 
     function lastHash() external view returns (bytes32) {
         return tip.hash;
-    }
-
-    /// @notice Timestamp of the finalized tip's header.
-    function lastTime() external view returns (uint32) {
-        return tip.time;
-    }
-
-    /// @notice Validate `headers` on top of the finalized state with every header rule and return the last
-    ///         height and its timestamp. Writes nothing. Any chain that passes carries real proof of work at the
-    ///         real difficulty, so its height is a lower bound on the Bitcoin tip: what a consumer needs to
-    ///         schedule work at a height that cannot exist yet (T11 pools on this index).
-    function seenTip(bytes calldata headers) external view returns (uint64 height, uint32 time) {
-        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
-        uint256 count = headers.length / 80;
-        if (count > MAX_HEADERS) revert TooManyHeaders();
-        Continuity memory state = tip;
-        uint32[11] memory times = recentTimes;
-        uint256 work = chainWork;
-        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
-        for (uint256 i = 0; i < count; ++i) {
-            work = _apply(state, times, work, headers[i * 80:(i + 1) * 80], maxTime);
-        }
-        return (state.height, state.time);
     }
 
     /// @notice The exact tuple the next proof must start from: the newest pending batch's end, or the
@@ -290,6 +303,7 @@ contract ZkWujiIndex {
 
     /// @notice Runs only from the finalized state with nothing pending, so it cannot race a dispute.
     function foldHeaders(bytes calldata headers, address[] calldata rewardTokens) external returns (uint64 folded) {
+        if (frozen) revert IndexFrozen();
         if (firstPending != nextBatch) revert BatchesPending();
         Working memory w;
         w.state = tip;
@@ -310,6 +324,12 @@ contract ZkWujiIndex {
         tip = w.committed;
         recentTimes = w.committedTimes;
         chainWork = w.committedWork;
+        committedAt[w.committed.height] = _commitment(w.committed, w.committedTimes, w.committedWork);
+        // After a replay `w.state` is the last header validated: the newest Bitcoin block this contract has seen.
+        if (w.state.height > seenHeight) {
+            seenHeight = w.state.height;
+            seenTime = w.state.time;
+        }
         folded = w.committed.height - w.from + 1;
         if (address(rewards) != address(0)) rewards.credit(msg.sender, w.from, w.committed.height, rewardTokens);
         emit Fold(w.from, w.committed.height, int256(w.committed.u) * UNIT, false);
@@ -399,6 +419,7 @@ contract ZkWujiIndex {
         external
         returns (uint256 id)
     {
+        if (frozen) revert IndexFrozen();
         if (address(verifier) == address(0)) revert NoVerifier(); // header-path-only deployment
         Journal memory j = abi.decode(publicValues, (Journal));
 
@@ -452,6 +473,7 @@ contract ZkWujiIndex {
     /// @notice Apply up to `maxBatches` pending batches, oldest first, that are past their window and
     ///         undisputed, or backed. Stops at the first that is not ready. Anyone may call.
     function finalize(uint256 maxBatches) external returns (uint256 done) {
+        if (frozen) revert IndexFrozen();
         while (done < maxBatches && firstPending < nextBatch) {
             uint256 id = firstPending;
             Batch storage b = batches[id];
@@ -461,6 +483,12 @@ contract ZkWujiIndex {
             tip = b.to;
             recentTimes = b.toTimes;
             chainWork = b.toWork;
+            committedAt[b.to.height] = _commitment(b.to, b.toTimes, b.toWork);
+            // A journal carries no header past the folded tip, so the proof path can only vouch for that one.
+            if (b.to.height > seenHeight) {
+                seenHeight = b.to.height;
+                seenTime = b.to.time;
+            }
             for (uint256 i = 0; i < b.checkpointHeights.length; ++i) {
                 _recordCheckpoint(b.checkpointHeights[i], int256(b.checkpointU[i]) * UNIT);
             }
@@ -475,6 +503,7 @@ contract ZkWujiIndex {
     /// @notice Object to a pending batch before its window closes, posting `DISPUTE_BOND`.
     /// @param rewardTokens the relayer-reserve tokens the disputer is paid in if the batch is rejected.
     function dispute(uint256 id, address[] calldata rewardTokens) external payable {
+        if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer != address(0)) revert AlreadyDisputed();
         if (block.timestamp >= b.finalAt) revert WindowClosed();
@@ -527,6 +556,7 @@ contract ZkWujiIndex {
         external
         returns (uint64 folded)
     {
+        if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         Working memory w;
@@ -626,6 +656,46 @@ contract ZkWujiIndex {
         return height + 1 < GENESIS_HEIGHT ? 0 : (height + 1 - GENESIS_HEIGHT) / CHECKPOINT_INTERVAL;
     }
 
+    // ------------------------------------------------------------------ rule 3: deep reorg seals the index
+
+    /// @notice Seal the index for good when Bitcoin has reorganized past its finalized tip. `headers` must form
+    ///         a branch, valid under every header rule, from a recorded finalized state below the tip
+    ///         (`committedAt`), that does not pass through the tip and that out-works the finalized chain by
+    ///         `CONFIRMATIONS + REORG_MARGIN` blocks at the tip's difficulty. No notice, no waiting, no one to
+    ///         cancel: the wait is in the work. Afterwards S and its checkpoints stay at the last consistent
+    ///         state and nothing advances; consumers exit on what was recorded (as under T9).
+    /// @dev Same trust as the rest of the header path: anything with valid work counts. A fake seal needs about
+    ///      CONFIRMATIONS + 144 privately mined blocks, more than the finalized chain had.
+    /// @param base `abi.encode(Continuity, uint32[11] times, uint256 work)` of a state recorded in `committedAt`
+    function freezeOnReorg(bytes calldata base, bytes calldata headers) external {
+        if (frozen) revert IndexFrozen();
+        (Continuity memory state, uint32[11] memory times, uint256 work) =
+            abi.decode(base, (Continuity, uint32[11], uint256));
+        uint64 tipHeight = tip.height;
+        if (state.height >= tipHeight) revert NoReorg();
+        if (committedAt[state.height] != keccak256(base)) revert Discontinuous();
+        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
+        if (headers.length / 80 > MAX_REORG_HEADERS) revert TooManyHeaders();
+
+        uint64 forkBase = state.height;
+        bytes32 tipHash = tip.hash;
+        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        for (uint256 i = 0; i < headers.length; i += 80) {
+            work = _apply(state, times, work, headers[i:i + 80], maxTime);
+            // Through the finalized tip means the same chain: that is an extension, not a reorg.
+            if (state.height == tipHeight && state.hash == tipHash) revert NoReorg();
+        }
+        if (state.height <= tipHeight) revert NoReorg();
+        if (work < chainWork + uint256(CONFIRMATIONS + REORG_MARGIN) * workOf(targetOf(tip.bits))) revert NoReorg();
+
+        frozen = true;
+        emit Frozen(tipHeight, tipHash, S(), forkBase, state.height);
+    }
+
+    function _commitment(Continuity memory c, uint32[11] memory times, uint256 work) internal pure returns (bytes32) {
+        return keccak256(abi.encode(c, times, work));
+    }
+
     // ------------------------------------------------------------------ rules (identical to the guest)
 
     /// @dev Mutates `state` and `times` in place (they are memory references) and returns the new work.
@@ -685,7 +755,9 @@ contract ZkWujiIndex {
         return t[5];
     }
 
-    function targetOf(uint32 bits) public pure returns (uint256 target) {
+    /// @dev Virtual only so a test-only subclass can lower the difficulty floor to mine real forks in tests
+    ///      (as T9 does with its relay); no production contract overrides it.
+    function targetOf(uint32 bits) public pure virtual returns (uint256 target) {
         uint256 size = bits >> 24;
         uint256 word = bits & 0x007fffff;
         require(word != 0 && bits & 0x00800000 == 0, "target sign/zero");

@@ -48,8 +48,7 @@ contract ZkWujiIndexTest is Test {
             uint32(vm.parseJsonUint(meta, ".epochStartTime")),
             times,
             0,
-            genesis,
-            4320,
+            ZkWujiIndex.Schedule(genesis, 4320, 6),
             _challenge()
         );
     }
@@ -162,7 +161,7 @@ contract ZkWujiIndexTest is Test {
         }
         return new ZkWujiIndex(
             new AcceptingVerifier(), bytes32(uint256(1)), RelayerRewards(address(0)), anchor, anchorHeight,
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, genesis, interval, _challenge()
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, ZkWujiIndex.Schedule(genesis, interval, 6), _challenge()
         );
     }
 
@@ -320,7 +319,7 @@ contract ZkWujiIndexTest is Test {
         vm.expectRevert(ZkWujiIndex.NoVerifier.selector);
         new ZkWujiIndex(
             ISP1Verifier(address(0xdead)), bytes32(uint256(1)), RelayerRewards(address(0)), anchor,
-            anchorHeight, 1, times, 0, genesis, 4320, _challenge()
+            anchorHeight, 1, times, 0, ZkWujiIndex.Schedule(genesis, 4320, 6), _challenge()
         );
 
         // address(0) is allowed, and means "header path only"

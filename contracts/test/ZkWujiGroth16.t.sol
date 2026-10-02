@@ -48,8 +48,7 @@ contract ZkWujiGroth16Test is Test {
             uint32(vm.parseJsonUint(meta, ".epochStartTime")),
             times,
             0,
-            uint64(vm.parseJsonUint(meta, ".start")),
-            4320,
+            ZkWujiIndex.Schedule(uint64(vm.parseJsonUint(meta, ".start")), 4320, 6),
             ZkWujiIndex.Challenge({window: 6 hours, responseWindow: 6 hours, bond: 0.05 ether})
         );
     }

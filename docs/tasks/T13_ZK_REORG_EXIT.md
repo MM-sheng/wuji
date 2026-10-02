@@ -1,6 +1,6 @@
 # T13 · 无中继指数的主网规则：三条规则，无人值守
 
-2026-10-02 · 状态：**设计，未实现**，K 待项目方最终确认。适用于主网采用的"只走区块头路径的 `ZkWujiIndex`"
+2026-10-02 · 状态：**源码已实现（未部署、未审阅）**；项目方确认 K = 100、池子定价改为单一规则（见末节"实现记录"）。适用于主网采用的"只走区块头路径的 `ZkWujiIndex`"
 （[区块头路径优先决策](../decisions/2026-10-02-header-path-first.md)）。取代本文件 2026-10-02 早些时候的"通知 / 取消 / 等待"版本，
 那一版要求有人按时在线取消假通知，不符合"无人维护也能运行"的目标。
 
@@ -105,3 +105,20 @@ ZK 证明、挑战窗口、挂起队列、争议和保证金、`back` / `reject`
 2. keeper：限制单次推进的高度数（≈ 250）；终端显示封存状态。
 3. 测试网部署，与 WUJI-14 的修复一起。
 4. 交独立审阅（主网前）。
+
+## 实现记录（2026-10-02）
+
+项目方确认：**K = 100**（比特币自己的 coinbase 成熟期），永续池定价合并为一条规则。
+
+- `ZkWujiIndex`：`CONFIRMATIONS` 改为构造参数（`Schedule{genesisHeight, checkpointInterval, confirmations}`），
+  每次推进写 `committedAt[height]`，`seenHeight`/`seenTime` 记录验证过的最新区块头（含未满 K 的尾部），
+  新增 `freezeOnReorg(base, headers)` 与 `frozen`；封存后 `foldHeaders`、`foldProof`、`finalize`、`dispute`、
+  `refute` 一律拒绝。去掉了 `seenTip` 与 `lastTime`。
+- `WujiAccounts`（无中继模式）：定价 = `seenHeight + 按 seenTime 年龄查表的余量`，`seenTime` 超过 24 小时拒绝；
+  去掉了原来的 A（按已终结链尾）和 B（申请人提交区块头）。`frozen()` 存在，所以池子可以走冻结退出。
+- keeper：合约没有验证器时直接走区块头路径，凑够 `K + 36` 个区块头就推进，单次最多推进 250 个高度；
+  所有交易的 gas 上限都控制在 16M 以内（EIP-7825）。顺带修复：原来的回退路径把 gas 上限设成了 60M，会被 RPC 直接拒绝。
+- 测试：`test/ZkWujiReorg.t.sol` 用只在测试中存在的低难度子合约真挖分叉，覆盖：工作量恰好达到门槛才封存（另有 256 轮随机测试）、
+  经过已终结链尾的链不算、只能从有记录的状态分叉、封存后不能再推进、池子封存后全额退款。Foundry 227 个全部通过。
+- anvil 实测：K = 100、只走区块头路径的合约，keeper 一笔提交 350 个区块头、推进 250 个高度，634 万 gas；
+  `seenHeight` 比已终结高度多 100；S 与独立重算一致。

@@ -41,7 +41,7 @@ test('the keeper does not prove on top of a pending batch that does not match th
     [sel('GENESIS_HEIGHT()')]: w(j.genesisHeight), [sel('CHECKPOINT_INTERVAL()')]: w(4320), [sel('CONFIRMATIONS()')]: w(6),
     [sel('MAX_HEADERS()')]: w(512), [sel('MAX_PROOF_HEADERS()')]: w(250), [sel('pendingCount()')]: w(1),
     [sel('finalize(uint256)')]: w(0), [sel('firstPending()')]: w(0), [sel('nextBatch()')]: w(1),
-    [sel('DISPUTE_BOND()')]: w(1),
+    [sel('DISPUTE_BOND()')]: w(1), [sel('verifier()')]: w(0x5f1), // a proof-path index
   };
   const rpcStub = globalThis.fetch;
   globalThis.fetch = async (_url, init) => {

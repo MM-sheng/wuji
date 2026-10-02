@@ -263,6 +263,11 @@ B. **Requester supplies headers.** The request carries the raw headers from the 
    45–80 headers ≈ 0.9–1.6M gas per request on top of the request itself.
 C. **A thin header relay for the best tip only** (option 3 above): per-header gas forever.
 
+**Superseded 2026-10-02 (T13): one rule for relay-less pools** — price at the index's newest validated
+header (`seenHeight`, recorded by every fold, including the unconfirmed trailing headers) plus the margin for
+that header's age; A and B below are removed from the source. With K = 100 the finalized tip is always ≥ 17 h
+old, so A could no longer serve, and one rule replaces two. Historical record follows.
+
 **Decided 2026-10-01: A by default, B and C kept.** Implemented in `WujiAccounts.sol`; the pool detects at
 construction whether its index has a relay (`RELAY_TIP`):
 

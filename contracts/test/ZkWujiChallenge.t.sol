@@ -43,7 +43,7 @@ abstract contract ZkChallengeBase is Test {
         }
         return new ZkWujiIndex(
             verifier, bytes32(uint256(1)), rewards, anchor, anchorHeight,
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, genesis, interval,
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, ZkWujiIndex.Schedule(genesis, interval, 6),
             ZkWujiIndex.Challenge({window: W, responseWindow: R, bond: BOND})
         );
     }
@@ -481,14 +481,14 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         for (uint256 i = 0; i < 3; i++) {
             vm.expectRevert(ZkWujiIndex.ConfigMismatch.selector);
             new ZkWujiIndex(
-                anyProof, bytes32(uint256(1)), RelayerRewards(address(0)), anchor, anchorHeight, 1, times, 0, genesis,
-                4320, bad[i]
+                anyProof, bytes32(uint256(1)), RelayerRewards(address(0)), anchor, anchorHeight, 1, times, 0,
+                ZkWujiIndex.Schedule(genesis, 4320, 6), bad[i]
             );
         }
         // a header-path-only deployment needs none of them
         new ZkWujiIndex(
             ISP1Verifier(address(0)), bytes32(0), RelayerRewards(address(0)), anchor, anchorHeight, 1, times, 0,
-            genesis, 4320, ZkWujiIndex.Challenge({window: 0, responseWindow: 0, bond: 0})
+            ZkWujiIndex.Schedule(genesis, 4320, 6), ZkWujiIndex.Challenge({window: 0, responseWindow: 0, bond: 0})
         );
     }
 }

@@ -132,7 +132,8 @@ returned the bond plus the batch's relayer bounty: disputing honest batches was 
 
 ### WUJI-14 — Medium — Fixed in source — B pricing could start from a hand-picked header stamped in the future
 
-Self-review 2026-10-02 (§2). B priced at supplied tip + 16 if that tip looked ≤ 30 min old, but the requester
+Superseded by T13 the same day: B was removed and relay-less pools price from the index's own newest
+validated header. Self-review 2026-10-02 (§2). B priced at supplied tip + 16 if that tip looked ≤ 30 min old, but the requester
 chooses the stopping header and Bitcoin allows timestamps 2 h ahead: a recent block stamped ahead could make an
 already-mined pricing height likely (≈ 0.07–0.43). Fix: B uses A's skew-aware margin on the supplied tip's age
 (≈ 7 h wait instead of 3–4 h). Deployed pools predate it.

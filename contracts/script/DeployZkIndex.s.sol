@@ -21,10 +21,12 @@ contract DeployZkIndex is Script {
         bytes memory anchor = vm.parseJsonBytes(j, ".anchorHeader");
         uint64 height = uint64(vm.parseJsonUint(j, ".anchorHeight"));
         uint32 epochStart = uint32(vm.parseJsonUint(j, ".epochStart"));
-        uint256[] memory t = vm.parseJsonUintArray(j, ".ancestorTimes");
-        require(t.length == 11, "11 ancestor times");
         uint32[11] memory times;
-        for (uint256 i; i < 11; i++) times[i] = uint32(t[i]);
+        {
+            uint256[] memory t = vm.parseJsonUintArray(j, ".ancestorTimes");
+            require(t.length == 11, "11 ancestor times");
+            for (uint256 i; i < 11; i++) times[i] = uint32(t[i]);
+        }
         require(times[10] == uint32(uint8(anchor[68])) | uint32(uint8(anchor[69])) << 8
             | uint32(uint8(anchor[70])) << 16 | uint32(uint8(anchor[71])) << 24, "last ancestor time is the anchor's");
 
@@ -34,12 +36,14 @@ contract DeployZkIndex is Script {
             bond: vm.envOr("DISPUTE_BOND", uint256(0.05 ether))
         });
         address existing = vm.envOr("SP1_VERIFIER", address(0));
+        ZkWujiIndex.Schedule memory schedule =
+            ZkWujiIndex.Schedule(height + 1, 4320, uint64(vm.envOr("CONFIRMATIONS", uint256(6))));
 
         vm.startBroadcast();
         SP1Verifier verifier = existing == address(0) ? new SP1Verifier() : SP1Verifier(existing);
         ZkWujiIndex idx = new ZkWujiIndex(
             ISP1Verifier(address(verifier)), VKEY, RelayerRewards(address(0)), anchor, height, epochStart, times, 0,
-            height + 1, 4320, challenge
+            schedule, challenge
         );
         vm.stopBroadcast();
 

@@ -13,9 +13,8 @@ import {WujiAccountsFactory} from "../src/WujiAccountsFactory.sol";
 ///   forge script script/DeployAccounts.s.sol --rpc-url $RPC --broadcast --account $KEYSTORE_ACCOUNT --password-file $PASSWORD_FILE
 ///
 /// Pricing: epochs of 6 heights, DELAY 16, MAX_TIP_AGE 30 min (docs/tasks/T11 §Entry and exit timing).
-/// INDEX may also be an index without a relay (ZkWujiIndex): the pools then price by A, or B with headers.
-/// Their A path waits for a finalized tip under 24 h old, so the deploy probes B instead: PROBE_HEADERS must
-/// hold real headers from the index's finalized tip to a block at most 30 min old.
+/// INDEX may also be an index without a relay (ZkWujiIndex): the pools then price from its newest validated
+/// header, which must be under 24 h old for the probe below to pass (fold first if it is not).
 contract DeployAccounts is Script {
     function run() external {
         uint256 expected = vm.envUint("EXPECTED_CHAIN_ID");
@@ -27,8 +26,7 @@ contract DeployAccounts is Script {
         bool hasRelay;
         try index.relay() returns (BitcoinRelay r) { hasRelay = address(r).code.length > 0; } catch {}
         require(address(index).code.length > 0 && treasury.code.length > 0, "bad index or treasury");
-        bytes memory probe = vm.envOr("PROBE_HEADERS", bytes(""));
-        require(hasRelay || probe.length > 0, "a relay-less index needs PROBE_HEADERS");
+
         vm.startBroadcast();
         WujiAccountsFactory factory = new WujiAccountsFactory(index, treasury, 6, 16, 30 minutes, 30, 1_000);
         WujiAccounts[3] memory pools;
@@ -37,8 +35,7 @@ contract DeployAccounts is Script {
         // Deployment alone proves nothing about requests: probe the exact request conditions now.
         for (uint256 t; t < 3; t++) {
             require(pools[t].RELAY_TIP() == hasRelay, "pricing mode");
-            if (hasRelay) require(pools[t].acceptingRequests(), "pool would reject requests");
-            else console.log("B probe: a request now would price at", pools[t].pricingHeightWithHeaders(probe));
+            require(pools[t].acceptingRequests(), "pool would reject requests");
         }
         console.log("WujiAccountsFactory", address(factory));
         for (uint256 t; t < 3; t++) console.log("pool", t, address(pools[t]));
