@@ -26,7 +26,8 @@ and revise the paper if its values no longer agree. Protocol changes also requir
 ## Render the six-page PDF
 
 Rendering is optional documentation tooling, separate from the zero-dependency runtime. The checked copy was
-generated with Python 3.12.14, ReportLab 4.4.9, pypdf 6.10.0 and macOS Arial Unicode TTF. The renderer requires
+generated on 2026-10-02 with Python 3.9.6, ReportLab 4.4.9, pypdf 6.10.0 and macOS Arial Unicode TTF (the
+2026-09-21 copy used Python 3.12.14 with the same libraries). The renderer requires
 ReportLab and pypdf in the selected Python environment; it does not install packages or download fonts.
 
 ```bash

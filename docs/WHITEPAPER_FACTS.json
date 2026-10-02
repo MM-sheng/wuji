@@ -6,7 +6,7 @@
     "mean": 4080,
     "confirmations": 6,
     "feeBps": 5,
-    "bountyDivisor": 10000,
+    "bountyDivisor": 100000,
     "maxRelayAgeSeconds": 10800
   },
   "release": {
@@ -37,9 +37,9 @@
     "assumedGwei": 1,
     "assumedHeightsPerDay": 144,
     "costEthPerDay": 0.0432,
-    "reserveEthForNextBounty": 3,
+    "reserveEthForNextBounty": 30,
     "feeBaseEthPerDay": 86.4,
-    "zeroRevenueHalfLifeDays": 48.132814071065425
+    "zeroRevenueHalfLifeDays": 481.3498019593201
   },
   "evidence": {
     "originalHeaders": 2028,
