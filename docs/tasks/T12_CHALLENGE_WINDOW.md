@@ -188,6 +188,13 @@ immutables masked; `seenTip` checked on chain with ten real headers. Keeper, wat
 By 2026-10-02 00:49 UTC three batches here had finalized without dispute (to 969470): `finalize` 112,056
 for the first, 80,969 for each later one; `foldProof` ≈ 443k–459k.
 
+### Review 2026-10-02: WUJI-12
+
+A read-only review found that `refute` does not compare work, so an honest pending batch can be replaced
+with ≈ 7 privately mined blocks. Accepted and documented, fix rejected: the same bar already holds for
+`foldHeaders`, and a "strictly more work" rule would stop refuting forgeries that keep the real bits (equal
+range, equal difficulty, equal work), reopening WUJI-08. See the review note's response.
+
 ### Not done
 
 - Run a second watcher on another machine.

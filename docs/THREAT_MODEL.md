@@ -60,8 +60,11 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
   honest watcher disputes within the window, and `refute` (WUJI-08) answers each forgery at once with real
   headers, folding the real state, so forgeries cannot hold the index either. Residual risks: watcher
   absence for `W` (loss), griefing that delays honest batches by `W + R` per lost bond, a reject reward a
-  griefer can collect if nobody backs an honest batch within `R`, and forgeries that cost the attacker only
-  gas (WUJI-09).
+  griefer can collect if nobody backs an honest batch within `R`, forgeries that cost the attacker only
+  gas (WUJI-09), and the header path's bar itself: ≈ 7 privately mined blocks at the real difficulty (a
+  branch with valid work and 6 descendants) can be folded by `foldHeaders` when nothing is pending or used
+  to `refute` an honest pending batch (WUJI-12). Raising it is a mainnet decision (deeper confirmations
+  for the whole header path, or a challenge game between branches).
 - **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
   height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
   local Core/Esplora. HTTP success is not proof of Bitcoin consensus. `BITCOIN_SOURCE=p2p` removes the HTTP

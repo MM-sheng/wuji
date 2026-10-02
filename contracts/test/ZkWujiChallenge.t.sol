@@ -402,6 +402,20 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         assertEq(idx.owed(WATCHER), BOND, "the disputer was right and gets the bond back");
     }
 
+    /// Why `refute` cannot require "strictly more work" (docs/reviews/2026-10-02-T12-refute-work.md): the
+    /// refuting headers cover exactly the batch's range, so at equal difficulty a forgery that claims honest
+    /// bits claims exactly the work the real headers have. A strict comparison would leave every such forgery
+    /// to wait out the response window, which is the liveness hole `refute` closed (WUJI-08).
+    function test_aForgeryClaimingHonestWorkIsRefutedEvenThoughTheWorkIsEqual() public {
+        ZkWujiIndex.Journal memory honest = _honest(idx, 60);
+        ZkWujiIndex.Journal memory forged = _forge(honest); // same bits, same work, different U
+        _propose(idx, forged);
+        assertEq(idx.batch(0).toWork, honest.newWork, "the forgery's claimed work equals the real chain's");
+        _dispute(0);
+        idx.refute(0, _headers(anchorHeight, 60), new address[](0));
+        assertEq(idx.lastHash(), honest.newHash);
+    }
+
     function test_refutingAnHonestBatchFails() public {
         _propose(idx, _honest(idx, 60));
         _dispute(0);

@@ -54,3 +54,25 @@ rejected at `foldProof`; or keep the current rule and document the ≈7-block co
 - Reward tokens are fixed at proposal/dispute time and validated with RelayerRewards' rule, so `finalize` and
   `reject` cannot be made to revert by the caller's token choice; `award` failures are caught in `_reject`.
 - `seenTip` validates from the finalized tip with every header rule and writes nothing.
+
+## Response (T12 session, 2026-10-02)
+
+**Finding accepted; suggested fix rejected; documented instead.** Recorded as AUDIT_NOTES WUJI-12.
+
+The suggested `w.committedWork > b.toWork` cannot hold for the case `refute` exists for. The refuting headers
+must cover exactly the batch's range (`back` and `refute` both fix the length), and the work of a range depends
+only on its bits and its length. A forgery that keeps the real bits, which costs a broken prover nothing,
+claims exactly the work the real headers have, so a strict comparison fails and every such forgery waits out
+`RESPONSE_WINDOW` again: the WUJI-08 liveness hole, not a sub-case of it. The note's "forged batches that claim
+a normal work value are still refuted at once" does not hold. `test_aForgeryClaimingHonestWorkIsRefutedEvenThoughTheWorkIsEqual`
+pins this: the forged batch's `toWork` equals the real chain's, and it is still refuted.
+
+Neither alternative changes the attack the note describes: an equal-length private branch at the real
+difficulty has equal work, so bounding claimed work by the claimed bits does not exclude it either.
+
+What the finding does show is that the replacement cost of an honest pending batch is the header path's
+general bar — any branch with valid work and `CONFIRMATIONS` (6) descendants — the same bar `foldHeaders`
+already offers whenever the queue is empty. `refute` changes when that bar can be used, not its height. Raising
+it means a deeper confirmation depth for the whole header path (a new guest and verifying key, since
+`confirmations` is part of the journal), or an on-chain challenge game between competing branches. Both are
+recorded as mainnet questions rather than taken here. THREAT_MODEL and T12 now state the cost explicitly.

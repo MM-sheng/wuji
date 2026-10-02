@@ -112,6 +112,17 @@ production: the ZK keeper (on the fix since 2026-10-01 11:50 UTC) ignored lighte
 restarted on the fix at 2026-10-02 00:48 UTC with their original launch environments (the BSC indexer
 had logged 1,086 rewinds before that).
 
+### WUJI-12 — Medium (mainnet) / Low (testnet) — Accepted, documented — an honest pending batch can be refuted with a private branch
+
+Reported 2026-10-02 by a separate read-only review session ([note](reviews/2026-10-02-T12-refute-work.md)).
+`refute` accepts any differing replay with valid work and `CONFIRMATIONS` descendants, so ≈ 7 privately mined
+blocks at the real difficulty replace an honest pending batch, and for the oldest batch become finalized state.
+That is the header path's general bar (`foldHeaders` offers it whenever the queue is empty); `refute` does not
+lower it. The suggested "strictly more work" check was rejected: equal-length ranges at equal difficulty have
+equal work, so it would stop `refute` from removing forgeries that keep the real bits and reopen WUJI-08
+(test `test_aForgeryClaimingHonestWorkIsRefutedEvenThoughTheWorkIsEqual`). Raising the bar needs a deeper
+confirmation depth for the whole header path or a challenge game between branches; open for mainnet.
+
 ## Verification performed
 
 - 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.
