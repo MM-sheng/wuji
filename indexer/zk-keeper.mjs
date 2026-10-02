@@ -45,6 +45,12 @@ const MIN_FOLD = Number(env.ZK_MIN_FOLD || 36);
 const MAX_FOLD = Number(env.ZK_MAX_FOLD || 250);
 // Every transaction must stay under the 2^24 per-transaction gas cap (EIP-7825); ≈ 18.7k gas per header.
 const headerGas = n => Math.min(16_000_000, 200_000 + 22_000 * n);
+// Relayer-bounty tokens (sorted, unique, ≤ 8) credited to this keeper for every height it folds.
+const REWARD_TOKENS = (env.ZK_REWARD_TOKENS || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort();
+if (REWARD_TOKENS.some(t => !/^0x[0-9a-f]{40}$/.test(t)) || new Set(REWARD_TOKENS).size !== REWARD_TOKENS.length || REWARD_TOKENS.length > 8) {
+  throw Error('ZK_REWARD_TOKENS must be up to 8 distinct token addresses');
+}
+const tokens = `[${REWARD_TOKENS.join(',')}]`;
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
@@ -111,7 +117,7 @@ export async function round(source) {
     }
     const n = Math.min(available, immut.confirmations + MAX_FOLD, immut.maxHeaders);
     const headers = await fetchHeaders(n);
-    const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.join(''), '[]');
+    const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.join(''), tokens);
     log(`foldHeaders ${n} headers (folds ${n - immut.confirmations}) gas ${tx.gas} ${tx.hash}`);
     return { action: 'headers', ...tx, headers: n };
   }
@@ -133,7 +139,7 @@ export async function round(source) {
   try {
     const p = await prove(inFile, outFile);
     log(`proved in ${p.seconds.toFixed(0)} s, folds to ${p.newHeight}`);
-    const tx = await send('foldProof(bytes,bytes,address[])', 1_500_000, p.proof, p.journal, '[]');
+    const tx = await send('foldProof(bytes,bytes,address[])', 1_500_000, p.proof, p.journal, tokens);
     log(`foldProof ${tag} gas ${tx.gas} ${tx.hash}`);
     return { action: 'proof', ...tx, headers: count, newHeight: p.newHeight };
   } catch (e) {
@@ -142,7 +148,7 @@ export async function round(source) {
     // The header path runs only from the finalized state; while batches are pending it would revert.
     if (pending > 0) throw Error('proof path failed with batches pending; header fallback waits for them');
     const n = Math.min(count, immut.maxHeaders);
-    const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.slice(0, n).join(''), '[]');
+    const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.slice(0, n).join(''), tokens);
     log(`fallback foldHeaders ${n} headers gas ${tx.gas} ${tx.hash}`);
     return { action: 'headers', ...tx, headers: n };
   }
