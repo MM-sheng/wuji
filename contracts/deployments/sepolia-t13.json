@@ -1,0 +1,94 @@
+{
+  "version": "t13-header-sepolia-v1",
+  "chainId": 11155111,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "deployedAt": "2026-10-02",
+  "sourceCommit": "a79e176 (branch t12-challenge-window); pools from the same source",
+  "shape": "T13 mainnet shape: header-path-only ZkWujiIndex (verifier 0, no challenge window), CONFIRMATIONS = 100, own RelayerRewards + FeeRouter",
+  "ZkWujiIndex": "0xc076e54b7c6Cc999883908453BBF7b349fc3Ea78",
+  "RelayerRewards": "0x72C276A12bb3b3E642216BcB67DE40e26e24Cb79",
+  "FeeRouter": "0x20B4367795a3886aE69dec0127Ebc8492E49cFC2",
+  "anchor": "contracts/deployments/sepolia-t13-anchor.json",
+  "anchorHeight": 969415,
+  "genesisHeight": 969416,
+  "checkpointInterval": 4320,
+  "confirmations": 100,
+  "reorgMargin": 144,
+  "transactions": [
+    {
+      "contract": "RelayerRewards",
+      "hash": "0x5f85d97c566fe44a0bf8b5fb434318eba5ffd9e77ef1fc9efd3fbf7244097d47",
+      "gas": 1110705
+    },
+    {
+      "contract": "ZkWujiIndex",
+      "hash": "0x77d351e824d59313fadc4d936732738cffac802a34b30d078ea946b814f4ca13",
+      "gas": 5018810
+    },
+    {
+      "contract": "FeeRouter",
+      "hash": "0xb50599b829682481587fc079df021659232af852c4df42dbc47d197afed3cfd5",
+      "gas": 322002
+    }
+  ],
+  "verification": "runtime bytecode of all three equals the local build with immutables masked; CONFIRMATIONS 100, verifier 0, rewards bound both ways, committedAt(anchor) set, not frozen",
+  "firstFold": {
+    "tx": "0x6c0dc6dd7fc8d63a93266496feceb034168d7f437c1443684bee979093924953",
+    "headers": 140,
+    "folded": 40,
+    "gas": 2466827,
+    "lastHeight": 969455,
+    "seenHeight": 969555
+  },
+  "accounts": {
+    "factory": "0x1f1773D691987833eEB3007FD9e404F66EA89985",
+    "collateral": {
+      "symbol": "WETH",
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+    },
+    "treasury": "0x20B4367795a3886aE69dec0127Ebc8492E49cFC2 (this index's FeeRouter: pool fees fund this index's submitters)",
+    "pricing": "one rule (T13): seenHeight + margin for seenTime's age; refuses past 24 h",
+    "pools": [
+      {
+        "tier": "5%/yr",
+        "address": "0x3Ec4aCFd7A7C00e3b535ec71628D0711aBb56A4a"
+      },
+      {
+        "tier": "10%/yr",
+        "address": "0x672e6D5bAEb5153849D482c89Db61a2823472158"
+      },
+      {
+        "tier": "25%/yr",
+        "address": "0xA331D271bF00dFe10fA5c76383f74cc45aFae171"
+      }
+    ],
+    "transactions": [
+      {
+        "what": "factory",
+        "hash": "0x97785b24cb35e75d5a3f20e827bf1f35dbb4d17b95a04419c1e37d806e0b0b6b",
+        "gas": 5028473
+      },
+      {
+        "what": "create tier 0",
+        "hash": "0xcc3d51fcc4bdea3be136dad87bb9987a591b8e869ed42845cf9ba3d331cb7ed1",
+        "gas": 4053130
+      },
+      {
+        "what": "create tier 1",
+        "hash": "0xa5a8a01d812470189fc4217e946db1baa81c5be36425441e73cfd657d6c395d7",
+        "gas": 4053142
+      },
+      {
+        "what": "create tier 2",
+        "hash": "0x418f2600de773ee2465d5da747ff85aa47ff2a4c0e2dd4d32ca938d52df0cc03",
+        "gas": 4053142
+      }
+    ],
+    "verification": "pool and factory runtimes equal the local build; each pool RELAY_TIP false, INDEX_CAN_FREEZE true, treasury = FeeRouter above, acceptingRequests true, next pricing 969612 at deploy"
+  },
+  "operators": {
+    "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), header-only mode, ZK_REWARD_TOKENS=WETH, ACCOUNTS = the three pools; log /tmp/wuji-sepolia-t13-keeper.log",
+    "watcher": "not needed for a header-only index; the T12 watcher was stopped"
+  },
+  "supersedes": "sepolia-zk-t12-v2.json as the running Sepolia ZK-family index (that contract and its pools stay on chain, no longer maintained)"
+}

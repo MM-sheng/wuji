@@ -291,7 +291,7 @@
       <button data-p="verdict">Verdict</button>
       <button data-p="taiji">两仪 · On-chain<em id="cChain"></em></button>
       <button data-p="perp">永续账户<em id="cPerp"></em></button>
-      <button data-p="zk">ZK · 挑战窗口<em id="cZk"></em></button>
+      <button data-p="zk">比特币指数 · 直读<em id="cZk"></em></button>
       <button data-p="data">数据源 · 核验</button>
       <button data-p="about">About</button>
       <span class="sp"></span>
@@ -336,9 +336,9 @@
           <div id="zkFinal"><div class="empty">读取中…</div></div>
         </div>
         <div>
-          <h4>挂起批次 · 挑战窗口</h4>
+          <h4>挂起批次 · 仅 ZK 路径</h4>
           <div id="zkPending"><div class="empty">读取中…</div></div>
-          <div class="muted" style="margin-top:8px">浏览器直读 Sepolia（同一区块），不经过索引器。证明只开启挂起批次；窗口内无人争议才生效。被争议的批次必须由真实区块头按 Solidity 规则重放吻合才保留，否则被驳回或当场反驳。</div>
+          <div class="muted" style="margin-top:8px">浏览器直读 Sepolia（同一区块），不经过索引器。区块头经合约按规则验证、满 K 个确认才计入；比特币深度重组时任何人可提交更重的分支让指数封存，按已记录结果退出。ZK 路径另有挑战窗口：证明只开启挂起批次，窗口内无人争议才生效。</div>
         </div>
       </div>
     </div>
@@ -1201,8 +1201,8 @@ function exitActionAllowed(state, action) {
     if(n>=2n**256n)throw Error('数量过大');return n;
   }
   // ---------------------------------------------------------------- ZK index (T12): direct reads
-  const ZK_RELEASE={chainId:11155111,index:'0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
-  const ZK_SEL={tip:'0x2755cd2d',S:'0x4be1c796',firstPending:'0x6faf954b',nextBatch:'0xe7c51f1b',batch:'0x0eaa75fe',window:'0xd62aad29',bond:'0x4c68ae63'};
+  const ZK_RELEASE={chainId:11155111,index:'0xc076e54b7c6Cc999883908453BBF7b349fc3Ea78',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
+  const ZK_SEL={tip:'0x2755cd2d',S:'0x4be1c796',firstPending:'0x6faf954b',nextBatch:'0xe7c51f1b',batch:'0x0eaa75fe',window:'0xd62aad29',bond:'0x4c68ae63',seenHeight:'0x42fc5369',seenTime:'0xaebd3c19',frozen:'0x054f7d9c',conf:'0x0438b0a4'};
   let ZK=null,zkError=null,zkBusy=false;
   async function readZk(){
     if(zkBusy)return;zkBusy=true;
@@ -1215,9 +1215,11 @@ function exitActionAllowed(state, action) {
       const wd=(hex,i)=>BigInt('0x'+hex.slice(2+64*i,66+64*i));
       const sg=(v,bits)=>v>=1n<<BigInt(bits-1)?v-(1n<<BigInt(bits)):v;
       const pad=n=>BigInt(n).toString(16).padStart(64,'0');
-      const [tip,S,first,next,win]=await Promise.all([call(ZK_SEL.tip),call(ZK_SEL.S),call(ZK_SEL.firstPending),call(ZK_SEL.nextBatch),call(ZK_SEL.window)]);
+      const [tip,S,first,next,win,sh,st,fr,cf]=await Promise.all([call(ZK_SEL.tip),call(ZK_SEL.S),call(ZK_SEL.firstPending),call(ZK_SEL.nextBatch),call(ZK_SEL.window),
+        call(ZK_SEL.seenHeight),call(ZK_SEL.seenTime),call(ZK_SEL.frozen),call(ZK_SEL.conf)]);
       const z={block:Number(block.number),now:Number(block.timestamp),height:Number(wd(tip,1)),time:Number(wd(tip,3)),
-        S:sg(wd(S,0),256),first:Number(wd(first,0)),next:Number(wd(next,0)),window:Number(wd(win,0)),batches:[]};
+        S:sg(wd(S,0),256),first:Number(wd(first,0)),next:Number(wd(next,0)),window:Number(wd(win,0)),batches:[],
+        seenHeight:Number(wd(sh,0)),seenTime:Number(wd(st,0)),frozen:wd(fr,0)===1n,conf:Number(wd(cf,0))};
       if(z.next-z.first>32)throw Error('挂起队列超出合约上限');
       let from=z.height;
       for(let id=z.first;id<z.next;id++){
@@ -1242,7 +1244,10 @@ function exitActionAllowed(state, action) {
     fe.innerHTML=`<div class="kv"><span>已终结高度</span><b>#${z.height.toLocaleString()}</b></div>
       <div class="kv"><span>S · 显示水平 100·e^S</span><b>${S.toFixed(6)} · ${(100*Math.exp(S)).toFixed(3)}</b></div>
       <div class="kv"><span>终结区块头时间</span><b>${zkWhen(z.time,z.now)}</b></div>
-      <div class="kv"><span>挑战窗口</span><b>${(z.window/3600).toFixed(1)} 小时</b></div>
+      <div class="kv"><span>状态</span><b class="${z.frozen?'bad':'ok'}">${z.frozen?'已封存（深度重组）· 按已记录结果退出':'运行中'}</b></div>
+      <div class="kv"><span>确认深度 K</span><b>${z.conf} 个区块</b></div>
+      <div class="kv"><span>验证过的最新区块</span><b>#${z.seenHeight.toLocaleString()} · ${zkWhen(z.seenTime,z.now)}</b></div>
+      <div class="kv"><span>挑战窗口</span><b>${z.window?(z.window/3600).toFixed(1)+' 小时':'无（只走区块头路径）'}</b></div>
       <div class="kv"><span>合约 · 读取区块</span><b>${link(ZK_RELEASE.index)} · #${z.block.toLocaleString()}</b></div>
       ${zkError?`<div class="kv"><span>最近一次刷新</span><b class="bad">失败：${esc(zkError)}</b></div>`:''}`;
     pe.innerHTML=z.batches.length?z.batches.map(b=>{
@@ -1254,7 +1259,7 @@ function exitActionAllowed(state, action) {
         <div class="kv"><span>声明的 S</span><b>${(Number(b.u)*1.2e13/1e18).toFixed(6)}</b></div>
         <div class="kv"><span>状态</span><b class="${st[0]}">${st[1]}</b></div>
         <div class="kv"><span>证明者</span><b>${link(b.prover)}</b></div></div>`;}).join('')
-      :'<div class="empty">没有挂起批次：已终结状态就是最新的证明结果。</div>';
+      :`<div class="empty">${z.window?'没有挂起批次：已终结状态就是最新的证明结果。':'只走区块头路径：没有证明、没有挂起批次。区块头经合约按规则验证后直接计入（满 K 个确认）。'}</div>`;
   }
   function exitRPC(url){let id=0;return async(method,params)=>{
     const n=++id,j=await(await fetchTimed(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:n,method,params})})).json();
