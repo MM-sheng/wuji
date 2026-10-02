@@ -123,24 +123,38 @@ contract WujiAccountsZkTest is Test {
 
     // ---------------------------------------------------------------- B
 
-    function test_BPricesFromSuppliedHeaders() public {
+    function test_BPricesFromSuppliedHeadersWithTheMarginForTheirAge() public {
         uint64 last = idx.lastHeight();
         bytes memory seen = _headers(last, 30);
         vm.warp(_timeAt(last + 30) + 10 minutes);
-        assertEq(pool.pricingHeightWithHeaders(seen), _round(last + 30 + DELAY));
+        uint64 margin = pool.marginForAge(_timeAt(last + 30));
+        assertEq(margin, 52, "a 10-minute-old tip falls in the 1 h bucket");
+        assertEq(pool.pricingHeightWithHeaders(seen), _round(last + 30 + margin));
         vm.prank(alice);
         uint256 id = pool.requestEnterWithHeaders(true, 100e18, seen);
         (,, uint64 e,,) = pool.accounts(id);
-        assertEq(e, _round(last + 30 + DELAY));
-        assertLt(e, last + pool.finalizedMargin(), "the fast path prices much sooner than A");
+        assertEq(e, _round(last + 30 + margin));
+        assertLt(e, last + pool.finalizedMargin(), "still sooner than A, which counts from the older finalized tip");
+    }
+
+    /// The requester chooses where the supplied chain stops, so the margin must cover a stopping header whose
+    /// timestamp runs up to 2 h ahead (Bitcoin's limit): at least as many heights as A gives a fresh tip.
+    function test_BMarginCoversAStoppingHeaderStampedInTheFuture() public {
+        uint64 last = idx.lastHeight();
+        bytes memory seen = _headers(last, 30);
+        vm.warp(_timeAt(last + 30) - 2 hours); // the stopping header claims to be 2 h in the future
+        assertEq(pool.pricingHeightWithHeaders(seen), _round(last + 30 + 40), "bucket-0 margin (40), not DELAY (2)");
+        vm.warp(_timeAt(last + 30) - 2 hours - 1);
+        vm.expectRevert(ZkWujiIndex.FutureTime.selector); // the index's own header rule rejects it first
+        pool.pricingHeightWithHeaders(seen);
     }
 
     function test_BRejectsStaleOrInvalidHeaders() public {
         uint64 last = idx.lastHeight();
         bytes memory seen = _headers(last, 30);
-        vm.warp(_timeAt(last + 30) + 31 minutes);
+        vm.warp(_timeAt(last + 30) + 24 hours + 1);
         vm.prank(alice);
-        vm.expectRevert(bytes("headers stale"));
+        vm.expectRevert(bytes("index stale"));
         pool.requestEnterWithHeaders(true, 100e18, seen);
 
         vm.warp(_timeAt(last + 30) + 1 minutes);
@@ -150,9 +164,10 @@ contract WujiAccountsZkTest is Test {
         vm.expectRevert(ZkWujiIndex.BadWork.selector);
         pool.requestEnterWithHeaders(true, 100e18, forged);
 
+        bytes memory unlinked = _headers(last + 1, 30);
         vm.prank(alice);
         vm.expectRevert(ZkWujiIndex.Linkage.selector);
-        pool.requestEnterWithHeaders(true, 100e18, _headers(last + 1, 30)); // does not start at the tip
+        pool.requestEnterWithHeaders(true, 100e18, unlinked); // does not start at the tip
     }
 
     function test_BIsOnlyForPoolsWithoutARelay() public {

@@ -116,7 +116,7 @@ Where the build differs from, or fills in, the design above:
   the disputer's with the dispute, both validated (≤ 8, sorted, unique) up front. Whoever calls `finalize`
   or `reject` cannot choose them, and a stored list can never make either revert.
 - **Reject reward:** `RelayerRewards.award` (index-only) pays the disputer the bounty the batch would have
-  earned, consuming no heights. `reject` calls it in `try/catch`: the reward must never keep a forged batch
+  earned, consuming no heights — since WUJI-13 only when `refute` proves the batch false, never on `reject`. `reject` calls it in `try/catch`: the reward must never keep a forged batch
   queued. A griefer who proves an honest batch, disputes it and finds nobody backing it within `R` collects
   this reward; that requires every watcher to be offline for `R`, and is bounded by one batch's bounty per
   `W + R`.

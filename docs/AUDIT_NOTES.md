@@ -123,6 +123,20 @@ equal work, so it would stop `refute` from removing forgeries that keep the real
 (test `test_aForgeryClaimingHonestWorkIsRefutedEvenThoughTheWorkIsEqual`). Raising the bar needs a deeper
 confirmation depth for the whole header path or a challenge game between branches; open for mainnet.
 
+### WUJI-13 — Medium — Fixed in source — disputing honest batches paid a bounty
+
+Self-review 2026-10-02 ([note](reviews/2026-10-02-T12-self-review.md) §1). When backing a batch costs more gas
+than the bond (a full batch is ≈ 5.5M gas, above 0.05 ETH from ≈ 9 gwei), nobody rational backs it, and `reject`
+returned the bond plus the batch's relayer bounty: disputing honest batches was free and paid. Fix: only `refute`
+(real headers show the batch false) pays the bounty; `reject` returns bonds only. Deployed contracts predate it.
+
+### WUJI-14 — Medium — Fixed in source — B pricing could start from a hand-picked header stamped in the future
+
+Self-review 2026-10-02 (§2). B priced at supplied tip + 16 if that tip looked ≤ 30 min old, but the requester
+chooses the stopping header and Bitcoin allows timestamps 2 h ahead: a recent block stamped ahead could make an
+already-mined pricing height likely (≈ 0.07–0.43). Fix: B uses A's skew-aware margin on the supplied tip's age
+(≈ 7 h wait instead of 3–4 h). Deployed pools predate it.
+
 ## Verification performed
 
 - 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.

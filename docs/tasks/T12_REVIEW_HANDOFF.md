@@ -40,6 +40,10 @@ Read first: [T12 design and build notes](T12_CHALLENGE_WINDOW.md), [THREAT_MODEL
 
 ## 3. Where the authors are least sure
 
+The authors worked through this list themselves on 2026-10-02 ([self-review](../reviews/2026-10-02-T12-self-review.md)):
+two fixes (WUJI-13, WUJI-14), the rest unchanged with numbers. Check those numbers rather than trusting them.
+
+
 - **Header-path bar (WUJI-12).** ≈ 7 private blocks replace an honest batch or fold via `foldHeaders`. Is
   6 confirmations acceptable for a mainnet index? What would a challenge game between branches cost?
 - **Griefing economics.** A wrong dispute costs `DISPUTE_BOND` (0.05 ETH) and delays honest batches by up to
@@ -57,7 +61,7 @@ Read first: [T12 design and build notes](T12_CHALLENGE_WINDOW.md), [THREAT_MODEL
 ## 4. Reproduce
 
 ```sh
-cd contracts && forge test                     # 219 tests; ZkWujiChallenge*.t.sol, WujiAccounts.zk.t.sol
+cd contracts && forge test                     # 221 tests; ZkWujiChallenge*.t.sol, WujiAccounts.zk.t.sol
 forge test --mc ZkWujiChallengeInvariantTest -vv   # 32 runs × 300 calls, accept-anything verifier
 cd .. && node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs
 ```

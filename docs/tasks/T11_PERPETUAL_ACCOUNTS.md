@@ -283,7 +283,8 @@ The margin uses a 1.25× block rate on top of the 2 h skew, which lengthens A's 
 | margin `m` (heights) | 40 | 52 | 74 | 105 | 115 | 135 | 163 | 219 | 273 |
 | expected wait at 1×, h | 6.7 | 7.7 | 9.3 | 11.5 | 12.2 | 13.5 | 15.2 | 18.5 | 21.5 |
 
-With the T12 window the finalized tip is usually 7–13 h old, so A means roughly 12–15 h; B keeps 3–4 h for
+With the T12 window the finalized tip is usually 7–13 h old, so A means roughly 12–15 h. B, priced at the
+supplied tip plus the same margin for that tip's age (WUJI-14; it was tip + DELAY), means ≈ 7 h for
 ≈ 20k gas per supplied header. Tests: `test/WujiAccounts.zk.t.sol` (real `ZkWujiIndex`, mainnet headers).
 Keeper: `indexer/accounts.mjs` marks a relay-less pool's ready epochs from raw headers before `processMany`,
 highest first, each anchored at the finalized tip or the mark above it, bridging gaps over `MAX_WALK` (1024)

@@ -22,7 +22,7 @@ interface IZkTip {
 ///  A. an index without one (ZkWujiIndex), by default: the finalized height + a margin that bounds the chance
 ///     that the pricing block already exists by 1e-7 given the finalized tip's age (`finalizedMargin`);
 ///  B. the same index, fast path: the requester supplies headers from the finalized tip, validated by the
-///     index's own rules (`seenTip`); their last height + DELAY, last header ≤ MAX_TIP_AGE old.
+///     index's own rules (`seenTip`); their last height + the same margin as A, by that header's age.
 contract WujiAccounts is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -146,19 +146,28 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice A: how far past the finalized height a request is priced, given the finalized tip's age.
     function finalizedMargin() public view returns (uint64) {
-        uint256 t = IZkTip(address(index)).lastTime();
+        return marginForAge(IZkTip(address(index)).lastTime());
+    }
+
+    /// @notice The Poisson margin for a tip stamped `t` (MARGINS; includes 2 h of timestamp skew).
+    function marginForAge(uint256 t) public view returns (uint64) {
         uint256 age = block.timestamp > t ? block.timestamp - t : 0;
         uint256 b = (age + 1 hours - 1) / 1 hours;
         require(b <= 24, "index stale");
         return uint64(uint8(MARGINS[2 * b])) << 8 | uint64(uint8(MARGINS[2 * b + 1]));
     }
 
-    /// @notice B: the height a request carrying `headers` (from the finalized tip on) would be priced at.
+    /// @notice B: the height a request carrying `headers` (from the finalized tip on) would be priced at: the
+    ///         supplied tip plus the same margin as A, by the supplied tip's age.
+    /// @dev Not tip + DELAY with a MAX_TIP_AGE check, as for a relay: Bitcoin accepts timestamps up to 2 h
+    ///      ahead, and here the requester chooses where the supplied chain stops, so they could stop at any
+    ///      recent block stamped in the future and look fresh while ≈ 15 blocks already followed it. A relay's
+    ///      best header has to be mined to be skewed; a stopping point only has to be found.
     function pricingHeightWithHeaders(bytes calldata headers) public view returns (uint64) {
         require(!RELAY_TIP, "relay pool");
         (uint64 h, uint32 t) = IZkTip(address(index)).seenTip(headers);
-        require(block.timestamp <= uint256(t) + MAX_TIP_AGE && t <= block.timestamp + 2 hours, "headers stale");
-        return _roundUp(h + DELAY);
+        require(t <= block.timestamp + 2 hours, "headers stale");
+        return _roundUp(h + marginForAge(t));
     }
 
     function _roundUp(uint64 h) internal view returns (uint64) {

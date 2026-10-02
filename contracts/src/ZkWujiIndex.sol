@@ -506,18 +506,20 @@ contract ZkWujiIndex {
     }
 
     /// @notice Remove a disputed batch nobody backed in time, and every pending batch after it (they were
-    ///         built on it). The disputer gets the bond back plus the relayer bounty the batch would have
-    ///         earned; disputers of removed later batches get their bonds back.
+    ///         built on it). Disputers get their bonds back. No bounty: an unbacked batch is not shown to be
+    ///         forged, and paying for it would let anyone dispute honest batches for profit whenever backing
+    ///         costs more gas than the bond is worth. Proven forgeries are paid through `refute`.
     function reject(uint256 id) external {
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         if (block.timestamp <= b.respondBy) revert WindowOpen();
-        _reject(id);
+        _reject(id, false);
     }
 
     /// @notice Prove a disputed batch false at once, instead of waiting out the response window: the real
     ///         headers over the batch's range, replayed by the Solidity rules from its starting state, reach a
-    ///         different end state. The batch and everything after it go as in `reject`. For the oldest batch
+    ///         different end state. The batch and everything after it go as in `reject`, and the disputer is
+    ///         paid the relayer bounty the batch would have earned. For the oldest batch
     ///         the replayed state is then folded exactly as `foldHeaders` would fold it, so a stream of forged
     ///         proofs holding the head of the queue cannot hold the index: the header path stays live.
     /// @dev Same trust as `foldHeaders`: any branch with valid proof of work and CONFIRMATIONS descendants.
@@ -533,11 +535,13 @@ contract ZkWujiIndex {
         (uint64[] memory heights, int64[] memory us) = _replay(w, headers);
         if (_matches(w, b, us)) revert NotForged();
         bool oldest = id == firstPending;
-        _reject(id);
+        _reject(id, true);
         if (oldest) folded = _commitReplay(w, heights, us, rewardTokens);
     }
 
-    function _reject(uint256 id) internal {
+    /// @param proven whether the batch was shown to differ from real headers (`refute`); only then is the
+    ///        disputer paid a bounty.
+    function _reject(uint256 id, bool proven) internal {
         Batch storage b = batches[id];
         address disputer = b.disputer;
         address[] memory tokens = b.disputerTokens;
@@ -553,7 +557,7 @@ contract ZkWujiIndex {
         }
         nextBatch = id;
         // The bounty is a reward, never a condition: a failing reserve must not keep a forged batch queued.
-        if (address(rewards) != address(0)) {
+        if (proven && address(rewards) != address(0)) {
             try rewards.award(disputer, heights, tokens) {} catch {}
         }
         emit Rejected(id, removed, disputer);

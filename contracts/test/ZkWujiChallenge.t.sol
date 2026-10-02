@@ -532,18 +532,32 @@ contract ZkWujiChallengeRewardsTest is ZkChallengeBase {
         assertEq(rewards.lastHeight(), j.newHeight);
     }
 
-    function test_aRejectedBatchPaysItsBountyToTheDisputer() public {
+    /// Only a proven forgery pays: `refute` shows the batch differs from real headers.
+    function test_aRefutedBatchPaysItsBountyToTheDisputer() public {
         ZkWujiIndex.Journal memory j = _forge(_honest(idx, 40));
+        vm.prank(PROVER);
+        idx.foldProof(hex"c0ffee", abi.encode(j), _one());
+        vm.prank(WATCHER);
+        idx.dispute{value: BOND}(0, _one());
+        idx.refute(0, _headers(anchorHeight, 40), new address[](0));
+        uint256 heights = j.newHeight - j.prevHeight;
+        assertEq(rewards.claimable(address(token), WATCHER), _bountyFor(1_000_000_000, heights));
+        assertEq(rewards.claimable(address(token), PROVER), 0);
+    }
+
+    /// An unbacked batch is not shown to be forged: `reject` returns the bond and pays nothing, so disputing an
+    /// honest batch never profits even when backing it costs more gas than the bond.
+    function test_aRejectedBatchPaysNoBounty() public {
+        ZkWujiIndex.Journal memory j = _honest(idx, 40); // honest, but nobody backs it in time
         vm.prank(PROVER);
         idx.foldProof(hex"c0ffee", abi.encode(j), _one());
         vm.prank(WATCHER);
         idx.dispute{value: BOND}(0, _one());
         vm.warp(block.timestamp + R + 1);
         idx.reject(0);
-        uint256 heights = j.newHeight - j.prevHeight;
-        assertEq(rewards.claimable(address(token), WATCHER), _bountyFor(1_000_000_000, heights));
-        assertEq(rewards.claimable(address(token), PROVER), 0);
-        assertEq(rewards.lastHeight(), genesis - 1, "rejected heights stay payable to whoever folds them for real");
+        assertEq(rewards.claimable(address(token), WATCHER), 0, "no bounty for an unproven batch");
+        assertEq(idx.owed(WATCHER), BOND, "the bond comes back");
+        assertEq(rewards.lastHeight(), genesis - 1, "the heights stay payable to whoever folds them");
     }
 
     function _bountyFor(uint256 balance, uint256 count) internal pure returns (uint256) {

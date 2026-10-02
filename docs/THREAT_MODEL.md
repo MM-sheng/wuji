@@ -59,8 +59,8 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
   replayed by the Solidity rules, reproduce it exactly. A broken verifier then moves the index only if no
   honest watcher disputes within the window, and `refute` (WUJI-08) answers each forgery at once with real
   headers, folding the real state, so forgeries cannot hold the index either. Residual risks: watcher
-  absence for `W` (loss), griefing that delays honest batches by `W + R` per lost bond, a reject reward a
-  griefer can collect if nobody backs an honest batch within `R`, forgeries that cost the attacker only
+  absence for `W` (loss), griefing that delays honest batches by `W + R` (free for the griefer whenever
+  backing costs more gas than the bond, though no longer paid: `reject` pays no bounty, WUJI-13), forgeries that cost the attacker only
   gas (WUJI-09), and the header path's bar itself: ≈ 7 privately mined blocks at the real difficulty (a
   branch with valid work and 6 descendants) can be folded by `foldHeaders` when nothing is pending or used
   to `refute` an honest pending batch (WUJI-12). Raising it is a mainnet decision (deeper confirmations
@@ -228,8 +228,9 @@ margin from its age: P(pricing block already exists) ≤ 1e-7 under a Poisson mo
 rate with 2 h of timestamp skew. Residuals: a block rate above 1.25× for the tip's whole age, and a finalized
 tip stamped in the future (it then looks younger; Bitcoin allows 2 h, which the skew term covers once).
 Fast path B prices from requester-supplied headers that the index validates with every header rule (`seenTip`),
-with the same `MAX_TIP_AGE`/`DELAY` bound as a relay; a requester can only show *more* real work than exists
-by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it
+at the supplied tip plus A's margin for that tip's age. Not the relay's `DELAY`/`MAX_TIP_AGE` bound: the
+requester chooses where the supplied chain stops and could pick a recent block stamped in the future
+(WUJI-14). A requester can only show *more* real work than exists by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it
 relies on the index's own confirmation depth, as the index does.
 
 **Floor overshoot.** A loser can cross 0 between two priced epochs; the winner is still credited the full
