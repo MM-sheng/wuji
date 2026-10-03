@@ -38,8 +38,8 @@ and as the vaults' current binding; its items apply only if it ships.
 
 - [x] Measure gas per submitted header on the target shape (17.6k all-in on Sepolia) and publish the cost by fold frequency ([economics](decisions/2026-10-02-submitter-economics.md)).
 - [x] Set the reserve rate so a donation lasts: `BOUNTY_DIVISOR = 100000` (half-life ≈ 1.3 years).
-- [ ] Choose the deployment chain(s): Ethereum L1 (≈ USD 160–550 a month at 0.3–1 gwei, two folds a day) and/or an L2 (a few USD a month); for an L2, document its operator/upgrade trust and timestamp bounds.
-- [ ] Fund the reserve at launch (a donation, not a privilege) and publish the expected runway at the chosen chain's gas prices.
+- [ ] Choose the deployment chain(s). Research ([chain choice](decisions/2026-10-03-chain-choice.md)) recommends Ethereum L1 as primary: ≈ USD 37 a month at the 0.067 gwei seen on 2026-10-03 (≈ USD 550 at 1 gwei), two folds a day. An added L2 should be an OP Stack chain (L2 time bound to its L1 origin, ≤ 30 min ahead); Arbitrum's sequencer may set timestamps up to 24 h in the past, which shrinks the pools' age margin. For any L2, document its operator/upgrade trust.
+- [ ] Fund the reserve at launch (a donation, not a privilege) and publish the expected runway at the chosen chain's gas prices (≈ USD 850 pays two folds a day at 2026-10-03 L1 gas and 1/100000 per height).
 - [ ] Run at least two independent keepers, each with its own RPC and funded key, folding at least twice a day while pools are open.
 
 ## Protocol decision (shared)
