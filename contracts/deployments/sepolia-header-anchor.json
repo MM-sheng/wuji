@@ -1,0 +1,28 @@
+{
+ "tip": 969685,
+ "anchorHeight": 969545,
+ "anchorHeader": "0x0000ae218bb026eba2802e50d7779674152ca91b30fcacf3078601000000000000000000ea76b6d638dd9167cc36ed1635aac0b23c4dc97ea53f500395a3b8fd41304e47154abf6ac51e02172d4246d0",
+ "anchorHash": "0000000000000000000093d46f3e6f339ae4e2c923d2ed46929250676943670f",
+ "epochFirst": 967680,
+ "epochStart": 1789801745,
+ "ancestorTimes": [
+  1790916084,
+  1790917422,
+  1790918189,
+  1790918276,
+  1790919973,
+  1790920259,
+  1790920396,
+  1790920403,
+  1790921054,
+  1790921121,
+  1790921237
+ ],
+ "genesisHeight": 969546,
+ "sources": [
+  "local Bitcoin P2P header cache (validated from genesis by indexer/bitcoin-p2p.mjs)",
+  "mempool.space cross-check of anchor hash and epoch-first hash"
+ ],
+ "fetchedAt": "2026-10-03",
+ "mempoolTip": 969685
+}
