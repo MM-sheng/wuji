@@ -235,6 +235,81 @@ Marking is solved; request scheduling is not. `ZkWujiIndex` stores only its fold
    or exit. No index change.
 3. Keep a thin header relay only for the best tip. Brings back the per-header gas ZK was built to remove.
 
+### Update 2026-10-01: T12 changes the answer
+
+With the T12 challenge window, anything a proof says is untrusted for `W` (6 h). Option 1 above (a `seenHeight`
+in the journal) therefore gives a tip that is either untrusted (pending) or ≥ 6 h old (finalized). Trusting a
+pending tip for scheduling is unsafe exactly when T12 matters: a forged, too-low tip sets the pricing height at
+a block that already exists, and the requester knows S there. The options are now:
+
+A. **Price from the finalized tip with a statistical margin.** `P = lastHeight + m(now − tipTime)`, where `m` is
+   the 10⁻⁷ upper quantile of Poisson block arrivals over the tip's age (+2 h timestamp skew), the same
+   bound the whitepaper states today. No index change and no new trust; the pool reads `tip.time`, which
+   `ZkWujiIndex` already exposes. Cost: a long wait, since the finalized tip is typically 7–13 h old:
+
+   | finalized tip age | margin `m` | expected wait after request |
+   |---:|---:|---:|
+   | 3 h | 64 | 7.7 h |
+   | 7 h | 97 | 9.2 h |
+   | 12 h | 137 | 10.8 h |
+   | 24 h | 226 | 13.7 h |
+
+   The quantile assumes a constant block rate. Hash-rate growth within a difficulty epoch makes blocks faster,
+   so `m` needs a rate factor (e.g. ×1.25), which lengthens the wait further. A table of `m` by age bucket
+   fits in the contract as constants.
+B. **Requester supplies headers.** The request carries the raw headers from the finalized tip to the current
+   tip, checked by the Solidity rules (any valid-PoW chain proves at least that much real work exists, so it
+   is a safe lower bound). Keeps today's 3–4 h wait and adds no trust, but costs ≈ 20k gas per header:
+   45–80 headers ≈ 0.9–1.6M gas per request on top of the request itself.
+C. **A thin header relay for the best tip only** (option 3 above): per-header gas forever.
+
+**Superseded 2026-10-02 (T13): one rule for relay-less pools** — price at the index's newest validated
+header (`seenHeight`, recorded by every fold, including the unconfirmed trailing headers) plus the margin for
+that header's age; A and B below are removed from the source. With K = 100 the finalized tip is always ≥ 17 h
+old, so A could no longer serve, and one rule replaces two. Historical record follows.
+
+**Decided 2026-10-01: A by default, B and C kept.** Implemented in `WujiAccounts.sol`; the pool detects at
+construction whether its index has a relay (`RELAY_TIP`):
+
+- relay index → **C**, unchanged (relay best + `DELAY`, best header ≤ `MAX_TIP_AGE`; queue only grows);
+- index without a relay → **A** for `requestEnter`/`requestExit` (`finalizedMargin()`: the table below, in
+  the contract as constants; requests stop once the finalized tip is 24 h old), and **B** for
+  `requestEnterWithHeaders`/`requestExitWithHeaders` (headers from the finalized tip, validated by the
+  index's new `seenTip`, last one ≤ `MAX_TIP_AGE` old, priced at its height + `DELAY`).
+
+A and B price the same moment differently, so on these pools the pending-epoch queue is kept sorted and
+unique (each epoch is still priced once, in height order). Epochs below the finalized tip are marked with
+`markWithHeaders`; one exactly at the tip is read from the index.
+
+The margin uses a 1.25× block rate on top of the 2 h skew, which lengthens A's wait beyond the first table:
+
+| finalized tip age (h, rounded up) | 0 | 1 | 3 | 6 | 7 | 9 | 12 | 18 | 24 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| margin `m` (heights) | 40 | 52 | 74 | 105 | 115 | 135 | 163 | 219 | 273 |
+| expected wait at 1×, h | 6.7 | 7.7 | 9.3 | 11.5 | 12.2 | 13.5 | 15.2 | 18.5 | 21.5 |
+
+With the T12 window the finalized tip is usually 7–13 h old, so A means roughly 12–15 h. B, priced at the
+supplied tip plus the same margin for that tip's age (WUJI-14; it was tip + DELAY), means ≈ 7 h for
+≈ 20k gas per supplied header. Tests: `test/WujiAccounts.zk.t.sol` (real `ZkWujiIndex`, mainnet headers).
+Keeper: `indexer/accounts.mjs` marks a relay-less pool's ready epochs from raw headers before `processMany`,
+highest first, each anchored at the finalized tip or the mark above it, bridging gaps over `MAX_WALK` (1024)
+with intermediate marks; `indexer/zk-keeper.mjs` maintains such pools with `ACCOUNTS=<pool,...>` from its own
+Bitcoin source. Checked end to end on anvil against a header-path `ZkWujiIndex` and a real pool: a B entry
+(priced 798468) and an A entry (798540) queued in height order, the keeper marked both from headers and
+processed them, and the recorded S at both heights equals an independent recomputation from the headers.
+Note: `WujiAccountsFactory` is 24,288 bytes, 288 under the EIP-170 limit.
+
+### Live on Sepolia over the ZK index (2026-10-01)
+
+Factory `0x26b62b96416D17BBDeA4243FC84E4B616a8A64B8` on `ZkWujiIndex` `0x0350ff37…1DC7`, collateral Sepolia
+WETH, pools 5% `0xd5d318C7009e8fadE2d4997ed3bD2943533d59CA`, 10% `0x59f585aC267195350B7080e51f700B4aDD17c1e7`,
+25% `0x7bdfCf4ad29388FC5238099Ec07A82eD1fbF3093` (`contracts/deployments/sepolia-zk-t12-v2.json` → `accounts`).
+Fees go to the v4 FeeRouter: the ZK index has no relayer reserve, and one bound to it could never pay out.
+Runtimes match the local build; B was probed on chain with 310 real headers (would price at 969462). A
+opened once the index's first batch finalized (2026-10-01 17:11 UTC); at 2026-10-02 00:49 UTC all three
+pools accept requests, priced at 969600 (finalized 969470 + margin 125). The ZK keeper maintains the pools (`ACCOUNTS`). The first factory
+attempt hit the EIP-7825 gas cap (AUDIT_NOTES WUJI-10).
+
 ## Step 5 (2026-09-25) — live on BSC testnet
 
 Deployed against the running BSC testnet stack (index `0xe26b…d19b`, timestamps-v3, P2P source, keeper live)

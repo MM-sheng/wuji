@@ -30,7 +30,7 @@ proposal must not claim otherwise.
    concept. `ZkWujiIndex` folds a batch of headers through one SP1 proof, with a Rust core that is
    differential-tested against the Solidity and JavaScript implementations over 6,060 real headers, and the
    raw-header path stays callable so liveness never depends on a prover. Verified on chain (2026-09-29): a
-   Groth16 proof of 100 real headers costs 453,888 gas against SP1's own verifier, versus 7,956,964 gas for
+   Groth16 proof of 100 real headers costs 453,888 gas against SP1's own verifier, versus 1,928,070 gas for
    the same headers through the Solidity rules.
 2. **Zero administration from deployment.** Genesis is a constructor argument with a public checkpoint, not
    an owner call; there is no owner, authorised-submitter list or parameter setter (compare tBTC's

@@ -18,7 +18,7 @@ contract RewardHandler is Test {
         for(uint256 t;t<2;++t)if((mask&(1<<t))!=0) {
             list[pos++]=address(tokens[t]);uint256 r=rewards.reserve(address(tokens[t]));
             // Independent accounting model, one height at a time.
-            for(uint256 h;h<count;++h){uint256 bounty=r/10_000;earned[t][who]+=bounty;r-=bounty;}
+            for(uint256 h;h<count;++h){uint256 bounty=r/rewards.BOUNTY_DIVISOR();earned[t][who]+=bounty;r-=bounty;}
         }
         if(list.length==2&&list[0]>list[1])(list[0],list[1])=(list[1],list[0]);
         uint64 from=rewards.lastHeight()+1;rewards.credit(address(uint160(100+who)),from,from+uint64(count)-1,list);

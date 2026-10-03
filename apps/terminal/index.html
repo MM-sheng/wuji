@@ -291,6 +291,7 @@
       <button data-p="verdict">Verdict</button>
       <button data-p="taiji">两仪 · On-chain<em id="cChain"></em></button>
       <button data-p="perp">永续账户<em id="cPerp"></em></button>
+      <button data-p="zk">比特币指数 · 直读<em id="cZk"></em></button>
       <button data-p="data">数据源 · 核验</button>
       <button data-p="about">About</button>
       <span class="sp"></span>
@@ -326,6 +327,19 @@
           <label for="rpcURL">独立 RPC URL</label><input id="rpcURL" type="url" spellcheck="false">
           <button id="saveRPC">保存 RPC</button><button id="verifyNow">立即核验</button><div class="muted">公共服务需 HTTPS 与 CORS。切换来源会重载页面，模拟账户按来源分开保存。</div></div>
         <div id="directResult" role="status"></div>
+      </div>
+    </div>
+    <div class="pane" id="p-zk">
+      <div class="taiji">
+        <div>
+          <h4>已终结 · 消费者读到的</h4>
+          <div id="zkFinal"><div class="empty">读取中…</div></div>
+        </div>
+        <div>
+          <h4>挂起批次 · 仅 ZK 路径</h4>
+          <div id="zkPending"><div class="empty">读取中…</div></div>
+          <div class="muted" style="margin-top:8px">浏览器直读 Sepolia（同一区块），不经过索引器。区块头经合约按规则验证、满 K 个确认才计入；比特币深度重组时任何人可提交更重的分支让指数封存，按已记录结果退出。ZK 路径另有挑战窗口：证明只开启挂起批次，窗口内无人争议才生效。</div>
+        </div>
       </div>
     </div>
     <div class="pane" id="p-perp">
@@ -520,7 +534,8 @@ function exitActionAllowed(state, action) {
   function validatePool(p){
     for(const k of ['address','asset','index'])if(!ADDRESS.test(p[k]))throw Error('Invalid pool address');
     for(const k of ['k_wad','yin_wad','yang_wad','matched_wad','idle_wad','buffer_wad','badDebt_wad','balance_wad','lastS_wad'])if(!WAD_STR.test(p[k]))throw Error('Invalid pool amount');
-    for(const k of ['epoch','delay','feeBps','pendingEpochs','nextPricingHeight','accountsCreated'])if(!Number.isSafeInteger(p[k]))throw Error('Invalid pool number');
+    for(const k of ['epoch','delay','feeBps','pendingEpochs','accountsCreated'])if(!Number.isSafeInteger(p[k]))throw Error('Invalid pool number');
+    if(p.nextPricingHeight!==null&&!Number.isSafeInteger(p.nextPricingHeight))throw Error('Invalid pool number');
     if(!(p.annualVol>0)||![null,'yin','yang'].includes(p.idleSide))throw Error('Invalid pool');
   }
   function validateAccount(a){
@@ -965,7 +980,7 @@ function exitActionAllowed(state, action) {
       <div class="yy"><div class="yang" style="width:${100*y/t}%">阳 ${fmtAmount(y)}</div><div class="yin">${fmtAmount(n)} 阴</div></div>
       <div class="kv"><span>在押 · 闲置</span><b>${fmtW(p.matched_wad)} · ${p.idleSide?(p.idleSide==='yang'?'阳':'阴')+' '+fmtW(p.idle_wad):'无'}</b></div>
       <div class="kv"><span>排队中的定价</span><b>${p.pendingEpochs?p.pendingEpochs+' 个 · 下一个 #'+p.nextEpoch+(p.nextEpochReady?' · 可处理':''):'无'}</b></div>
-      <div class="kv"><span>新申请将定价于</span><b>#${p.nextPricingHeight.toLocaleString()}</b></div>
+      <div class="kv"><span>新申请将定价于</span><b>${p.nextPricingHeight===null?'暂不接受（指数终结高度过旧）':'#'+p.nextPricingHeight.toLocaleString()}</b></div>
       <div class="kv"><span>缓冲金 · 未覆盖亏空</span><b class="${BigInt(p.badDebt_wad)>0n?'bad':'ok'}">${fmtW(p.buffer_wad)} · ${fmtW(p.badDebt_wad)}</b></div>
       <div class="kv"><span>手续费 · 账户数</span><b>${p.feeBps/100}% · ${p.accountsCreated}</b></div>
       <div class="kv"><span>池子</span><b>${p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
@@ -1185,6 +1200,67 @@ function exitActionAllowed(state, action) {
     const [whole,fraction='']=text.split('.');const n=BigInt(whole)*10n**18n+BigInt(fraction.padEnd(18,'0'));
     if(n>=2n**256n)throw Error('数量过大');return n;
   }
+  // ---------------------------------------------------------------- ZK index (T12): direct reads
+  const ZK_RELEASE={chainId:11155111,index:'0xc076e54b7c6Cc999883908453BBF7b349fc3Ea78',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
+  const ZK_SEL={tip:'0x2755cd2d',S:'0x4be1c796',firstPending:'0x6faf954b',nextBatch:'0xe7c51f1b',batch:'0x0eaa75fe',window:'0xd62aad29',bond:'0x4c68ae63',seenHeight:'0x42fc5369',seenTime:'0xaebd3c19',frozen:'0x054f7d9c',conf:'0x0438b0a4'};
+  let ZK=null,zkError=null,zkBusy=false;
+  async function readZk(){
+    if(zkBusy)return;zkBusy=true;
+    try{
+      const rpc=exitRPC(ZK_RELEASE.rpc);
+      if(Number(await rpc('eth_chainId',[]))!==ZK_RELEASE.chainId)throw Error('RPC 不是 Sepolia');
+      const block=await rpc('eth_getBlockByNumber',['latest',false]);
+      // Every value comes from one block, so a batch cannot appear both pending and finalized.
+      const call=sel=>rpc('eth_call',[{to:ZK_RELEASE.index,data:sel},block.number]);
+      const wd=(hex,i)=>BigInt('0x'+hex.slice(2+64*i,66+64*i));
+      const sg=(v,bits)=>v>=1n<<BigInt(bits-1)?v-(1n<<BigInt(bits)):v;
+      const pad=n=>BigInt(n).toString(16).padStart(64,'0');
+      const [tip,S,first,next,win,sh,st,fr,cf]=await Promise.all([call(ZK_SEL.tip),call(ZK_SEL.S),call(ZK_SEL.firstPending),call(ZK_SEL.nextBatch),call(ZK_SEL.window),
+        call(ZK_SEL.seenHeight),call(ZK_SEL.seenTime),call(ZK_SEL.frozen),call(ZK_SEL.conf)]);
+      const z={block:Number(block.number),now:Number(block.timestamp),height:Number(wd(tip,1)),time:Number(wd(tip,3)),
+        S:sg(wd(S,0),256),first:Number(wd(first,0)),next:Number(wd(next,0)),window:Number(wd(win,0)),batches:[],
+        seenHeight:Number(wd(sh,0)),seenTime:Number(wd(st,0)),frozen:wd(fr,0)===1n,conf:Number(wd(cf,0))};
+      if(z.next-z.first>32)throw Error('挂起队列超出合约上限');
+      let from=z.height;
+      for(let id=z.first;id<z.next;id++){
+        const b=await call(ZK_SEL.batch+pad(id)),o=Number(wd(b,0))/32,f=k=>wd(b,o+k);
+        const to=Number(f(1)),disputer='0x'+f(22).toString(16).padStart(40,'0');
+        z.batches.push({id,from:from+1,to,u:sg(f(5),256),finalAt:Number(f(21)),disputed:!/^0x0{40}$/.test(disputer),
+          respondBy:Number(f(23)),backed:f(24)!==0n,prover:'0x'+f(20).toString(16).padStart(40,'0')});
+        from=to;
+      }
+      ZK=z;zkError=null;
+    }catch(e){zkError=e.message||String(e);}
+    finally{zkBusy=false;renderZk();}
+  }
+  function zkWhen(t,now){const d=t-now,a=Math.abs(d),hh=Math.floor(a/3600),mm=Math.floor(a%3600/60);
+    const at=new Date(t*1000).toISOString().slice(11,16)+' UTC';return d>=0?`${at} · 还剩 ${hh}h ${mm}m`:`${at} · ${hh}h ${mm}m 前`;}
+  function renderZk(){
+    const fe=$('zkFinal'),pe=$('zkPending');
+    if(zkError&&!ZK){fe.innerHTML=`<div class="empty">直读失败：${esc(zkError)}</div>`;pe.innerHTML='';$('cZk').textContent='⚠';return;}
+    if(!ZK)return;
+    const z=ZK,S=Number(z.S)/1e18,link=a=>`<a href="${ZK_RELEASE.explorer}/address/${a}" target="_blank">${short(a)}</a>`;
+    $('cZk').textContent=z.batches.length||'';
+    fe.innerHTML=`<div class="kv"><span>已终结高度</span><b>#${z.height.toLocaleString()}</b></div>
+      <div class="kv"><span>S · 显示水平 100·e^S</span><b>${S.toFixed(6)} · ${(100*Math.exp(S)).toFixed(3)}</b></div>
+      <div class="kv"><span>终结区块头时间</span><b>${zkWhen(z.time,z.now)}</b></div>
+      <div class="kv"><span>状态</span><b class="${z.frozen?'bad':'ok'}">${z.frozen?'已封存（深度重组）· 按已记录结果退出':'运行中'}</b></div>
+      <div class="kv"><span>确认深度 K</span><b>${z.conf} 个区块</b></div>
+      <div class="kv"><span>验证过的最新区块</span><b>#${z.seenHeight.toLocaleString()} · ${zkWhen(z.seenTime,z.now)}</b></div>
+      <div class="kv"><span>挑战窗口</span><b>${z.window?(z.window/3600).toFixed(1)+' 小时':'无（只走区块头路径）'}</b></div>
+      <div class="kv"><span>合约 · 读取区块</span><b>${link(ZK_RELEASE.index)} · #${z.block.toLocaleString()}</b></div>
+      ${zkError?`<div class="kv"><span>最近一次刷新</span><b class="bad">失败：${esc(zkError)}</b></div>`:''}`;
+    pe.innerHTML=z.batches.length?z.batches.map(b=>{
+      const st=b.backed?['ok','已背书 · 可立即终结']
+        :b.disputed?(z.now<=b.respondBy?['bad','被争议 · 等待真实区块头背书，截止 '+zkWhen(b.respondBy,z.now)]:['bad','被争议 · 无人背书，任何人可驳回'])
+        :z.now<b.finalAt?['','已证明 · 终结于 '+zkWhen(b.finalAt,z.now)]:['ok','窗口已过 · 等待任何人调用 finalize'];
+      return `<div style="margin-bottom:10px">
+        <div class="kv"><span>批次 #${b.id} · 高度</span><b>${b.from.toLocaleString()} – ${b.to.toLocaleString()}（${b.to-b.from+1} 个）</b></div>
+        <div class="kv"><span>声明的 S</span><b>${(Number(b.u)*1.2e13/1e18).toFixed(6)}</b></div>
+        <div class="kv"><span>状态</span><b class="${st[0]}">${st[1]}</b></div>
+        <div class="kv"><span>证明者</span><b>${link(b.prover)}</b></div></div>`;}).join('')
+      :`<div class="empty">${z.window?'没有挂起批次：已终结状态就是最新的证明结果。':'只走区块头路径：没有证明、没有挂起批次。区块头经合约按规则验证后直接计入（满 K 个确认）。'}</div>`;
+  }
   function exitRPC(url){let id=0;return async(method,params)=>{
     const n=++id,j=await(await fetchTimed(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:n,method,params})})).json();
     if(j.error||j.id!==n||j.result===undefined)throw Error(j.error?.message||'Invalid RPC response');return j.result;
@@ -1331,6 +1407,7 @@ function exitActionAllowed(state, action) {
   // Freshness and errors must update even when the chart has no new second.
   setInterval(()=>{renderHeartbeat();renderVerification();renderTaiji();if(PXN)renderMode(viewTick());},1000);
   setTimeout(checkRPC,1000);setInterval(checkRPC,30000);
+  readZk();setInterval(readZk,60000);
   boot();
 })();
 </script>

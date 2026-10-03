@@ -48,8 +48,8 @@ contract ZkWujiGroth16Test is Test {
             uint32(vm.parseJsonUint(meta, ".epochStartTime")),
             times,
             0,
-            uint64(vm.parseJsonUint(meta, ".start")),
-            4320
+            ZkWujiIndex.Schedule(uint64(vm.parseJsonUint(meta, ".start")), 4320, 6),
+            ZkWujiIndex.Challenge({window: 6 hours, responseWindow: 6 hours, bond: 0.05 ether})
         );
     }
 
@@ -63,11 +63,16 @@ contract ZkWujiGroth16Test is Test {
         uint256 g = gasleft();
         viaProof.foldProof(proof, journal, new address[](0));
         uint256 used = g - gasleft();
+        vm.warp(block.timestamp + 6 hours);
+        g = gasleft();
+        viaProof.finalize(1);
+        uint256 finalizeGas = g - gasleft();
 
         ZkWujiIndex viaHeaders = _deploy(ISP1Verifier(address(verifier)), VKEY);
         vm.warp(1_800_000_000); // header path: a normal "now" (u32::MAX + 2h would overflow its bound)
+        bytes memory raw = _slice(100); // built first: the test's byte-copy loop is not the contract's cost
         uint256 g2 = gasleft();
-        viaHeaders.foldHeaders(_slice(100), new address[](0));
+        viaHeaders.foldHeaders(raw, new address[](0));
         uint256 usedHeaders = g2 - gasleft();
 
         assertEq(viaProof.lastHeight(), viaHeaders.lastHeight(), "height");
@@ -76,6 +81,7 @@ contract ZkWujiGroth16Test is Test {
         assertEq(viaProof.chainWork(), viaHeaders.chainWork(), "work");
 
         console.log("foldProof, 100 headers (incl. Groth16 verify):", used);
+        console.log("finalize, after the challenge window:         ", finalizeGas);
         console.log("foldHeaders, same 100 headers:               ", usedHeaders);
     }
 

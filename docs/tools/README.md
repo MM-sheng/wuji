@@ -23,10 +23,11 @@ block outcomes are unbiased, independent or tradable at the displayed share.
 `docs/WHITEPAPER_FACTS.json` is committed output. Regenerate it only after checking source/parameter changes
 and revise the paper if its values no longer agree. Protocol changes also require their normal review and tests.
 
-## Render the six-page PDF
+## Render the PDF
 
 Rendering is optional documentation tooling, separate from the zero-dependency runtime. The checked copy was
-generated with Python 3.12.14, ReportLab 4.4.9, pypdf 6.10.0 and macOS Arial Unicode TTF. The renderer requires
+generated on 2026-10-02 with Python 3.9.6, ReportLab 4.4.9, pypdf 6.10.0 and macOS Arial Unicode TTF (the
+2026-09-21 copy used Python 3.12.14 with the same libraries). The renderer requires
 ReportLab and pypdf in the selected Python environment; it does not install packages or download fonts.
 
 ```bash
@@ -40,8 +41,9 @@ licence permits embedding and which covers Chinese, Latin and mathematical symbo
 library version can change line breaks and PDF bytes. Same inputs and rendering environment are deterministic.
 
 The script supports the limited Markdown constructs used in this paper, rather than arbitrary Markdown.
-Five explicit page-break comments define six authored pages. Rendering fails if text overflows six pages,
-essential text is missing or no TrueType font is embedded. Visually inspect all six pages after edits, including
+`<!-- pagebreak -->` comments start new pages; there is no fixed page count (since 2026-10-02), and footers
+show "page / total". Rendering fails if essential text is missing or no TrueType font is embedded. Visually
+inspect every page after edits, including
 mathematical symbols and the long hash vector; text extraction alone does not establish correct appearance.
 Each footer carries the first 12 characters of the Markdown SHA-256 to identify its source. This is a content
 identifier, not a signature or audit approval. Relative links in the PDF require the accompanying repository;

@@ -9,8 +9,10 @@ proof-of-work without trusting anyone, plus a public index derived from it:
 - a Solidity Bitcoin header relay that enforces the header consensus rules (PoW, linkage, retargeting,
   median-time-past, heaviest work) from a public checkpoint;
 - a zero-knowledge light client (SP1, Groth16) that proves a whole batch of headers: **100 real mainnet
-  headers for 453,888 gas instead of 7,956,964** checked one by one, running on Ethereum Sepolia since
-  2026-09-29 (first live proof: 42 headers, 323,385 gas);
+  headers for 453,888 gas instead of 1,928,070** checked one by one in Solidity, running on Ethereum Sepolia since
+  2026-09-29 (first live proof: 42 headers, 323,385 gas). Since 2026-10-01 a proof only opens a pending
+  batch that finalizes after a 6-hour [challenge window](docs/tasks/T12_CHALLENGE_WINDOW.md), so a flaw in
+  the proof system cannot move the index while one honest watcher is online;
 - a public index `S` computed from Bitcoin block hashes that anyone can recompute, and a deep-reorg rule
   that freezes consumers at the last consistent state.
 
@@ -24,7 +26,7 @@ derived from Bitcoin proof-of-work headers and can be independently recomputed. 
 the intended model; it is not a proof of unbiased mining, independence from every asset, or investment returns.
 There is no owner, governance or upgrade key. Paired YANG/YIN vaults are one application of this public index.
 
-Read the six-page Chinese whitepaper: [PDF](docs/WHITEPAPER.pdf) · [editable Markdown](docs/WHITEPAPER.md).
+Read the Chinese whitepaper: [PDF](docs/WHITEPAPER.pdf) · [editable Markdown](docs/WHITEPAPER.md).
 It describes the testnet implementation, conditional mathematical model and remaining verification boundaries.
 [Recompute its numbers or render the PDF](docs/tools/README.md).
 
@@ -195,7 +197,7 @@ existing path. Neither procedure establishes full-node validity from scratch.
 ### Operations reserve — also retained at port 8791
 
 The immutable router sends 100% of each vault's fees into the operations reserve. Each newly folded Bitcoin
-height allocates floor(available reserve / 10000) per selected token, sequentially across a batch. The folder
+height allocates floor(available reserve / 10000) per selected token (1/100000 in deployments from 2026-10-02 on), sequentially across a batch. The folder
 can claim that fixed amount; past work never gains a share of later fees or donations. There is no burn or
 lifetime-points scheme in this deployment. Funded mock balances have no economic value.
 

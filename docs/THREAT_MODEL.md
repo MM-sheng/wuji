@@ -54,6 +54,18 @@ is not an asset identifier; publish chain ID, collateral address, notional, seri
   constructor rejects any verifier address that holds no code, because `verifyProof` returns nothing and
   Solidity emits no extcodesize check for such a call: a misconfigured verifier would otherwise accept
   every proof silently.
+  **T12 (source, not deployed) narrows this:** a proof only opens a pending batch; it becomes final after a
+  challenge window unless disputed with a bond, and a disputed batch survives only if its raw headers,
+  replayed by the Solidity rules, reproduce it exactly. A broken verifier then moves the index only if no
+  honest watcher disputes within the window, and `refute` (WUJI-08) answers each forgery at once with real
+  headers, folding the real state, so forgeries cannot hold the index either. Residual risks: watcher
+  absence for `W` (loss), griefing that delays honest batches by `W + R` (free for the griefer whenever
+  backing costs more gas than the bond, though no longer paid: `reject` pays no bounty, WUJI-13), forgeries that cost the attacker only
+  gas (WUJI-09), and the header path's bar itself: ≈ 7 privately mined blocks at the real difficulty (a
+  branch with valid work and 6 descendants) can be folded by `foldHeaders` when nothing is pending or used
+  to `refute` an honest pending batch (WUJI-12). T13 raises it for the mainnet plan: the confirmation depth
+  is a deployment parameter (100 proposed, Bitcoin's coinbase maturity), and a branch that out-works the
+  finalized chain by K + 144 blocks seals the index (`freezeOnReorg`) instead of stranding it.
 - **Keeper/data sources:** anyone can submit, fold and settle. Losing keepers or APIs delays progress; no Bitcoin
   height is skipped or replaced by zero. Public APIs can stall or mislead the cache; use independent sources or
   local Core/Esplora. HTTP success is not proof of Bitcoin consensus. `BITCOIN_SOURCE=p2p` removes the HTTP
@@ -166,7 +178,7 @@ Specification, implementation boundaries and tests: [T9_DESIGN.md](tasks/T9_DESI
 
 Current source routes 100% of fees into an immutable operations reserve. Only the immutable index can
 allocate bounties for the next contiguous range of folded heights. Per selected token and per height it
-reserves floor(available reserve / 10000). Allocated but unpaid claims are excluded from available reserves.
+reserves floor(available reserve / 10000) (1/100000 for deployments from 2026-10-02). Allocated but unpaid claims are excluded from available reserves.
 There are no lifetime points, historical fee shares or burns. Funding and syncing a direct donation can
 only benefit future fold calls; delayed withdrawals receive their previously fixed amount.
 
@@ -210,6 +222,19 @@ pricing block already exists is at most P(≥ DELAY blocks mined within MAX_TIP_
 deployed 30 min / 16 blocks, worst case. Residual: a best header stamped in the future (Bitcoin allows up to
 2 h) looks fresher than it is. Honest headers are close to real time, and making a future-stamped tip costs a
 real block. This hole existed in the first implementation and was found while building, not by review.
+
+**Pools on an index without a relay (ZK, 2026-10-01).** There is no relay best to price from, and a pending
+proof's view of the tip is untrusted for the T12 window. Default pricing A uses the *finalized* tip plus a
+margin from its age: P(pricing block already exists) ≤ 1e-7 under a Poisson model at 1.25× the nominal block
+rate with 2 h of timestamp skew. Residuals: a block rate above 1.25× for the tip's whole age, and a finalized
+tip stamped in the future (it then looks younger; Bitcoin allows 2 h, which the skew term covers once).
+Since T13 (2026-10-02) A and B are replaced by one rule: the index's newest validated header plus the same
+margin for its age, so none of the requester-chosen stopping points below remain. Historically, fast path B
+priced from requester-supplied headers that the index validated with every header rule (`seenTip`),
+at the supplied tip plus A's margin for that tip's age. Not the relay's `DELAY`/`MAX_TIP_AGE` bound: the
+requester chooses where the supplied chain stops and could pick a recent block stamped in the future
+(WUJI-14). A requester can only show *more* real work than exists by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it
+relies on the index's own confirmation depth, as the index does.
 
 **Floor overshoot.** A loser can cross 0 between two priced epochs; the winner is still credited the full
 move. The shortfall is charged to the pool's fee buffer first and only then recorded as `badDebt`, which is

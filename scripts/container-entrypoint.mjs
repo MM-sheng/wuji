@@ -2,6 +2,19 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
+/// ZK watcher (T12): checks pending batches of a ZkWujiIndex against two Bitcoin sources. Alert-only without a
+/// keystore; with one (and a funded account) it disputes, refutes and backs.
+export function zkWatcherEnv(manifest,env){
+ assert.ok(/^t12-zk-/.test(manifest.version||''),'use a T12 ZK manifest (contracts/deployments/sepolia-zk-t12-*.json)');
+ assert.ok([11155111].includes(manifest.chainId),'container example supports testnets only');
+ assert.match(manifest.ZkWujiIndex||'',/^0x[0-9a-fA-F]{40}$/,'invalid ZkWujiIndex');
+ const result={...env,CHAIN_ID:String(manifest.chainId),ZK_INDEX:manifest.ZkWujiIndex.toLowerCase(),RPC:env.RPC||manifest.rpc,
+  WATCH_SOURCES:env.WATCH_SOURCES||'p2p,http',BITCOIN_P2P_DIR:env.BITCOIN_P2P_DIR||'/data/headers',CAST:env.CAST||'/usr/local/bin/cast'};
+ assert.ok(result.RPC,'set RPC');
+ if(!env.KEYSTORE_ACCOUNT||!env.PASSWORD_FILE)result.WATCH_DRY_RUN='1';
+ else assert.match(env.KEYSTORE_ACCOUNT,/^[a-zA-Z0-9_-]+$/,'set KEYSTORE_ACCOUNT (name only)');
+ return result;
+}
 export function containerEnv(manifest,env,role){
  assert.ok(['indexer','keeper'].includes(role),'role must be indexer or keeper');
  assert.equal(manifest.status,'confirmed','deployment must be confirmed');
@@ -22,10 +35,16 @@ export function containerEnv(manifest,env,role){
 if(process.argv[1]&&import.meta.url===pathToFileURL(fs.realpathSync(process.argv[1])).href){
  try{
   const role=process.argv[2]||'indexer',file=process.env.MANIFEST||'contracts/deployments/sepolia-weth-v3.json';
+  if(role==='zk-watcher'){
+   const env=zkWatcherEnv(JSON.parse(fs.readFileSync(file,'utf8')),process.env);
+   if(!env.WATCH_DRY_RUN)for(const p of [env.PASSWORD_FILE,`${env.HOME}/.foundry/keystores/${env.KEYSTORE_ACCOUNT}`])assert.ok(fs.statSync(p).isFile(),'mount the encrypted keystore and password as files');
+   Object.assign(process.env,env);await (await import('../indexer/zk-watcher.mjs')).main(process.env);
+  }else{
   const env=containerEnv(JSON.parse(fs.readFileSync(file,'utf8')),process.env,role);
   if(role==='keeper'){
    for(const p of [env.PASSWORD_FILE,`${env.HOME}/.foundry/keystores/${env.KEYSTORE_ACCOUNT}`])assert.ok(fs.statSync(p).isFile(),'mount the encrypted keystore and password as files');
   }
   Object.assign(process.env,env);await import(`../indexer/${role==='indexer'?'index':'keeper'}.mjs`);
+  }
  }catch(e){console.error('Startup failed:',e.message);process.exitCode=1;}
 }

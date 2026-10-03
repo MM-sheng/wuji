@@ -385,14 +385,21 @@ contract WujiAccountsTest is Test {
 
     function test_factoryFixesTheMenu() public {
         WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000);
-        WujiAccounts[3] memory pools = f.create(asset);
+        WujiAccounts[3] memory pools;
+        for (uint256 t; t < 3; t++) {
+            uint256 g = gasleft();
+            pools[t] = f.create(asset, t);
+            assertLt(g - gasleft(), 1 << 24, "one pool per transaction fits the EIP-7825 gas cap");
+        }
         assertEq(pools[0].K(), 23e18);
         assertEq(pools[1].K(), 11.5e18);
         assertEq(pools[2].K(), 4.6e18);
         assertEq(address(f.pool(address(asset), 1)), address(pools[1]));
         assertEq(pools[1].BOUNTY_DIVISOR(), 10_000);
         vm.expectRevert("exists");
-        f.create(asset);
+        f.create(asset, 1);
+        vm.expectRevert(bytes("tier"));
+        f.create(asset, 3);
     }
 
     /// Invariant 7: yield accrues to holders through the token's own NAV and never enters the bet.

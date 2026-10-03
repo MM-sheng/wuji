@@ -5,17 +5,38 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {WujiIndex} from "./WujiIndex.sol";
 
+/// @notice What a pool needs from an index that keeps no header relay (ZkWujiIndex): the newest Bitcoin
+/// header it has validated, folded or not.
+interface IZkTip {
+    function seenHeight() external view returns (uint64);
+    function seenTime() external view returns (uint32);
+}
+
 /// @notice T11 perpetual accounts. Fixed principal, additive P&L = principal·side·ΔS/k, value in
 /// [0, 2·principal], no expiry. One collateral and one tier per pool; `WujiAccountsFactory` fixes the menu.
 /// See docs/tasks/T11_PERPETUAL_ACCOUNTS.md. No owner, no pause, no upgrade; every parameter is immutable.
 /// @dev Every entry and exit is priced at an epoch height that was not yet mined when it was requested.
 /// Epochs are processed strictly in order; between processed epochs the pool does not move.
+///
+/// Where "not yet mined" comes from depends on the index (fixed at construction):
+///  C. an index with a header relay (WujiIndex): the relay's best height + DELAY, best header ≤ MAX_TIP_AGE old;
+///  S. an index without one (ZkWujiIndex): the newest header the index has validated (`seenHeight`) + a margin
+///     that bounds the chance that the pricing block already exists by 1e-7 given that header's age
+///     (`seenMargin`). One rule; nothing for the requester to supply (T13).
 contract WujiAccounts is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     int256 internal constant ONE = 1e18;
     int256 internal constant ACC = 1e27;   // accumulator precision per unit of principal
     uint256 public constant MAX_WALK = 1024;
+    /// @notice Pools on an index without a relay refuse requests once its newest validated header is older.
+    uint256 public constant MAX_SEEN_AGE = 24 hours;
+    /// @dev Margin by the newest validated header's age rounded up to whole hours (0..24 h), as big-endian uint16:
+    /// the smallest m with P(Poisson(λ) ≥ m) ≤ 1e-7, λ = 1.25 × 6 blocks/h × (age + 2 h). The 1.25 allows for
+    /// blocks faster than one per ten minutes between retargets; the 2 h for header timestamps ahead of real
+    /// time. Recompute: docs/tasks/T11_PERPETUAL_ACCOUNTS.md (Update 2026-10-01).
+    bytes internal constant MARGINS =
+        hex"002800340040004a0055005f00690073007d00870090009a00a300ad00b600bf00c900d200db00e400ed00f600ff01080111";
 
     IERC20 public immutable asset;
     WujiIndex public immutable index;
@@ -29,6 +50,8 @@ contract WujiAccounts is ReentrancyGuard {
     /// @notice Whether the index implements the T9 frozen exit. Older indexes (BSC testnet v3) do not; there the
     /// pool simply has no frozen state, and a deep reorg stops new requests and epoch processing instead.
     bool public immutable INDEX_CAN_FREEZE;
+    /// @notice Whether the index has a header relay (pricing C). Otherwise the pool prices by A, or B on request.
+    bool public immutable RELAY_TIP;
     address public immutable treasury;  // FeeRouter: surplus fees go to the relayers' operations reserve
     uint256 public immutable FEE_BPS;   // charged on entry and on normal exit
     /// @notice Each processed epoch and each retirement pays `buffer / BOUNTY_DIVISOR` to its caller (0 = none).
@@ -107,6 +130,8 @@ contract WujiAccounts is ReentrancyGuard {
         require(c.treasury != address(0) && c.feeBps <= 100 && c.bufferBps <= 10_000, "fees");
         (bool ok, bytes memory ret) = address(c.index).staticcall(abi.encodeWithSignature("frozen()"));
         INDEX_CAN_FREEZE = ok && ret.length == 32;
+        (ok, ret) = address(c.index).staticcall(abi.encodeWithSignature("relay()"));
+        RELAY_TIP = ok && ret.length == 32;
         asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay; MAX_TIP_AGE = c.maxTipAge;
         treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY_DIVISOR = c.bountyDivisor; BUFFER_BPS = c.bufferBps;
     }
@@ -115,7 +140,26 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice The height a request made now would be priced at.
     function nextPricingHeight() public view returns (uint64) {
-        uint64 h = index.relay().bestHeight() + DELAY;
+        uint64 h = RELAY_TIP ? index.relay().bestHeight() + DELAY : IZkTip(address(index)).seenHeight() + seenMargin();
+        return _roundUp(h);
+    }
+
+    /// @notice How far past the index's newest validated header a request is priced, given that header's age.
+    /// @dev The header is one the index validated, but its timestamp is a miner's (up to 2 h ahead is valid);
+    ///      the table's skew term covers that. A relay's `DELAY`/`MAX_TIP_AGE` bound would not.
+    function seenMargin() public view returns (uint64) {
+        return marginForAge(IZkTip(address(index)).seenTime());
+    }
+
+    /// @notice The Poisson margin for a header stamped `t` (MARGINS; includes 2 h of timestamp skew).
+    function marginForAge(uint256 t) public view returns (uint64) {
+        uint256 age = block.timestamp > t ? block.timestamp - t : 0;
+        uint256 b = (age + 1 hours - 1) / 1 hours;
+        require(b <= 24, "index stale");
+        return uint64(uint8(MARGINS[2 * b])) << 8 | uint64(uint8(MARGINS[2 * b + 1]));
+    }
+
+    function _roundUp(uint64 h) internal view returns (uint64) {
         return ((h + EPOCH - 1) / EPOCH) * EPOCH;
     }
 
@@ -125,30 +169,70 @@ contract WujiAccounts is ReentrancyGuard {
     }
 
     function _tipFresh() internal view returns (bool) {
+        if (!RELAY_TIP) {
+            uint256 f = IZkTip(address(index)).seenTime();
+            return f <= block.timestamp + 2 hours && block.timestamp <= f + MAX_SEEN_AGE;
+        }
         uint256 t = index.relay().timestampOf(index.relay().bestHash());
         return block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours;
     }
 
-    function _schedule() internal returns (uint64 e) {
+    function _schedule() internal returns (uint64) {
         require(!frozen && !_indexFrozen() && _historyConsistent(), "pool frozen");
         // The index's own freshness bound (3h) is for folding, far too loose for pricing: a relay that lags
         // lets a requester see the pricing block before asking. Use this pool's tighter bound instead.
-        require(_tipFresh(), "relay stale");
-        e = nextPricingHeight();
+        require(_tipFresh(), RELAY_TIP ? "relay stale" : "index stale");
+        return _enqueue(nextPricingHeight());
+    }
+
+    function _enqueue(uint64 e) internal returns (uint64) {
         uint256 n = queue.length;
-        // The relay's best height can move down (a heavier, shorter branch). Never queue behind the last
-        // epoch: a later height is still unmined, and a strictly increasing queue can never price an epoch
-        // twice (which would double-count its entries and brick processing).
-        if (n > 0 && queue[n - 1] >= e) e = queue[n - 1];
-        else queue.push(e);
+        if (RELAY_TIP) {
+            // The relay's best height can move down (a heavier, shorter branch). Never queue behind the last
+            // epoch: a later height is still unmined, and a strictly increasing queue can never price an epoch
+            // twice (which would double-count its entries and brick processing).
+            if (n > 0 && queue[n - 1] >= e) return queue[n - 1];
+            queue.push(e);
+            return e;
+        }
+        // A later request can price earlier (a fresh header with a small margin can land below an old one with
+        // a large margin). Keep the pending
+        // epochs sorted and unique instead: each is still priced once, in height order. Every pending epoch is
+        // above the finalized height and every processed one at or below it, so order with the processed
+        // part is kept too. Pending epochs are bounded by the pricing horizon (≈ a day of heights / EPOCH).
+        if (n == head || queue[n - 1] < e) {
+            queue.push(e);
+            return e;
+        }
+        for (uint256 i = head; i < n; ++i) {
+            if (queue[i] == e) return e;
+            if (queue[i] > e) {
+                queue.push(queue[n - 1]);
+                for (uint256 j = n - 1; j > i; --j) queue[j] = queue[j - 1];
+                queue[i] = e;
+                return e;
+            }
+        }
+        return e; // unreachable: queue[n - 1] >= e
     }
 
     /// @notice Deposit `amount`; the principal is `amount` minus the entry fee.
     function requestEnter(bool yang, uint128 amount) external nonReentrant returns (uint256 id) {
-        uint128 fee = uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
-        require(amount > fee, "zero");
+        _checkAmount(amount);
+        return _enter(yang, amount, _schedule());
+    }
+
+    function _checkAmount(uint128 amount) internal view {
+        require(amount > _entryFee(amount), "zero");
+    }
+
+    function _entryFee(uint128 amount) internal view returns (uint128) {
+        return uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
+    }
+
+    function _enter(bool yang, uint128 amount, uint64 e) internal returns (uint256 id) {
+        uint128 fee = _entryFee(amount);
         uint128 principal = amount - fee;
-        uint64 e = _schedule();
         uint256 before = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), amount);
         // Fee-on-transfer and other short-paying tokens would credit principal that never arrived.
@@ -164,13 +248,21 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice Irrevocable. Exposure continues until the pricing epoch.
     function requestExit(uint256 id) external nonReentrant {
+        _checkExit(id);
+        _exit(id, _schedule());
+    }
+
+    function _checkExit(uint256 id) internal view {
         Account storage a = accounts[id];
         require(a.owner == msg.sender, "not owner");
         require(a.exitEpoch == 0, "exit pending");
         // Until the entry is priced it may still be refunded by a freeze; an exit queued before that would be
         // subtracted from principal that never joined, underflowing and bricking freezePool.
         require(epochs[a.enterEpoch].processed, "entry pending");
-        uint64 e = _schedule();
+    }
+
+    function _exit(uint256 id, uint64 e) internal {
+        Account storage a = accounts[id];
         require(e > a.enterEpoch, "same epoch");
         a.exitEpoch = e;
         epochs[e].exitOut[a.yang ? 1 : 0] += a.principal;
@@ -191,8 +283,10 @@ contract WujiAccounts is ReentrancyGuard {
         return INDEX_CAN_FREEZE && index.frozen();
     }
 
-    /// @dev Same definition as WujiIndex.historyConsistent, from functions every index version has.
+    /// @dev Same definition as WujiIndex.historyConsistent, from functions every index version has. An index
+    /// without a relay has no second view of history to disagree with; its finalized state is final.
     function _historyConsistent() internal view returns (bool) {
+        if (!RELAY_TIP) return true;
         bytes32 h = index.lastHash();
         return h == bytes32(0) || index.relay().headerAt(index.lastHeight()) == h;
     }
@@ -265,6 +359,15 @@ contract WujiAccounts is ReentrancyGuard {
         if (!marked[e]) {
             uint64 last = index.lastHeight();
             if (e > last) return false;
+            if (!RELAY_TIP) {
+                // No relay history to walk: an epoch below the tip is marked from raw headers first
+                // (`markWithHeaders`); one exactly at the tip is read from the index.
+                if (e != last) return false;
+                sAt[e] = index.S(); marked[e] = true; hashAt[e] = index.lastHash();
+                _advance(e, sAt[e]);
+                _payBounty(msg.sender);
+                return true;
+            }
             // After a long keeper absence the epoch can lie more than MAX_WALK below the tip. Walk down one
             // MAX_WALK chunk per call, remembering the lowest point reached, until the epoch is in range.
             uint64 from = bridge >= e && marked[bridge] ? bridge : last;

@@ -10,9 +10,12 @@ without trusting anyone: a Solidity Bitcoin header relay that enforces the full 
 zero-knowledge light client (SP1) that proves a whole batch of headers for a fixed on-chain cost, and a
 public index derived from Bitcoin block hashes that any contract can read and anyone can recompute. The
 relay and index run today on two testnets, and a Groth16 proof of 100 real mainnet headers already verifies
-on chain against SP1's own verifier contract for 453,888 gas, against 7,956,964 gas for the same headers
-checked one by one. We ask for funding to automate proving in the keeper, deploy the ZK path publicly, pay
-for an independent security review, and operate the public deployment for a year.
+on chain against SP1's own verifier contract for 453,888 gas, against 1,928,070 gas for the same headers
+checked one by one in Solidity. The ZK path has run on Ethereum Sepolia since 2026-09-29, proving live Bitcoin
+headers from the peer-to-peer network (first batch: 42 headers, 323,385 gas). A challenge window, so that a flaw in the proof system
+alone cannot corrupt the index, runs there too (proofs finalize after a window unless disputed; disputes are
+settled by checking raw headers on chain). We ask for funding to pay for an independent security review,
+deploy the reviewed contracts, and operate the public deployment for a year.
 
 ## The problem
 
@@ -36,7 +39,8 @@ dependency), wrapped as an SP1 guest. The Rust crate, the Solidity relay and a J
 produce identical results over the real-header fixtures. Measured on a laptop (14-core, 64 GB):
 ≈27.5k RISC-V cycles per header; a Groth16 proof of 100 real headers in 217 s (31 GB peak memory),
 verified on chain by SP1's unmodified v6.1.0 verifier: **453,888 gas for the whole batch** (357,037 of it
-the verifier) versus 7,956,964 gas on the per-header path, with identical resulting state. Tampered
+the verifier) versus 1,928,070 gas on the per-header Solidity path (`foldHeaders`, no per-header storage), with
+identical resulting state. Tampered
 journals, tampered proofs and a wrong program key are rejected. The cost is flat in batch size. The
 Solidity header path stays deployed as a permissionless escape hatch, so liveness never depends on a
 prover.
@@ -81,14 +85,15 @@ Full survey with sources: `docs/RELATED_WORK.md`. In short:
 
 | # | Deliverable | Acceptance | Estimate |
 |---|---|---|---|
-| 1 | Public ZK deployment: `ZkWujiIndex` with SP1's Groth16 verifier on Sepolia, then mainnet after review | Real-header proofs accepted on Sepolia; gas published per batch | [USD 2,000–4,000] engineering + proving hardware |
-| 2 | Keeper proving pipeline | Keeper proves and submits batches, falls back to raw headers when no prover is available; 30 days on Sepolia without manual action | [USD 4,000–8,000] |
-| 3 | Independent security review of relay, index, ZK index, SP1 guest and the reference application | Public report; every finding fixed or answered in writing | [USD 20,000–45,000, pending quotes] |
-| 4 | Twelve months of public operation | Two independent keepers, public dashboard, monthly status notes | [USD 3,000–6,000] gas and servers |
-| 5 | Documentation for integrators | Guide and example contract that reads the relay and the index | [USD 2,000–4,000] |
-| | **Total** | | **[USD 31,000–67,000]** |
+| 1 | Mainnet deployment of the reviewed contracts | Deployed bytecode reproduced from the audited source; addresses published | [USD 1,000–2,000] gas and verification |
+| 2 | Independent security review of relay, index, ZK index, SP1 guest and the reference application | Public report; every finding fixed or answered in writing | [USD 20,000–45,000, pending quotes] |
+| 3 | Twelve months of public operation | Two independent keepers, public dashboard, monthly status notes | [USD 3,000–6,000] gas and servers |
+| 4 | Documentation for integrators | Guide and example contract that reads the relay and the index | [USD 2,000–4,000] |
+| | **Total** | | **[USD 26,000–57,000]** |
 
-Milestones: 1 → 2 in the first two months; 3 after 1–2 are frozen; 4 and 5 run throughout.
+Already done without funding, and therefore not requested: the Groth16 verifier path, the keeper proving
+pipeline, the challenge window with its watcher, and the Sepolia deployments. Milestones: the review (2) first;
+mainnet deployment (1) after it; operation (3) and documentation (4) throughout.
 
 ## Why it is a public good
 
@@ -109,14 +114,16 @@ Milestones: 1 → 2 in the first two months; 3 after 1–2 are frozen; 4 and 5 r
   machine with ≈32 GB of memory.
 - **Header-only verification.** It proves Bitcoin headers and work, not transactions or global visibility.
 - **The ZK path adds trust in SP1** and its on-chain verifier; the raw-header path remains available.
-- [Single maintainer; applicant to describe team and continuity plan.]
+- **Single maintainer today.** Continuity rests on the design (no owner, no upgrade, anyone can run the
+  keeper and watcher from the published scripts) and on recruiting a second independent operator during the
+  grant.
 
 ## Applicant
 
-- Name / organisation: [ ]
-- Contact: [ ]
-- Public repository: [must be public before submission]
-- Previous work: [ ]
+Applicant and payment details are provided privately in the application form. The project is published under
+a pseudonym; the application names the developer and, where required, a legal guardian as co-signer. Built
+with extensive use of AI coding assistants; every component is covered by tests, and the security review in
+item 3 is independent.
 
 ## Links in the repository
 

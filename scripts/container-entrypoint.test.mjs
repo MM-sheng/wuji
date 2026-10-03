@@ -23,3 +23,16 @@ test('exit automation is bound to the explicit v4 manifest, never inherited by v
  assert.equal(containerEnv(manifest,{FROZEN_EXIT:'1'},'indexer').FROZEN_EXIT,'0');
  assert.equal(containerEnv({...manifest,version:'bitcoin-sepolia-v4'}, {}, 'indexer').FROZEN_EXIT,'1');
 });
+
+test('zk-watcher role: wiring from a T12 manifest, alert-only without a key', async () => {
+ const {zkWatcherEnv}=await import('./container-entrypoint.mjs');
+ const fs=await import('node:fs');
+ const zk=JSON.parse(fs.readFileSync(new URL('../contracts/deployments/sepolia-zk-t12-v2.json',import.meta.url)));
+ const env=zkWatcherEnv(zk,{});
+ assert.equal(env.ZK_INDEX,zk.ZkWujiIndex.toLowerCase());assert.equal(env.CHAIN_ID,'11155111');
+ assert.equal(env.WATCH_DRY_RUN,'1','no key: never sends');assert.equal(env.WATCH_SOURCES,'p2p,http');assert.ok(env.RPC);
+ const acting=zkWatcherEnv(zk,{KEYSTORE_ACCOUNT:'watcher-two',PASSWORD_FILE:'/run/secrets/p'});
+ assert.equal(acting.WATCH_DRY_RUN,undefined);
+ assert.throws(()=>zkWatcherEnv(zk,{KEYSTORE_ACCOUNT:'bad name',PASSWORD_FILE:'/p'}),/KEYSTORE_ACCOUNT/);
+ assert.throws(()=>zkWatcherEnv({...zk,version:'bitcoin-sepolia-v4'},{}),/T12 ZK manifest/);
+});

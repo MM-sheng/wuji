@@ -10,7 +10,7 @@ const fixture=fs.readFileSync(new URL('../contracts/test/fixtures/bitcoin-798336
 const castDouble=String.raw`#!/usr/bin/env node
 import fs from 'node:fs';import {execFileSync} from 'node:child_process';
 const file=process.env.TEST_KEEPER_STATE,s=JSON.parse(fs.readFileSync(file)),a=process.argv.slice(2);
-const save=()=>fs.writeFileSync(file,JSON.stringify(s));
+const save=()=>{fs.writeFileSync(file+'.'+process.pid,JSON.stringify(s));fs.renameSync(file+'.'+process.pid,file);};
 const fail=m=>{save();process.stderr.write('Error: execution reverted: '+m);process.exit(1);};
 const output=x=>process.stdout.write(String(x));
 if(['calldata','abi-decode','to-unit'].includes(a[0])){output(execFileSync(process.env.TEST_CAST_CODEC,a,{encoding:'utf8'}));process.exit(0);}
@@ -47,7 +47,8 @@ for(const mode of ['catchup','fresh','wrong-chain','over-cap','zero-gas','chain-
   if(req.method==='POST'){
    let raw='';for await(const part of req)raw+=part;
    const {method,params,id}=JSON.parse(raw),s=JSON.parse(fs.readFileSync(stateFile));
-   const save=()=>fs.writeFileSync(stateFile,JSON.stringify(s)),hex=n=>'0x'+BigInt(n).toString(16),word=n=>'0x'+BigInt(n).toString(16).padStart(64,'0');
+   // Atomic write: the cast double runs in another process and must never read half a file (flaked on CI).
+   const save=()=>{fs.writeFileSync(stateFile+'.srv',JSON.stringify(s));fs.renameSync(stateFile+'.srv',stateFile);},hex=n=>'0x'+BigInt(n).toString(16),word=n=>'0x'+BigInt(n).toString(16).padStart(64,'0');
    const reply=result=>res.end(JSON.stringify({jsonrpc:'2.0',id,result}));
    const fail=message=>res.end(JSON.stringify({jsonrpc:'2.0',id,error:{code:-32000,message}}));
    if(method==='eth_chainId')return reply(hex(s.mode==='wrong-chain'||(s.mode==='chain-changed'&&s.estimates>0)?1:97));

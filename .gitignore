@@ -15,3 +15,4 @@ contracts/.keystore-password-sepolia-v4
 # Local container operator paths and credentials
 .env.docker
 operator/
+docs/private/

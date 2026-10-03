@@ -8,8 +8,10 @@ const SEL = {
   head: '0x8f7dcfa3', queueLength: '0xab91c7b0', queue: '0xddf0b009', nextPricingHeight: '0x7dd7307d',
   frozen: '0x054f7d9c', nextId: '0x61b8ce8c', valueOf: '0xcadf338f', rawValueOf: '0xb68f590f',
   lastS: '0xd894da4d', accounts: '0xf2a40db8', epochAcc: '0xa2e04c67', lastHeight: '0x25159aa9',
-  balanceOf: '0x70a08231',
+  balanceOf: '0x70a08231', RELAY_TIP: '0x59cfd7b0', marked: '0x515f805e',
 };
+const MAX_WALK = 1024;      // WujiAccounts.MAX_WALK: headers per markWithHeaders call
+const MARK_PER_ROUND = 8;   // as many epochs as one processMany(8) can use
 const word = n => BigInt(n).toString(16).padStart(64, '0');
 const addr = a => a.slice(2).toLowerCase().padStart(64, '0');
 const uint = v => { if (!/^0x[0-9a-f]{64,}$/i.test(v)) throw Error('Invalid accounts ABI'); return BigInt(v.slice(0, 66)); };
@@ -24,7 +26,9 @@ export async function readPool(read, pool) {
       read(pool, SEL.K), read(pool, SEL.EPOCH), read(pool, SEL.DELAY), read(pool, SEL.FEE_BPS), read(pool, SEL.asset),
       read(pool, SEL.index), read(pool, SEL.principalOf + word(0)), read(pool, SEL.principalOf + word(1)),
       read(pool, SEL.buffer), read(pool, SEL.badDebt), read(pool, SEL.head), read(pool, SEL.queueLength),
-      read(pool, SEL.nextPricingHeight), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
+      // Reverts on relay-less pools while their index's finalized tip is too old to price from (A); processing,
+      // retiring and sweeping must not depend on it.
+      read(pool, SEL.nextPricingHeight).catch(() => null), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
     ]);
   const assetAddr = '0x' + asset.slice(-40), indexAddr = '0x' + index.slice(-40);
   const [balance, folded] = await Promise.all([read(assetAddr, SEL.balanceOf + addr(pool)), read(indexAddr, SEL.lastHeight)]);
@@ -40,7 +44,7 @@ export async function readPool(read, pool) {
     buffer_wad: uint(buffer).toString(), badDebt_wad: uint(badDebt).toString(), balance_wad: uint(balance).toString(),
     pendingEpochs: Number(n - h), nextEpoch: nextEpoch === null ? null : Number(nextEpoch),
     nextEpochReady: nextEpoch !== null && nextEpoch <= uint(folded),
-    nextPricingHeight: Number(uint(next)), lastS_wad: int(lastS).toString(),
+    nextPricingHeight: next === null ? null : Number(uint(next)), lastS_wad: int(lastS).toString(),
     frozen: uint(frozen) === 1n, accountsCreated: Number(uint(nextId) - 1n),
   };
 }
@@ -72,7 +76,9 @@ export async function readAccount(read, pool, id) {
 /// Keeper duties for one pool, all permissionless and all paid from the pool's buffer:
 /// process ready epochs, retire accounts at the floor, sweep buffer surplus, and freeze after the index does.
 /// `simulate(to, sig, ...args)` must throw on revert; `send(to, sig, gas, ...args)` signs.
-export async function maintainPool({ read, simulate, send, pool, cursor = 1, scan = 200, log = () => {} }) {
+/// `headersFor(from, to)` (hex, heights from..to inclusive) is needed only for pools on an index without a
+/// relay (ZkWujiIndex): their epochs below the finalized tip are marked from raw headers before processing.
+export async function maintainPool({ read, simulate, send, pool, cursor = 1, scan = 200, log = () => {}, headersFor }) {
   const state = await readPool(read, pool);
   const done = [];
   if (state.frozen) return { state, done, cursor };
@@ -83,6 +89,12 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
     return { state, done, cursor };
   }
   if (state.nextEpochReady) {
+    // Pools older than the A/B/C pricing modes have no RELAY_TIP and always use a relay.
+    const relayTip = await read(pool, SEL.RELAY_TIP).then(v => uint(v) === 1n, () => true);
+    if (!relayTip) {
+      if (!headersFor) { log('pool', pool.slice(0, 10), 'has no relay to walk and this keeper has no header source'); return { state, done, cursor }; }
+      done.push(...await markFromHeaders({ read, simulate, send, pool, index: state.index, headersFor, log }));
+    }
     // Ceiling, not a reservation: a catch-up chunk after a long absence walks 1024 heights (≈5.5M gas).
     await send(pool, 'processMany(uint256)', 8_000_000, '8'); done.push('processMany');
   }
@@ -102,6 +114,42 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
     if (surplus > 0n) { await send(pool, 'sweep()', 200_000); done.push('sweep'); }
   } catch { /* nothing to sweep */ }
   return { state, done, cursor: id };
+}
+
+/// Mark the ready epochs of a relay-less pool from raw headers, highest first: each mark is anchored at the
+/// finalized tip or at the mark above it (the contract checks hash linkage to that anchor). Gaps longer than
+/// MAX_WALK are bridged with intermediate marks. The epoch exactly at the tip needs no headers.
+export async function markFromHeaders({ read, simulate, send, pool, index, headersFor, log = () => {} }) {
+  const folded = uint(await read(index, SEL.lastHeight));
+  const head = uint(await read(pool, SEL.head)), qlen = uint(await read(pool, SEL.queueLength));
+  const isMarked = async h => uint(await read(pool, SEL.marked + word(h))) === 1n;
+  const ready = [];
+  for (let i = head; i < qlen && ready.length < MARK_PER_ROUND; i++) {
+    const e = uint(await read(pool, SEL.queue + word(i)));
+    if (e > folded) break;
+    ready.push(e);
+  }
+  const done = [];
+  const mark = async (h, to) => {
+    const headers = await headersFor(Number(h) + 1, Number(to));
+    const args = [String(h), String(to), headers];
+    await simulate(pool, 'markWithHeaders(uint64,uint64,bytes)(int256)', ...args);
+    await send(pool, 'markWithHeaders(uint64,uint64,bytes)', 200_000 + 12_000 * Number(to - h), ...args);
+    done.push(`mark ${h} from ${to}`);
+  };
+  let anchor = folded;
+  for (const e of ready.reverse()) {
+    if (e === folded || await isMarked(e)) { anchor = e; continue; }
+    while (anchor - e > BigInt(MAX_WALK)) {
+      const mid = anchor - BigInt(MAX_WALK);
+      if (!await isMarked(mid)) await mark(mid, anchor);
+      anchor = mid;
+    }
+    await mark(e, anchor);
+    anchor = e;
+  }
+  if (done.length) log('marked', done.length, 'heights from headers for', pool.slice(0, 10));
+  return done;
 }
 
 export const formatWad = v => (Number(BigInt(v) * 10000n / WAD) / 10000).toString();

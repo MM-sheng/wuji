@@ -80,6 +80,41 @@ export function retarget(bits, first, last) {
 const workOf = target => (((1n << 256n) - target - 1n) / (target + 1n)) + 1n;
 const hashValue = internal => BigInt('0x' + Buffer.from(internal).reverse().toString('hex'));
 
+/// Apply one `headers` reply. A reply that extends the tip is appended. A reply that forks below the tip is
+/// validated on a copy, extended through `more(locator)` while it is still lighter, and adopted only if it then
+/// has more cumulative work than this chain: a peer on a lighter or invalid branch can no longer make us drop
+/// validated headers (2026-10-01: a minority branch from 961632 made every keeper rewind ~8,200 headers,
+/// fail at 961640 and re-download them, hundreds of times a day). Throws on an invalid header; for a fork,
+/// this chain is untouched when it does. Returns { added, last } (`last`: length of the last reply).
+export async function applyHeaders(chain, batch, more, log = () => {}) {
+  const parent = Buffer.from(batch[0].subarray(4, 36)).reverse().toString('hex');
+  if (chain.hashes[chain.height] === parent) {
+    for (const raw of batch) chain.append(raw);
+    return { added: batch.length, last: batch.length };
+  }
+  const at = chain.hashes.lastIndexOf(parent);
+  if (at < 0) return { added: 0, last: batch.length };            // an unrelated branch: nothing to compare
+  const candidate = chain.fork(at);
+  let reply = batch;
+  for (;;) {
+    for (const raw of reply) candidate.append(raw);
+    if (candidate.work > chain.work || reply.length < MAX_HEADERS) break;
+    reply = await more(candidate.locator());
+    if (!reply.length) break;
+  }
+  if (candidate.work <= chain.work) {
+    if (candidate.height < chain.height || candidate.hashes[chain.height] !== chain.hashes[chain.height]) {
+      log(`headers: ignored a branch from ${at} with less work (to ${candidate.height})`);
+    }
+    return { added: 0, last: reply.length };
+  }
+  const before = chain.height;
+  const forked = candidate.hashes[Math.min(before, candidate.height)] !== chain.hashes[Math.min(before, candidate.height)];
+  if (forked) log(`headers: reorg at ${at}, ${before} → ${candidate.height} (more work)`);
+  chain.adopt(candidate);
+  return { added: Math.max(1, chain.height - before), last: reply.length };
+}
+
 /// In-memory header chain, validated from the Bitcoin genesis block.
 export class HeaderChain {
   constructor() {
@@ -115,11 +150,24 @@ export class HeaderChain {
     this.work += workOf(target);
     return height;
   }
+  headerWork(raw) { return workOf(targetOf(raw.readUInt32LE(72))); }
+  /// A copy truncated at `height`, for validating a competing branch without touching this chain.
+  fork(height) {
+    const c = Object.create(Object.getPrototypeOf(this));
+    c.headers = this.headers.slice(0, height + 1);
+    c.hashes = this.hashes.slice(0, height + 1);
+    c.rewind(height);
+    return c;
+  }
+  /// Take over a validated branch built with `fork`.
+  adopt(other) {
+    this.headers = other.headers; this.hashes = other.hashes; this.work = other.work; this.epochStart = other.epochStart;
+  }
   /// Drop everything above `height` so a heavier branch can replace it.
   rewind(height) {
     while (this.height > height) { this.headers.pop(); this.hashes.pop(); }
     this.work = 0n;
-    for (const h of this.headers) this.work += workOf(targetOf(h.readUInt32LE(72)));
+    for (const h of this.headers) this.work += this.headerWork(h);
     const epoch = Math.floor(this.headers.length ? (this.headers.length - 1) / RETARGET : 0) * RETARGET;
     this.epochStart = this.headers[epoch]?.readUInt32LE(68) ?? 0;
   }
@@ -281,21 +329,10 @@ export class BitcoinP2P {
         for (;;) {
           const batch = await peer.getheaders(this.chain.locator());
           if (!batch.length) break;
-          let added = 0;
-          for (const raw of batch) {
-            const parent = raw.subarray(4, 36).toString('hex');
-            if (this.chain.headers.length && parent !== sha256d(this.chain.headers.at(-1)).toString('hex')) {
-              // The peer answered from a fork point our locator offered: rewind to it, then continue.
-              const at = this.chain.hashes.indexOf(Buffer.from(parent, 'hex').reverse().toString('hex'));
-              if (at < 0) continue;                                  // header we already have, or an unrelated branch
-              this.log(`headers: reorg, rewinding ${this.chain.height} → ${at}`);
-              this.chain.rewind(at);
-            }
-            this.chain.append(raw); added++;
-          }
+          const { added, last } = await applyHeaders(this.chain, batch, loc => peer.getheaders(loc), this.log);
           if (!added) break;
           if (this.chain.height - before > 50000) this.log(`headers: ${this.chain.height}`);
-          if (batch.length < MAX_HEADERS) break;
+          if (last < MAX_HEADERS) break;
         }
         peer.close();
         if (this.chain.height > before || this.chain.height > 0) {

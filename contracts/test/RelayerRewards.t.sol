@@ -37,27 +37,27 @@ contract RelayerRewardsTest is Test {
         assertEq(rewards.lastHeight(),1000);
     }
     function test_oldWorkCannotClaimNewFees() public {
-        work(ALICE,10,one(address(token)));fund(1_000_000);
-        assertEq(claim(ALICE),0);assertEq(rewards.reserve(address(token)),1_000_000);
+        work(ALICE,10,one(address(token)));fund(10_000_000);
+        assertEq(claim(ALICE),0);assertEq(rewards.reserve(address(token)),10_000_000);
         work(BOB,1,one(address(token)));assertEq(claim(BOB),100);assertEq(claim(ALICE),0);assertEq(claim(BOB),0);
     }
     function test_delayedClaimIsFixedAndCannotTakeLaterFunding() public {
-        fund(1_000_000);work(ALICE,1,one(address(token)));
+        fund(10_000_000);work(ALICE,1,one(address(token)));
         uint256 fixedAmount=rewards.claimable(address(token),ALICE);assertEq(fixedAmount,100);
-        fund(9_000_000);work(BOB,1,one(address(token)));
+        fund(90_000_000);work(BOB,1,one(address(token)));
         assertEq(claim(ALICE),fixedAmount);assertEq(claim(BOB),999);assertEq(claim(ALICE),0);
     }
     function test_unsynchronizedDonationOnlyFundsFutureWork() public {
-        token.mint(address(rewards),1_000_000);work(ALICE,1,one(address(token)));assertEq(claim(ALICE),0);
+        token.mint(address(rewards),10_000_000);work(ALICE,1,one(address(token)));assertEq(claim(ALICE),0);
         rewards.sync(address(token));work(BOB,1,one(address(token)));assertEq(claim(ALICE),0);assertEq(claim(BOB),100);
     }
     function test_unselectedTokensCannotBeClaimedRetroactively() public {
-        fund(1_000_000);work(ALICE,5,new address[](0));work(BOB,1,one(address(token)));
+        fund(10_000_000);work(ALICE,5,new address[](0));work(BOB,1,one(address(token)));
         assertEq(claim(ALICE),0);assertEq(claim(BOB),100);
     }
     function test_permissionlessFundingDoesNotGiveRights() public {
-        token.mint(BOB,1_000_000);vm.startPrank(BOB);token.approve(address(rewards),1_000_000);
-        rewards.fund(address(token),1_000_000);vm.stopPrank();work(ALICE,1,one(address(token)));
+        token.mint(BOB,10_000_000);vm.startPrank(BOB);token.approve(address(rewards),10_000_000);
+        rewards.fund(address(token),10_000_000);vm.stopPrank();work(ALICE,1,one(address(token)));
         assertEq(claim(BOB),0);assertEq(claim(ALICE),100);
     }
     function expectBadWork(bytes memory reason,uint64 count,address[] memory list) internal {
@@ -76,11 +76,11 @@ contract RelayerRewardsTest is Test {
     function test_tinyReservePaysZeroAndPreservesEveryUnit() public {
         fund(1);assertEq(token.balanceOf(address(router)),0);assertEq(token.balanceOf(DEAD),0);
         work(ALICE,256,one(address(token)));assertEq(claim(ALICE),0);assertEq(rewards.reserve(address(token)),1);
-        fund(9999);work(BOB,256,one(address(token)));assertEq(claim(BOB),1);assertEq(rewards.reserve(address(token)),9999);
+        fund(99999);work(BOB,256,one(address(token)));assertEq(claim(BOB),1);assertEq(rewards.reserve(address(token)),99999);
     }
     function test_independentTokensAndNoTokenCallsDuringCredit() public {
-        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(rewards),1_000_000);
-        rewards.sync(address(bad));bad.configure(true,false,address(0),"");fund(2_000_000);
+        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(rewards),10_000_000);
+        rewards.sync(address(bad));bad.configure(true,false,address(0),"");fund(20_000_000);
         address[] memory list=new address[](2);
         (list[0],list[1])=address(token)<address(bad)?(address(token),address(bad)):(address(bad),address(token));
         work(ALICE,1,list);assertEq(rewards.claimable(address(bad),ALICE),100);
@@ -89,29 +89,29 @@ contract RelayerRewardsTest is Test {
         bad.configure(false,false,address(0),"");vm.prank(ALICE);assertEq(rewards.claim(address(bad)),100);
     }
     function test_senderFeeCannotEatOtherWorkersReserveOnClaim() public {
-        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(rewards),1_000_000);rewards.sync(address(bad));
+        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(rewards),10_000_000);rewards.sync(address(bad));
         work(ALICE,1,one(address(bad)));bad.configure(false,true,address(0),"");
         vm.expectRevert("unsupported collateral");vm.prank(ALICE);rewards.claim(address(bad));
-        assertEq(rewards.claimable(address(bad),ALICE),100);assertEq(bad.balanceOf(address(rewards)),1_000_000);
+        assertEq(rewards.claimable(address(bad),ALICE),100);assertEq(bad.balanceOf(address(rewards)),10_000_000);
     }
     function test_reentrancyBlockedDuringFundingAndClaim() public {
-        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(this),1_000_000);bad.approve(address(rewards),1_000_000);
+        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(this),10_000_000);bad.approve(address(rewards),10_000_000);
         bad.configure(false,false,address(rewards),abi.encodeCall(rewards.sync,(address(bad))));
-        rewards.fund(address(bad),1_000_000);assertFalse(bad.callbackSucceeded());work(ALICE,1,one(address(bad)));
+        rewards.fund(address(bad),10_000_000);assertFalse(bad.callbackSucceeded());work(ALICE,1,one(address(bad)));
         bad.configure(false,false,address(rewards),abi.encodeCall(rewards.claim,(address(bad))));
         vm.prank(ALICE);assertEq(rewards.claim(address(bad)),100);assertFalse(bad.callbackSucceeded());
     }
     function test_balanceReductionIsDetectedWithoutErasingClaims() public {
-        fund(1_000_000);work(ALICE,1,one(address(token)));vm.prank(address(rewards));token.transfer(BOB,1);
+        fund(10_000_000);work(ALICE,1,one(address(token)));vm.prank(address(rewards));token.transfer(BOB,1);
         vm.expectRevert("unsupported balance decrease");rewards.sync(address(token));
         vm.expectRevert("unsupported balance decrease");claim(ALICE);assertEq(rewards.claimable(address(token),ALICE),100);
     }
     function test_transferFeeFundingAndRoutingRevertWithoutBookingPhantomReserve() public {
-        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(this),1_000_000);bad.approve(address(rewards),1_000_000);bad.setRecipientFee();
-        vm.expectRevert("unsupported collateral");rewards.fund(address(bad),1_000_000);
-        assertEq(rewards.reserve(address(bad)),0);assertEq(bad.balanceOf(address(this)),1_000_000);
-        bad.mint(address(router),1_000_000);vm.expectRevert("unsupported collateral");router.route(address(bad));
-        assertEq(bad.balanceOf(address(router)),1_000_000);assertEq(bad.allowance(address(router),address(rewards)),0);
+        AdversarialRewardToken bad=new AdversarialRewardToken();bad.mint(address(this),10_000_000);bad.approve(address(rewards),10_000_000);bad.setRecipientFee();
+        vm.expectRevert("unsupported collateral");rewards.fund(address(bad),10_000_000);
+        assertEq(rewards.reserve(address(bad)),0);assertEq(bad.balanceOf(address(this)),10_000_000);
+        bad.mint(address(router),10_000_000);vm.expectRevert("unsupported collateral");router.route(address(bad));
+        assertEq(bad.balanceOf(address(router)),10_000_000);assertEq(bad.allowance(address(router),address(rewards)),0);
         assertEq(rewards.reserve(address(bad)),0);
     }
     function testFuzz_batchSplittingPaysExactlyTheSame(uint128 amount,uint8 n) public {

@@ -19,6 +19,15 @@ contract ZkFixture is Script {
             times[i] = uint32(uint8(anc[at])) | uint32(uint8(anc[at + 1])) << 8 | uint32(uint8(anc[at + 2])) << 16
                 | uint32(uint8(anc[at + 3])) << 24;
         }
+        ZkWujiIndex.Schedule memory schedule = ZkWujiIndex.Schedule(uint64(vm.parseJsonUint(meta, ".start")), 4320, 6);
+        // short windows so a local run can finalize after an anvil time jump
+        ZkWujiIndex.Challenge memory challenge = ZkWujiIndex.Challenge({
+            window: uint64(vm.envOr("CHALLENGE_WINDOW", uint256(600))),
+            responseWindow: uint64(vm.envOr("RESPONSE_WINDOW", uint256(600))),
+            bond: vm.envOr("DISPUTE_BOND", uint256(0.01 ether))
+        });
+        uint64 anchorHeight = uint64(vm.parseJsonUint(meta, ".checkpointHeight"));
+        uint32 epochStart = uint32(vm.parseJsonUint(meta, ".epochStartTime"));
         vm.startBroadcast();
         SP1Verifier verifier = new SP1Verifier();
         ZkWujiIndex idx = new ZkWujiIndex(
@@ -26,12 +35,12 @@ contract ZkFixture is Script {
             0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8,
             RelayerRewards(address(0)),
             anchor,
-            uint64(vm.parseJsonUint(meta, ".checkpointHeight")),
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")),
+            anchorHeight,
+            epochStart,
             times,
             0,
-            uint64(vm.parseJsonUint(meta, ".start")),
-            4320
+            schedule,
+            challenge
         );
         vm.stopBroadcast();
         console.log("ZK_INDEX", address(idx));

@@ -91,3 +91,13 @@ The first 0.15 ETH arrived, thank you. Catching the relay up turned out to need 
 headers, not the 620 estimated), so the Sepolia keeper is spending it now. **New target: another 0.15 Sepolia
 ETH to the same deployer address** `0x85967858e2464535A12031103ABA38f2795Fe8Fd` (≈0.06 there now), then keep
 collecting ≈0.05/day for upkeep (≈0.02 ETH/day at 1.6 gwei). Same rules and fuel log as above.
+
+## Task D — BSC testnet tBNB (added 2026-10-01)
+
+The BSC keeper (`0x7E251FaE0b8E9B1ceD08378bdC8D9CA59E9aCc9f`) spends ≈0.003 tBNB/day and holds ≈0.013; the
+BSC deployer `0x6657289562f870677325124f3ACbdebB0ea80B95` holds ≈0.0045. Collect tBNB from a BSC testnet
+faucet to the **keeper address directly**, target ≥0.05, same rules as Task C (CAPTCHA/login → human). Log
+receipts under "BSC fuel log" in the report.
+
+Sepolia status: the per-header keeper is retired; the ZK keeper spends ≈0.001 ETH/day, so Task C's daily
+collection can drop to once a week.

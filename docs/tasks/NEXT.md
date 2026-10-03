@@ -237,12 +237,13 @@ The v3 comparison keeper is currently stopped for insufficient test fuel; its re
 - Let the first real 30-day series (boundary height 972145) settle on testnet untouched; write up what happened.
 - Then: independent audit of the exact release commit; bug bounty; `docs/MAINNET_CHECKLIST.md` fully ticked.
 
-## T10 · ZK relay — Groth16 verified on chain (2026-09-29); keeper automation and public deployment remain
+## T10 · ZK relay — live on Sepolia since 2026-09-29 (superseded there by T12 on 2026-10-01)
 
 A real Groth16 proof of 100 mainnet headers verifies against SP1's unmodified v6.1.0 verifier: 453,888 gas
-for the batch vs 7,956,964 on the header path (`contracts/test/ZkWujiGroth16.t.sol`, details in
-T10_DESIGN.md). Remaining: keeper proves and submits batches (falls back to headers); deploy on Sepolia with
-the real verifier; best-height source for T11 pools on a ZK index.
+for the batch vs 1,928,070 on the header path (`contracts/test/ZkWujiGroth16.t.sol`, details in
+T10_DESIGN.md). Keeper (`indexer/zk-keeper.mjs`), Rust↔Solidity journal interop tests, the threat-model entry
+and the Sepolia deployment are done; the keeper now serves the T12 contract. Remaining: best-height source
+for T11 pools on a ZK index.
 
 ### History
 
@@ -256,8 +257,8 @@ Done:
 - `contracts/src/ZkWujiIndex.sol` — `foldProof` (one proof per batch) and `foldHeaders` (raw headers in
   Solidity, the escape hatch) advancing one state machine. 10 differential tests: both paths reach the
   same S, height, hash, work and median-time-past window over real headers, and interleave freely.
-  Measured: 99k gas **per header** on the header path vs **86k for 256 heights** on the proof path
-  (verifier excluded). Runtime size 10,779 bytes.
+  Measured: ≈19k gas **per header** on the header path vs **86k for 256 heights** on the proof path
+  (verifier excluded). (First recorded as 99k per header; that included the test's own header copying.) Runtime size 10,779 bytes.
 - `zk/program`, `zk/script` — SP1 guest and host written.
 
 Two design corrections found while building, both now in the code and its comments:
@@ -279,18 +280,22 @@ guest's committed journal is byte-identical to the host's, computed by the same 
 Solidity path is differential-tested against. A compressed proof verifies locally; `vkey`
 `0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8` for the current guest.
 
-Remaining:
-- Groth16 wrap (the on-chain format). Root cause of the two failures: SP1 fetches a **6.2 GB** artifact
-  tarball and needs about as much again to extract it; this machine had 6.3 GB free, and SP1's installer
-  deletes its staging directory on any interruption, so it can never make progress. Run it somewhere with
-  ~15 GB free and a stable link, then record the real verifier gas. The proving pipeline itself is already
-  demonstrated by the compressed proof; Groth16 changes only the wrapper.
-- Interop test: decode a host-produced journal in Foundry to prove the ABI encodings agree.
-- Keeper: prove and submit, falling back to `foldHeaders` when proving is unavailable.
-- THREAT_MODEL: the zkVM verifier joins the trusted base — state it plainly. A broken *prover* cannot
-  stop the protocol (escape hatch); a broken *verifier* could corrupt it.
-- Deploy to a testnet and reconcile against the non-ZK deployment.
+All items of the original remaining list (Groth16 wrap, interop test, keeper, threat model, testnet
+deployment) were completed on 2026-09-29; see T10_DESIGN.md.
 ---
+
+## T12 · Challenge window for ZK folds — live on Sepolia (2026-10-01)
+
+Design, build notes, measurements and deployment: [T12_CHALLENGE_WINDOW.md](T12_CHALLENGE_WINDOW.md).
+`0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7` (with `refute`); keeper and watcher running; first full
+proof → window → finalize cycle recorded on the first deployment. Remaining: a second watcher machine,
+independent review.
+
+## T13 · Mainnet rules for a relay-less index — implemented in source
+
+[T13_ZK_REORG_EXIT.md](T13_ZK_REORG_EXIT.md): three rules (valid headers; count only K = 100 deep; a branch that
+out-works the finalized chain by K + 144 blocks seals the index), one pricing rule for pools, keeper header-only
+mode. Remaining: testnet deployment, independent review, the mainnet economics (who pays the submitters).
 
 ## Explicitly not now
 

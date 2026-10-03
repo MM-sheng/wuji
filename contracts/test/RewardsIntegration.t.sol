@@ -37,7 +37,7 @@ contract RewardsIntegrationTest is BitcoinRelayTest {
     function test_noRewardFoldConsumesOldWorkBeforeNewFees() public {
         (RelayerRewards rewards,EasyRelay r,WujiIndex idx)=wired();MockUSDT token=new MockUSDT();
         extend(r,r.bestHash(),10,100);vm.prank(ALICE);idx.fold();
-        assertEq(rewards.lastHeight(),1004);token.mint(address(rewards),1_000_000);rewards.sync(address(token));
+        assertEq(rewards.lastHeight(),1004);token.mint(address(rewards),10_000_000);rewards.sync(address(token));
         vm.prank(ALICE);assertEq(rewards.claim(address(token)),0);
         extend(r,r.bestHash(),1,200);vm.prank(BOB);idx.fold(16,one(address(token)));
         assertEq(rewards.claimable(address(token),BOB),100);assertEq(rewards.claimable(address(token),ALICE),0);

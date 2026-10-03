@@ -26,13 +26,14 @@ http.createServer(async(req,res)=>{
  const hash=req.url.split('/')[2],row=rows.find(r=>r.hash===hash);if(row)return res.end(row.header);res.statusCode=404;res.end();
 }).listen(8080,'0.0.0.0');`);
 const mount={type:'bind',source:temp,target:'/fixture',read_only:true};
-const override={services:{source:{image:'wuji-node:local',entrypoint:['node','/fixture/source.mjs'],volumes:[mount]},indexer:{environment:{MANIFEST:'/fixture/manifest.json',RPC:'http://source:8080',BITCOIN_API:'http://source:8080'},volumes:[mount]},keeper:{environment:{MANIFEST:'/fixture/manifest.json',RPC:'http://source:8080',BITCOIN_API:'http://source:8080',INTERVAL:'1'},volumes:[mount]}}};
+const override={services:{source:{image:'wuji-node:local',entrypoint:['node','/fixture/source.mjs'],volumes:[mount]},indexer:{environment:{MANIFEST:'/fixture/manifest.json',RPC:'http://source:8080',BITCOIN_API:'http://source:8080',BITCOIN_REQUEST_DELAY_MS:'0'},volumes:[mount]},keeper:{environment:{MANIFEST:'/fixture/manifest.json',RPC:'http://source:8080',BITCOIN_API:'http://source:8080',BITCOIN_REQUEST_DELAY_MS:'0',INTERVAL:'1'},volumes:[mount]}}};
 const overrideFile=path.join(temp,'compose.json');fs.writeFileSync(overrideFile,JSON.stringify(override));
 const env={...process.env,WUJI_PORT:String(port),KEYSTORE_ACCOUNT:'dummy',KEYSTORE_FILE:path.join(temp,'dummy-keystore'),PASSWORD_FILE:path.join(temp,'dummy-password')};
 const compose=(...args)=>execFileSync('docker',['compose','-p',project,'-f','docker-compose.yml','-f',overrideFile,...args],{cwd:root,env,encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:4*1024*1024});
 try{
  compose('up','-d','source','indexer','keeper');
- const until=async test=>{for(let i=0;i<100;i++){try{const r=await test();if(r)return r;}catch{}await new Promise(r=>setTimeout(r,200));}throw Error('container smoke timed out');};
+ // 60 s: container start-up plus the indexer's first sync (CI timed out at the former 20 s).
+ const until=async test=>{for(let i=0;i<300;i++){try{const r=await test();if(r)return r;}catch{}await new Promise(r=>setTimeout(r,200));}throw Error('container smoke timed out');};
  const head=await until(async()=>{const h=await(await fetch(`http://127.0.0.1:${port}/head`)).json();return h.blocks===5&&h.chain?.err?h:null;});
  assert.equal(head.height,798340);assert.match(head.chain.err,/chain mismatch/);
  const proof=await(await fetch(`http://127.0.0.1:${port}/proof/798340`)).json();assert.match(proof.S_wad,/^-?\d+$/);

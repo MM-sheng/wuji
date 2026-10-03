@@ -1,0 +1,106 @@
+{
+  "version": "t12-zk-sepolia-v2",
+  "chainId": 11155111,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "deployedAt": "2026-10-01",
+  "sourceCommit": "047156c (branch t12-challenge-window)",
+  "ZkWujiIndex": "0x0350ff376F14bE43CbF62cC48E73D72dB86d1DC7",
+  "SP1Verifier": "0x3de0B34c4516AF875b8619Ca893dF9Be44C4ca6a",
+  "programVKey": "0x005bcc55d50f7f92d73f3869b71be8ff0ec500bfd58b484517106e52b613e2e8",
+  "anchor": "contracts/deployments/sepolia-zk-anchor.json (same as T10 and T12 v1)",
+  "anchorHeight": 969131,
+  "genesisHeight": 969132,
+  "checkpointInterval": 4320,
+  "challenge": {
+    "window": 21600,
+    "responseWindow": 21600,
+    "bond": "50000000000000000"
+  },
+  "rewards": "none (address(0))",
+  "changesFromV1": [
+    "refute(id, headers, tokens): WUJI-08, forged batches at the head cannot hold the index",
+    "lastTime() and seenTip(headers): what T11 pools on this index need for pricing A and B"
+  ],
+  "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "transaction": {
+    "hash": "0x471e1f611a822c467c040ae9ba70f7c40c4e9eb33aaec6bcbc8d14df7677d9dc",
+    "block": 11821390,
+    "gasUsed": 4565106,
+    "effectiveGasPrice": 1115650503
+  },
+  "verification": {
+    "runtimeBytecode": "20,142 bytes; identical to forge build of 047156c with immutables masked",
+    "views": "verifier, programVKey, GENESIS_HEIGHT, CHALLENGE_WINDOW, RESPONSE_WINDOW, DISPUTE_BOND, lastHeight=969131, lastHash = anchor, lastTime, pendingCount=0",
+    "seenTip": "10 real headers 969132-969141 from mempool.space returned (969141, 1790679599)"
+  },
+  "operators": {
+    "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), P2P source; log /tmp/wuji-sepolia-zk-t12b-keeper.log",
+    "watcher": "indexer/zk-watcher.mjs as the deployer (wuji-sepolia), WATCH_SOURCES=p2p,http; log /tmp/wuji-sepolia-zk-t12b-watcher.log"
+  },
+  "accounts": {
+    "version": "t11-accounts-zk-v1",
+    "deployedAt": "2026-10-01",
+    "sourceCommit": "18418d1",
+    "pricing": "A by default (finalized tip + Poisson margin, refused past 24 h), B with requester headers (requestEnterWithHeaders / requestExitWithHeaders); RELAY_TIP=false",
+    "factory": "0x26b62b96416D17BBDeA4243FC84E4B616a8A64B8",
+    "collateral": {
+      "symbol": "WETH",
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+    },
+    "treasury": "0xfff2dd388e15d881f840502ae9e159e54fedb768 (FeeRouter of sepolia-weth-v4: the ZK index has no reserve of its own, and a reserve bound to it could never pay out)",
+    "params": {
+      "epoch": 6,
+      "delay": 16,
+      "maxTipAge": 1800,
+      "feeBps": 30,
+      "bufferBps": 1000,
+      "bountyDivisor": 10000
+    },
+    "pools": [
+      {
+        "tier": "5%/yr",
+        "k": "23e18",
+        "address": "0xd5d318C7009e8fadE2d4997ed3bD2943533d59CA"
+      },
+      {
+        "tier": "10%/yr",
+        "k": "11.5e18",
+        "address": "0x59f585aC267195350B7080e51f700B4aDD17c1e7"
+      },
+      {
+        "tier": "25%/yr",
+        "k": "4.6e18",
+        "address": "0x7bdfCf4ad29388FC5238099Ec07A82eD1fbF3093"
+      }
+    ],
+    "transactions": [
+      {
+        "what": "factory",
+        "hash": "0x93ffc4f2d813bc0003c06fc55ec5e2f38a16b11b7fcb84cc4a80709febeb5ec4",
+        "gas": 5245809
+      },
+      {
+        "what": "create tier 0",
+        "hash": "0x051d00739d5aa47be5f65e0d247dbebd06f6b6565cdfe4e0938ad03a11eebb47",
+        "gas": 4248341
+      },
+      {
+        "what": "create tier 1",
+        "hash": "0x597f54ff26cc6d3e0a4d23efc9b6f02618b706f2741f9b18e8d70cec5df4af0a",
+        "gas": 4248353
+      },
+      {
+        "what": "create tier 2",
+        "hash": "0xf1a47560f8714c9eab4b1b7125ecfe1f987720e1015a89e2b910ba21b234df67",
+        "gas": 4248353
+      }
+    ],
+    "verification": "pool and factory runtimes equal the local build of 18418d1 with immutables masked; each pool's K, index, treasury, asset and RELAY_TIP read back; factory.pool(WETH, t) maps the three; pricingHeightWithHeaders with 310 real headers from 969132 returned 969462 on chain. acceptingRequests() (path A) is false until the index's first batch finalizes (17:08 UTC): its finalized tip is still the 2-day-old anchor.",
+    "abandoned": {
+      "factory": "0x5a394b46B914b1888505C49E3baE0f99c3FeA0bc",
+      "why": "pre-18418d1 factory: create(asset) deploys three pools in one transaction (18.5M gas), above the EIP-7825 cap; it has no pools",
+      "tx": "0x741e7702854b9bd53c1ee6f98701a72199ee8e3ac5f2302c1d6b1a962b858c98"
+    },
+    "maintainedBy": "indexer/zk-keeper.mjs with ACCOUNTS=<the three pools>"
+  }
+}

@@ -9,7 +9,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///      Allocation only touches accounting; token callbacks cannot block unrelated index progress.
 contract RelayerRewards is ReentrancyGuard {
     using SafeERC20 for IERC20;
-    uint256 public constant BOUNTY_DIVISOR = 10_000;
+    /// @notice Each folded height pays reserve / BOUNTY_DIVISOR. At 144 heights a day that is ≈ 0.14% of the reserve per
+    /// day (half-life ≈ 1.3 years), so a one-off donation pays submitters for years rather than weeks
+    /// (docs/decisions/2026-10-02-submitter-economics.md). Deployments before 2026-10-02 use 10,000.
+    uint256 public constant BOUNTY_DIVISOR = 100_000;
     uint256 public constant MAX_TOKENS = 8;
     uint256 public constant MAX_HEIGHTS = 256;
     address public immutable index;
@@ -53,6 +56,18 @@ contract RelayerRewards is ReentrancyGuard {
         uint256 count = uint256(to) - from + 1;
         require(tokens.length == 0 || count <= MAX_HEIGHTS, "height limit");
         lastHeight = to;
+        _allocate(worker, count, tokens, from, to);
+    }
+    /// @notice Index-only: pay a watcher whose dispute removed a batch (T12) the bounty that batch would have
+    ///         earned. Consumes no heights: they stay payable to whoever later folds them for real.
+    function award(address worker, uint256 count, address[] calldata tokens) external nonReentrant {
+        require(msg.sender == index, "index only");
+        require(worker != address(0) && count != 0 && count <= MAX_HEIGHTS, "award count");
+        require(tokens.length <= MAX_TOKENS, "token limit");
+        _allocate(worker, count, tokens, 0, 0);
+    }
+    /// @dev `from == to == 0` marks a dispute award in the Bounty event; folded heights are never 0.
+    function _allocate(address worker, uint256 count, address[] calldata tokens, uint64 from, uint64 to) internal {
         address previous;
         for (uint256 i; i < tokens.length; ++i) {
             address token = tokens[i];

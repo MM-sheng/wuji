@@ -46,5 +46,20 @@ services:
         target: /run/secrets/keeper-password
         read_only: true
         bind: {create_host_path: false}
+  # T12 watcher. Alert-only by default (no key: checks and logs, never sends). To dispute, refute and back,
+  # add a compose override mounting an encrypted keystore and password exactly as for `keeper`, and set
+  # KEYSTORE_ACCOUNT; the account needs DISPUTE_BOND (0.05 Sepolia ETH) plus gas. See docs/tasks/T12_WATCHER.md.
+  zk-watcher:
+    <<: *runtime
+    profiles: [zk-watcher]
+    command: [zk-watcher]
+    environment:
+      MANIFEST: ${ZK_MANIFEST:-contracts/deployments/sepolia-zk-t12-v2.json}
+      RPC: ${ZK_RPC:-}
+      BITCOIN_API: ${BITCOIN_API:-https://mempool.space/api,https://blockstream.info/api}
+      WATCH_SOURCES: ${WATCH_SOURCES:-p2p,http}
+      INTERVAL: ${WATCH_INTERVAL:-300}
+    volumes: ["zk-watch-data:/data"]
 volumes:
   index-data:
+  zk-watch-data:

@@ -65,6 +65,79 @@ Minting and redeeming complete pairs constrains aggregate pair value. It does no
 YIN pool individually tracks the live claim value. The UI must distinguish contract claim value from
 secondary-market execution price.
 
+### WUJI-08 — Medium — Fixed in source, deployed contract affected — forged proofs could hold the ZK index (T12)
+
+Found 2026-10-01 reviewing T12 after its Sepolia deployment (`0x0ee930Fe…6B47`). Assumes a broken proof
+system (the case T12 exists for). New proofs must extend the head of the pending queue, and `foldHeaders`
+is closed while anything is pending. An attacker who keeps one forged batch at the head (re-proposing on
+the finalized state each time the previous one is rejected, one proof per `W + R`) blocks every honest
+proof and the header path: the index cannot be corrupted (watchers dispute) but cannot advance either,
+breaking the T10 property that liveness never depends on the proof system.
+
+Fix: `refute(id, headers, tokens)`. For a disputed, unbacked batch, the real headers over its range,
+replayed from its starting state, must reach a different end state; the batch and its successors are
+removed as in `reject`, at once, and for the oldest batch the replayed state is folded exactly as
+`foldHeaders` would. Each forgery is then answered in one transaction that also advances the index.
+Tests: `test_forgedProofsCannotHoldTheIndex`, refute unit tests, and a refute action in the T12 invariant
+suite (forged batches on a real start can always be refuted; honest ones never). The watcher now refutes
+right after disputing. The deployed T12 contract predates the fix and keeps the issue until redeployed.
+
+### WUJI-09 — Informational — Accepted — forging costs the attacker only gas (T12)
+
+With a broken verifier, a forged batch costs the attacker gas and nothing else; its disputer is paid from
+the relayer reserve, and honest refuters pay header gas (≈ 20k per header). A prover bond would make the
+attacker pay, at the price of locking capital for every honest batch. Deferred; revisit with mainnet
+economics.
+
+### WUJI-10 — Medium — Fixed — the accounts factory could not create pools on Ethereum or Sepolia
+
+Found 2026-10-01 deploying T11 pools on Sepolia. `WujiAccountsFactory.create(asset)` deployed all three tier
+pools in one transaction (≈ 18.5M gas), above the 2^24 per-transaction gas cap of EIP-7825 (enforced on
+Sepolia, and on Ethereum after Fusaka): the RPC refused it, leaving a factory with no pools
+(`0x5a394b46…A0bc`, recorded as abandoned). Fix: `create(asset, tier)`, one pool per call (≈ 4.25M gas
+measured); the menu and create-once rule are unchanged. A test asserts each call stays under the cap.
+
+### WUJI-11 — Medium — Fixed — P2P header source rewound before validating, with no work comparison
+
+Found 2026-10-01 in keeper logs. When a peer answered `getheaders` from a point below our tip, the client
+rewound to that point *first* and then appended the peer's headers. A peer on a minority branch (valid work
+961632–961639, invalid difficulty at 961640) thus made every keeper and indexer drop ≈ 8,200 validated
+headers, fail, and re-download them — several hundred times a day across the running stacks. A lighter but
+valid branch would have been adopted outright: there was no cumulative-work comparison, contrary to the
+README. Fix (`applyHeaders` in `indexer/bitcoin-p2p.mjs`): a competing branch is built and validated on a
+copy, extended while lighter, and adopted only with more cumulative work; an invalid branch leaves the chain
+untouched. Tests cover extension, lighter, heavier, invalid, multi-reply and unknown branches. In
+production: the ZK keeper (on the fix since 2026-10-01 11:50 UTC) ignored lighter branches forking at
+961257, 961286 and 936720 with no rewind; the BSC indexer and keeper and the Sepolia v4 indexer were
+restarted on the fix at 2026-10-02 00:48 UTC with their original launch environments (the BSC indexer
+had logged 1,086 rewinds before that).
+
+### WUJI-12 — Medium (mainnet) / Low (testnet) — Accepted, documented — an honest pending batch can be refuted with a private branch
+
+Reported 2026-10-02 by a separate read-only review session ([note](reviews/2026-10-02-T12-refute-work.md)).
+`refute` accepts any differing replay with valid work and `CONFIRMATIONS` descendants, so ≈ 7 privately mined
+blocks at the real difficulty replace an honest pending batch, and for the oldest batch become finalized state.
+That is the header path's general bar (`foldHeaders` offers it whenever the queue is empty); `refute` does not
+lower it. The suggested "strictly more work" check was rejected: equal-length ranges at equal difficulty have
+equal work, so it would stop `refute` from removing forgeries that keep the real bits and reopen WUJI-08
+(test `test_aForgeryClaimingHonestWorkIsRefutedEvenThoughTheWorkIsEqual`). Raising the bar needs a deeper
+confirmation depth for the whole header path or a challenge game between branches; open for mainnet.
+
+### WUJI-13 — Medium — Fixed in source — disputing honest batches paid a bounty
+
+Self-review 2026-10-02 ([note](reviews/2026-10-02-T12-self-review.md) §1). When backing a batch costs more gas
+than the bond (a full batch is ≈ 5.5M gas, above 0.05 ETH from ≈ 9 gwei), nobody rational backs it, and `reject`
+returned the bond plus the batch's relayer bounty: disputing honest batches was free and paid. Fix: only `refute`
+(real headers show the batch false) pays the bounty; `reject` returns bonds only. Deployed contracts predate it.
+
+### WUJI-14 — Medium — Fixed in source — B pricing could start from a hand-picked header stamped in the future
+
+Superseded by T13 the same day: B was removed and relay-less pools price from the index's own newest
+validated header. Self-review 2026-10-02 (§2). B priced at supplied tip + 16 if that tip looked ≤ 30 min old, but the requester
+chooses the stopping header and Bitcoin allows timestamps 2 h ahead: a recent block stamped ahead could make an
+already-mined pricing height likely (≈ 0.07–0.43). Fix: B uses A's skew-aware margin on the supplied tip's age
+(≈ 7 h wait instead of 3–4 h). Deployed pools predate it.
+
 ## Verification performed
 
 - 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.

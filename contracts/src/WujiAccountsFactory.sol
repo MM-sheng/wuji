@@ -35,15 +35,15 @@ contract WujiAccountsFactory {
         return [K_5, K_10, K_25][tier];
     }
 
-    /// @notice Create the three pools for `asset`, once, by anyone.
-    function create(IERC20 asset) external returns (WujiAccounts[3] memory created) {
-        require(address(pools[address(asset)][0]) == address(0), "exists");
-        for (uint256 t; t < TIERS; t++) {
-            created[t] = new WujiAccounts(WujiAccounts.Config(
-                asset, index, kOf(t), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, BOUNTY_DIVISOR, BUFFER_BPS));
-            pools[address(asset)][t] = created[t];
-            emit Created(address(asset), t, kOf(t), address(created[t]));
-        }
+    /// @notice Create the pool for (`asset`, `tier`), once, by anyone. One pool per call: three pools in one
+    /// transaction need ≈ 18.5M gas, above the 2^24 per-transaction gas cap (EIP-7825) on Ethereum and Sepolia.
+    function create(IERC20 asset, uint256 tier) external returns (WujiAccounts created) {
+        require(tier < TIERS, "tier");
+        require(address(pools[address(asset)][tier]) == address(0), "exists");
+        created = new WujiAccounts(WujiAccounts.Config(
+            asset, index, kOf(tier), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, BOUNTY_DIVISOR, BUFFER_BPS));
+        pools[address(asset)][tier] = created;
+        emit Created(address(asset), tier, kOf(tier), address(created));
     }
 
     function pool(address asset, uint256 tier) external view returns (WujiAccounts) {

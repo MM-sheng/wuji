@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-02",
+  "observedAt": "2026-10-02T09:36:49.170Z",
+  "faucet": "Google Cloud Web3",
+  "faucetURL": "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
+  "recipient": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "status": "browser-unavailable",
+  "requestSubmitted": false,
+  "receivedAmountWei": "0",
+  "transactionHash": null,
+  "browserAttempts": 2,
+  "error": "Unable to load browser request-header policy. Retry the browser command.",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": "0xaa36a7",
+  "balanceObservedAtBlock": "0xb47ba6",
+  "balanceWei": "33244908190292601",
+  "round": 2,
+  "roundTargetWei": "150000000000000000",
+  "roundConfirmedReceivedWei": "150000000000000000",
+  "roundTargetReached": true,
+  "note": "Round 2 was completed October 1. No claim was submitted by this attempt; balance observation alone does not establish whether another actor claimed today."
+}
