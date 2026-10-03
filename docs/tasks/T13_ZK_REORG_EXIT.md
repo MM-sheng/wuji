@@ -130,3 +130,16 @@ ZK 证明、挑战窗口、挂起队列、争议和保证金、`back` / `reject`
 所有运行时字节码与本地构建一致（屏蔽 immutable）。keeper 第一次推进：140 个区块头、推进 40 个高度、2,466,827 gas，
 `seenHeight` 969555。池子开放申请，部署时定价高度 969612。池子手续费经 FeeRouter 进入这个指数自己的储备，
 keeper 推进时按高度领取 WETH 赏金：提交者由协议手续费付费的闭环第一次完整部署。T12 的 watcher 已停用。
+
+## 精简合约（2026-10-03）
+
+项目方要求主网像比特币一样简单。主网合约改为独立的 `contracts/src/WujiHeaderIndex.sol`：只有三条规则、检查点、
+最新验证区块记录和提交者赏金，没有 ZK 证明验证、挑战窗口、挂起队列、争议与保证金。
+
+- 代码：约 440 行（含注释），运行时代码 10,104 字节；`ZkWujiIndex` 为 832 行、21,990 字节。规则函数从 `ZkWujiIndex`
+  程序化截取，逻辑不变。
+- 测试：`WujiHeaderIndex.t.sol`（规则 1、2，以及与 `ZkWujiIndex` 区块头路径在 1000 个真实区块头上状态逐位一致的差分测试）、
+  `WujiHeaderIndex.reorg.t.sol`（规则 3，真实挖分叉）、`WujiAccounts.headerIndex.t.sol`（池子接在新合约上）。Foundry 共 253 个通过。
+- keeper 自动识别：读不到 `verifier()` 等 ZK 查询时按只走区块头处理。部署脚本 `DeployHeaderIndex.s.sol` 改为部署新合约。
+- anvil 实测：部署脚本部署指数、储备、手续费路由；keeper 一笔提交 350 个区块头、推进 250 个高度，6,345,451 gas，S 与独立重算一致。
+- `ZkWujiIndex` 原样保留，作为 ZK 路径的测试网研究成果。

@@ -71,16 +71,18 @@ function prove(inputFile, outFile) {
 let immut, lastProgress = Date.now(), lastHeight = -1;
 export async function round(source) {
   assertChain(await rpc('eth_chainId', []), CHAIN_ID);
+  // WujiHeaderIndex (the mainnet contract) has no proof path: its ZK-only views do not exist and read as absent.
+  const optional = async (sig, fallback) => { try { return BigInt(await call(sel(sig))); } catch { return fallback; } };
   immut ||= {
     genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
     interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
     confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
     maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
-    maxProofHeaders: Number(BigInt(await call(sel('MAX_PROOF_HEADERS()')))),
-    headerOnly: BigInt(await call(sel('verifier()'))) === 0n,
+    maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
+    headerOnly: (await optional('verifier()', 0n)) === 0n,
   };
   // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
-  const pending = Number(BigInt(await call(sel('pendingCount()'))));
+  const pending = Number(await optional('pendingCount()', 0n));
   if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
     const tx = await send('finalize(uint256)', 1_500_000, '8');
     log(`finalize gas ${tx.gas} ${tx.hash}`);

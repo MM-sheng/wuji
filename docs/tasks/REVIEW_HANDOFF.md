@@ -7,8 +7,9 @@ claim here as something to check.
 ## 0. Priority: T13, the planned mainnet path
 
 The project decided ([decision](../decisions/2026-10-02-header-path-first.md), [T13](T13_ZK_REORG_EXIT.md)) that
-mainnet runs a **header-path-only `ZkWujiIndex`** (no verifier, no challenge window, no watchers) under three
-rules. This is what must be reviewed before mainnet; §1–§3 (the ZK challenge window) are a testnet option.
+mainnet runs **`WujiHeaderIndex`** (`contracts/src/WujiHeaderIndex.sol`, about 440 lines with comments: no verifier,
+no challenge window, no watchers) under three rules. Its rule code is carried over unchanged from `ZkWujiIndex`'s
+header path, which a differential test checks over 1,000 real headers. This is what must be reviewed before mainnet; §1–§3 (the ZK challenge window) are a testnet option.
 
 | object | identifier |
 |---|---|

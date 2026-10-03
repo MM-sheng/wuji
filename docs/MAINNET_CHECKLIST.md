@@ -3,7 +3,7 @@
 Every item is required unless it is explicitly marked informational. Record links, hashes, addresses,
 and reviewer names in the release ticket; a checked box without evidence is insufficient.
 
-**Mainnet path (decided 2026-10-02):** a header-path-only `ZkWujiIndex` under the three T13 rules — valid
+**Mainnet path (decided 2026-10-02):** `WujiHeaderIndex` (the three T13 rules and nothing else; the ZK proof path stays in `ZkWujiIndex` for testnet research) — valid
 headers; a height counts only `CONFIRMATIONS = 100` deep; a branch that out-works the finalized chain by
 `CONFIRMATIONS + 144` blocks seals the index — with its own `RelayerRewards` (1/100000 per height) and
 `FeeRouter`, and T11 pools priced from the index's newest validated header. No verifier, no challenge
@@ -20,7 +20,8 @@ and as the vaults' current binding; its items apply only if it ships.
 - [x] Decide the confirmation depth and seal rule (K = 100, Bitcoin's coinbase maturity; margin 144) and record why ([T13](tasks/T13_ZK_REORG_EXIT.md)).
 - [x] Implement rules 2 and 3, the seen-header record and the header-only keeper mode; test real forks on a test-only low-difficulty subclass (`test/ZkWujiReorg.t.sol`, threshold exact and fuzzed).
 - [x] Deploy the exact shape on a public testnet, compare runtime bytecode, and fold live headers ([sepolia-t13.json](../contracts/deployments/sepolia-t13.json)).
-- [ ] Independent review of `_apply`/`_replay`/`foldHeaders` against Bitcoin Core (compact bits, retarget clamp, MTP, future bound, work) and of `freezeOnReorg` (fork base from `committedAt`, same-chain exclusion, work threshold, difficulty changes inside a branch, gas of the worst real seal).
+- [x] Keep the mainnet contract minimal: `WujiHeaderIndex` carries only the three rules (10,104-byte runtime against 21,990 for `ZkWujiIndex`), with a differential test showing identical state to `ZkWujiIndex`'s header path over 1,000 real headers.
+- [ ] Independent review of `WujiHeaderIndex`: `_apply`/`_replay`/`foldHeaders` against Bitcoin Core (compact bits, retarget clamp, MTP, future bound, work) and of `freezeOnReorg` (fork base from `committedAt`, same-chain exclusion, work threshold, difficulty changes inside a branch, gas of the worst real seal).
 - [ ] Confirm every transaction the system needs fits the 2^24 per-transaction gas cap (EIP-7825) with margin: folds ≤ 250 heights (≈ 6.4M gas), worst seal ≤ `MAX_REORG_HEADERS` (800, ≈ 15M gas). Re-measure on the target chain.
 - [ ] Choose the anchor near the tip at deployment, cross-check its hash and epoch-start time with two independent Bitcoin nodes, and verify `CONFIRMATIONS`, `REORG_MARGIN`, `GENESIS_HEIGHT`, `CHECKPOINT_INTERVAL`, `verifier() == 0` and `committedAt(anchor)` from deployed state.
 - [ ] Rehearse a seal on a fork network: a real deep reorg (low-difficulty fork) seals; pools exit through `freezePool`; nothing advances afterwards.

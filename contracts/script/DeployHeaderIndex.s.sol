@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 import {Script, console} from "forge-std/Script.sol";
-import {ZkWujiIndex, ISP1Verifier} from "../src/ZkWujiIndex.sol";
+import {WujiHeaderIndex} from "../src/WujiHeaderIndex.sol";
 import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {FeeRouter} from "../src/FeeRouter.sol";
 
-/// T13, the mainnet shape on a testnet: a header-path-only ZkWujiIndex (no verifier, no challenge window) with
-/// CONFIRMATIONS = 100, its own operations reserve (RelayerRewards) and a FeeRouter for consumers' fees, so
+/// T13, the mainnet shape on a testnet: WujiHeaderIndex (three rules, no proof path) with CONFIRMATIONS = 100, its own operations reserve (RelayerRewards) and a FeeRouter for consumers' fees, so
 /// submitters are paid from fees like miners. RelayerRewards binds the index address before the index exists:
 /// it is predicted from the deployer's nonce and checked by the index's constructor.
 ///
@@ -26,26 +25,23 @@ contract DeployHeaderIndex is Script {
             require(t.length == 11, "11 ancestor times");
             for (uint256 i; i < 11; i++) times[i] = uint32(t[i]);
         }
-        ZkWujiIndex.Schedule memory schedule =
-            ZkWujiIndex.Schedule(height + 1, 4320, uint64(vm.envOr("CONFIRMATIONS", uint256(100))));
+        uint64 confirmations = uint64(vm.envOr("CONFIRMATIONS", uint256(100)));
         address sender = msg.sender;
 
         vm.startBroadcast();
         address predicted = vm.computeCreateAddress(sender, vm.getNonce(sender) + 1);
-        RelayerRewards rewards = new RelayerRewards(predicted, schedule.genesisHeight);
-        ZkWujiIndex idx = new ZkWujiIndex(
-            ISP1Verifier(address(0)), bytes32(0), rewards, anchor, height, epochStart, times, 0, schedule,
-            ZkWujiIndex.Challenge(0, 0, 0)
-        );
+        RelayerRewards rewards = new RelayerRewards(predicted, height + 1);
+        WujiHeaderIndex idx =
+            new WujiHeaderIndex(rewards, anchor, height, epochStart, times, 0, height + 1, 4320, confirmations);
         FeeRouter router = new FeeRouter(rewards);
         vm.stopBroadcast();
 
         require(address(idx) == predicted, "index address prediction");
         require(rewards.index() == address(idx) && address(router.rewards()) == address(rewards), "binding");
-        require(address(idx.verifier()) == address(0) && idx.CONFIRMATIONS() == schedule.confirmations, "shape");
+        require(idx.CONFIRMATIONS() == confirmations, "shape");
         require(idx.lastHeight() == height && idx.committedAt(height) != bytes32(0) && !idx.frozen(), "state");
         console.log("RelayerRewards", address(rewards));
-        console.log("ZkWujiIndex", address(idx));
+        console.log("WujiHeaderIndex", address(idx));
         console.log("FeeRouter", address(router));
     }
 }
