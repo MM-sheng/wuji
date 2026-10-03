@@ -123,7 +123,7 @@ ZK 证明、挑战窗口、挂起队列、争议和保证金、`back` / `reject`
 - anvil 实测：K = 100、只走区块头路径的合约，keeper 一笔提交 350 个区块头、推进 250 个高度，634 万 gas；
   `seenHeight` 比已终结高度多 100；S 与独立重算一致。
 
-## Sepolia 部署（2026-10-02）
+## Sepolia 部署（2026-10-02，已被下文 2026-10-03 部署取代）
 
 主网形态原样部署在测试网：只走区块头路径的 `ZkWujiIndex` `0xc076e54b…Ea78`（K = 100，锚点 969415），
 自带运营储备 `RelayerRewards` `0x72C276A1…Cb79` 和 `FeeRouter` `0x20B43677…cFC2`，三档 WETH 永续池（工厂 `0x1f1773D6…9985`）。
@@ -143,3 +143,14 @@ keeper 推进时按高度领取 WETH 赏金：提交者由协议手续费付费�
 - keeper 自动识别：读不到 `verifier()` 等 ZK 查询时按只走区块头处理。部署脚本 `DeployHeaderIndex.s.sol` 改为部署新合约。
 - anvil 实测：部署脚本部署指数、储备、手续费路由；keeper 一笔提交 350 个区块头、推进 250 个高度，6,345,451 gas，S 与独立重算一致。
 - `ZkWujiIndex` 原样保留，作为 ZK 路径的测试网研究成果。
+
+## Sepolia 部署：精简合约（2026-10-03）
+
+精简合约按主网形态重新部署（源码 `7dffab4`，[清单](../../contracts/deployments/sepolia-header.json)）：
+`WujiHeaderIndex` `0x2d61Dd88…B9f7`（K = 100，锚点 969545，部署 2,445,732 gas），运营储备 `RelayerRewards` `0x7aAe0Cd0…2D0f`
+（`BOUNTY_DIVISOR` 100,000），`FeeRouter` `0xebA01F02…3B28`，三档 WETH 永续池（工厂 `0x0086b301…3a4e`）。
+指数、储备、路由与池子的运行时字节码都与本地构建一致（屏蔽 immutable）；每个池子 `RELAY_TIP` 为 false、
+`INDEX_CAN_FREEZE` 为 true、手续费进这个 FeeRouter。keeper 第一次推进：140 个区块头、推进 40 个高度、2,460,816 gas，
+`seenHeight` 969685。终端"比特币指数 · 直读"改读新合约（没有证明队列的查询按零处理）。
+
+旧的 `ZkWujiIndex` 部署留在链上、不再推进；它上面 2026-10-02 冒烟测试的两笔申请（定价 969672）要等那个指数推进过 969672 才会处理。

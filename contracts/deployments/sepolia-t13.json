@@ -108,5 +108,6 @@
     "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), header-only mode, ZK_REWARD_TOKENS=WETH, ACCOUNTS = the three pools; log /tmp/wuji-sepolia-t13-keeper.log",
     "watcher": "not needed for a header-only index; the T12 watcher was stopped"
   },
-  "supersedes": "sepolia-zk-t12-v2.json as the running Sepolia ZK-family index (that contract and its pools stay on chain, no longer maintained)"
+  "supersedes": "sepolia-zk-t12-v2.json as the running Sepolia ZK-family index (that contract and its pools stay on chain, no longer maintained)",
+  "supersededBy": "sepolia-header.json (2026-10-03: minimal WujiHeaderIndex; the keeper stopped folding this index)"
 }
