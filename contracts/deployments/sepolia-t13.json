@@ -101,7 +101,8 @@
       },
       "pricedAt": 969672,
       "principalEach": "997000000000000 (0.3% entry fee to the buffer)",
-      "expect": "processed once 969672 is folded, i.e. once the Bitcoin tip passes 969772 (K = 100) and the keeper folds: about 2026-10-04 01:00 UTC; the keeper marks it from headers and calls processMany"
+      "outcome": "abandoned 2026-10-03 by owner decision: this index is no longer folded (stopped at 969455), so the two requests stay pending; the end-to-end check moves to the new pools in sepolia-header.json",
+      "expect": "(original plan) processed once 969672 is folded, i.e. once the Bitcoin tip passes 969772 (K = 100) and the keeper folds: about 2026-10-04 01:00 UTC; the keeper marks it from headers and calls processMany"
     }
   },
   "operators": {
