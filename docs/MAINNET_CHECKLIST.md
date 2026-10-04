@@ -31,7 +31,7 @@ and as the vaults' current binding; its items apply only if it ships.
 
 - [x] T11 pools price from `seenHeight` + the age margin (one rule), refuse past 24 h, and keep the pending epochs sorted (`test/WujiAccounts.zk.t.sol`).
 - [x] Pools exit through `freezePool` after a seal (`test_aPoolOnTheIndexExitsAfterTheSeal`).
-- [ ] First live pool round trip on the testnet: entries at 969672 (2026-10-02) processed from headers; record the result in the manifest.
+- [ ] First live pool round trip on the testnet: entries at 969858 on the `WujiHeaderIndex` pools (2026-10-04; the 969672 entries on the superseded index were abandoned) processed from headers; record the result in the manifest.
 - [ ] Decide whether YANG/YIN vaults bind to the T13 index (they bind `WujiIndex` + relay today) and review that wiring if so.
 - [ ] Independent review of the age-margin table (Poisson, 1.25× rate, 2 h skew) and of `WujiAccountsFactory` one-pool-per-call creation.
 
@@ -39,7 +39,7 @@ and as the vaults' current binding; its items apply only if it ships.
 
 - [x] Measure gas per submitted header on the target shape (17.6k all-in on Sepolia) and publish the cost by fold frequency ([economics](decisions/2026-10-02-submitter-economics.md)).
 - [x] Set the reserve rate so a donation lasts: `BOUNTY_DIVISOR = 100000` (half-life ≈ 1.3 years).
-- [ ] Choose the deployment chain(s). Research ([chain choice](decisions/2026-10-03-chain-choice.md)) recommends Ethereum L1 as primary: ≈ USD 37 a month at the 0.067 gwei seen on 2026-10-03 (≈ USD 550 at 1 gwei), two folds a day. An added L2 should be an OP Stack chain (L2 time bound to its L1 origin, ≤ 30 min ahead); Arbitrum's sequencer may set timestamps up to 24 h in the past, which shrinks the pools' age margin. For any L2, document its operator/upgrade trust.
+- [x] Choose the deployment chain(s): **Ethereum L1 (decided 2026-10-03); no L2 for now.** Research ([chain choice](decisions/2026-10-03-chain-choice.md)) recommends Ethereum L1 as primary: ≈ USD 37 a month at the 0.067 gwei seen on 2026-10-03 (≈ USD 550 at 1 gwei), two folds a day. An added L2 should be an OP Stack chain (L2 time bound to its L1 origin, ≤ 30 min ahead); Arbitrum's sequencer may set timestamps up to 24 h in the past, which shrinks the pools' age margin. For any L2, document its operator/upgrade trust.
 - [x] Reserve funding at launch: **decided 2026-10-04, start at zero**. The project's own keepers pay gas until pool fees build the reserve; sweep every ≈ 2.9 days (412 heights in one 512-header call, ≈ USD 19 a month at 2026-10-03 L1 gas) while there are no users, twice a day once pools have users ([economics §6](decisions/2026-10-02-submitter-economics.md)). A donation (≈ USD 850 covers two folds a day) stays optional.
 - [ ] Run at least two independent keepers, each with its own RPC and funded key, folding at least twice a day while pools are open.
 
