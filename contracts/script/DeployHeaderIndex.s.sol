@@ -5,7 +5,7 @@ import {WujiHeaderIndex} from "../src/WujiHeaderIndex.sol";
 import {RelayerRewards} from "../src/RelayerRewards.sol";
 import {FeeRouter} from "../src/FeeRouter.sol";
 
-/// T13, the mainnet shape on a testnet: WujiHeaderIndex (three rules, no proof path) with CONFIRMATIONS = 100, its own operations reserve (RelayerRewards) and a FeeRouter for consumers' fees, so
+/// T13, the mainnet shape (Ethereum mainnet or a testnet): WujiHeaderIndex (three rules, no proof path) with CONFIRMATIONS = 100, its own operations reserve (RelayerRewards) and a FeeRouter for consumers' fees, so
 /// submitters are paid from fees like miners. RelayerRewards binds the index address before the index exists:
 /// it is predicted from the deployer's nonce and checked by the index's constructor.
 ///
@@ -14,7 +14,12 @@ import {FeeRouter} from "../src/FeeRouter.sol";
 contract DeployHeaderIndex is Script {
     function run() external {
         require(block.chainid == vm.envUint("EXPECTED_CHAIN_ID"), "wrong chain");
-        require(block.chainid == 11155111 || block.chainid == 97 || block.chainid == 31337, "testnets only until audited");
+        // Ethereum mainnet is allowed for the index, reserve and router only (2026-10-04 decision: they hold no user
+        // funds; the pools stay testnet-only in DeployAccounts.s.sol until audited).
+        require(
+            block.chainid == 1 || block.chainid == 11155111 || block.chainid == 97 || block.chainid == 31337,
+            "unsupported chain"
+        );
         string memory j = vm.readFile(vm.envString("ANCHOR_JSON"));
         bytes memory anchor = vm.parseJsonBytes(j, ".anchorHeader");
         uint64 height = uint64(vm.parseJsonUint(j, ".anchorHeight"));
@@ -23,9 +28,12 @@ contract DeployHeaderIndex is Script {
         {
             uint256[] memory t = vm.parseJsonUintArray(j, ".ancestorTimes");
             require(t.length == 11, "11 ancestor times");
-            for (uint256 i; i < 11; i++) times[i] = uint32(t[i]);
+            for (uint256 i; i < 11; i++) {
+                times[i] = uint32(t[i]);
+            }
         }
         uint64 confirmations = uint64(vm.envOr("CONFIRMATIONS", uint256(100)));
+        require(block.chainid != 1 || confirmations == 100, "mainnet: CONFIRMATIONS is 100");
         address sender = msg.sender;
 
         vm.startBroadcast();

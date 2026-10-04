@@ -12,6 +12,13 @@ window, no watchers. Design: [T13](tasks/T13_ZK_REORG_EXIT.md); decisions:
 The same shape runs on Sepolia as the minimal `WujiHeaderIndex` ([manifest](../contracts/deployments/sepolia-header.json)). The current review entry
 point is [REVIEW_HANDOFF.md](tasks/REVIEW_HANDOFF.md) §0.
 
+**Staged launch (decided 2026-10-04):** the index, its reserve and router go to Ethereum mainnet first, without a
+paid audit: they hold no user funds (the reserve starts at zero), and the worst outcome of a bug is a wrong S, fixed
+by redeploying from a new anchor. Before that launch the paid review below is replaced by the free evidence marked
+**[stage 1]**: a full-history replay, static analysis, a seal rehearsal, a public bug bounty and the live testnet round
+trip. The pools hold user funds and stay testnet-only (`DeployAccounts.s.sol` refuses mainnet) until the
+**[stage 2]** items, including an independent audit of the pools and a re-review of the index, are done.
+
 The relay path (`WujiIndex` + `BitcoinRelay`, T9 frozen exit, YANG/YIN vaults) is kept below as an alternative
 and as the vaults' current binding; its items apply only if it ships.
 
@@ -21,10 +28,13 @@ and as the vaults' current binding; its items apply only if it ships.
 - [x] Implement rules 2 and 3, the seen-header record and the header-only keeper mode; test real forks on a test-only low-difficulty subclass (`test/ZkWujiReorg.t.sol`, threshold exact and fuzzed).
 - [x] Deploy the exact shape on a public testnet, compare runtime bytecode, and fold live headers ([sepolia-header.json](../contracts/deployments/sepolia-header.json); the earlier `ZkWujiIndex` shape: [sepolia-t13.json](../contracts/deployments/sepolia-t13.json)).
 - [x] Keep the mainnet contract minimal: `WujiHeaderIndex` carries only the three rules (10,104-byte runtime against 21,990 for `ZkWujiIndex`), with a differential test showing identical state to `ZkWujiIndex`'s header path over 1,000 real headers.
-- [ ] Independent review of `WujiHeaderIndex`: `_apply`/`_replay`/`foldHeaders` against Bitcoin Core (compact bits, retarget clamp, MTP, future bound, work) and of `freezeOnReorg` (fork base from `committedAt`, same-chain exclusion, work threshold, difficulty changes inside a branch, gas of the worst real seal).
+- [x] **[stage 1]** Replay every Bitcoin mainnet header through `WujiHeaderIndex` and match S, work and tip hash against an independent computation: heights 11–969,692 (tip 969,792, hash cross-checked with mempool.space and blockstream.info), 24 segments, all pass; corrupted expectations, a flipped timestamp bit and a flipped difficulty bit each fail ([T13](tasks/T13_ZK_REORG_EXIT.md#全历史回放2026-10-04), `scripts/replay-history.mjs`, `test/FullHistoryReplay.t.sol`). Re-run on the release commit.
+- [ ] **[stage 1]** Static analysis (Slither, Aderyn) of `WujiHeaderIndex`, `RelayerRewards`, `FeeRouter`; triage every result.
+- [ ] **[stage 1]** Public bug bounty on the index, live before the mainnet deployment.
+- [ ] **[stage 2]** Independent review of `WujiHeaderIndex`: `_apply`/`_replay`/`foldHeaders` against Bitcoin Core (compact bits, retarget clamp, MTP, future bound, work) and of `freezeOnReorg` (fork base from `committedAt`, same-chain exclusion, work threshold, difficulty changes inside a branch, gas of the worst real seal).
 - [ ] Confirm every transaction the system needs fits the 2^24 per-transaction gas cap (EIP-7825) with margin: folds ≤ 250 heights (≈ 6.4M gas), worst seal ≤ `MAX_REORG_HEADERS` (800, ≈ 15M gas). Re-measure on the target chain.
 - [ ] Choose the anchor near the tip at deployment, cross-check its hash and epoch-start time with two independent Bitcoin nodes, and verify `CONFIRMATIONS`, `REORG_MARGIN`, `GENESIS_HEIGHT`, `CHECKPOINT_INTERVAL`, `verifier() == 0` and `committedAt(anchor)` from deployed state.
-- [ ] Rehearse a seal on a fork network: a real deep reorg (low-difficulty fork) seals; pools exit through `freezePool`; nothing advances afterwards.
+- [ ] **[stage 1]** Rehearse a seal on a fork network: a real deep reorg (low-difficulty fork) seals; pools exit through `freezePool`; nothing advances afterwards.
 - [ ] Observe at least one full 4320-height series on the testnet deployment, including pool entries and exits processed from headers.
 
 ## Consumers on the T13 index
@@ -53,7 +63,7 @@ and as the vaults' current binding; its items apply only if it ships.
 
 ## Review evidence
 
-- [ ] Independent smart-contract review completed against the exact release commit.
+- [ ] **[stage 2]** Independent smart-contract review completed against the exact release commit (pools, and a re-review of the index).
 - [ ] All high/critical findings fixed and the reviewer has checked the fixes.
 - [ ] `forge fmt --check`, `forge build --sizes`, `forge lint`, and `forge test -vvv` pass.
 - [ ] Run extended invariants with at least 1,000 runs and 100 depth on the audited production release commit. The v4 test candidate passed [10 seeded 100-run shards at depth 100](tasks/T8_RECOVERY_REPORT.md), with original predicates intact; that does not clear a later native-ETH/production release.
