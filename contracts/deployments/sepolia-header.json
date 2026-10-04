@@ -84,7 +84,26 @@
         "gas": 4053122
       }
     ],
-    "verification": "pool runtime equals the local build (immutables masked); factory index/treasury = above; each pool index = WujiHeaderIndex, RELAY_TIP false, INDEX_CAN_FREEZE true, treasury = FeeRouter above, next pricing 969738 at check"
+    "verification": "pool runtime equals the local build (immutables masked); factory index/treasury = above; each pool index = WujiHeaderIndex, RELAY_TIP false, INDEX_CAN_FREEZE true, treasury = FeeRouter above, next pricing 969738 at check",
+    "smoke": {
+      "date": "2026-10-04",
+      "pool": "0x0c92Bd736842268d85dDFD45036A104b9a6998A2 (10%/yr)",
+      "owner": "deployer 0x8596…e8Fd (owner approved)",
+      "transactions": {
+        "approve 0.001 WETH": "0x6f72ab8f4f7e4bf933aa4cec5a350062e594dbce09d2d6e2119351e9f2824928",
+        "enter yang 0.0005 (id 1)": "0x9bd7d57617b5edf8c67d3962e5ad4ce003c6413ce107ca933892937b2c90acc8",
+        "enter yin 0.0005 (id 2)": "0xa0618da58e14f81d178b229ed24bb2aa1a917a1c92b78deb69a78c5ed7c59c13"
+      },
+      "gas": {
+        "approve": 46052,
+        "first requestEnter": 265752,
+        "second requestEnter": 131186
+      },
+      "bitcoinTipAtRequest": 969783,
+      "pricedAt": 969858,
+      "principalEach": "498500000000000 (0.3% entry fee to the buffer)",
+      "expect": "processed once 969858 is folded, i.e. once the Bitcoin tip passes 969958 (K = 100) and the keeper folds: about 2026-10-05 06:00 UTC; the keeper marks it from headers and calls processMany"
+    }
   },
   "operators": {
     "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), header-only mode, ZK_REWARD_TOKENS=WETH, ACCOUNTS = the three pools; log /tmp/wuji-sepolia-header-keeper.log"
