@@ -102,7 +102,27 @@
       "bitcoinTipAtRequest": 969783,
       "pricedAt": 969858,
       "principalEach": "498500000000000 (0.3% entry fee to the buffer)",
-      "expect": "processed once 969858 is folded, i.e. once the Bitcoin tip passes 969958 (K = 100) and the keeper folds: about 2026-10-05 06:00 UTC; the keeper marks it from headers and calls processMany"
+      "expect": "processed once 969858 is folded, i.e. once the Bitcoin tip passes 969958 (K = 100) and the keeper folds: about 2026-10-05 06:00 UTC; the keeper marks it from headers and calls processMany",
+      "outcome": {
+        "date": "2026-10-05",
+        "result": "processed: ids 1 and 2 open at principal 0.0004985 WETH each (valueOf = principal at their own epoch)",
+        "fold": {
+          "tx": "0xc1a3d2ee53ac0210c9c201b6190c797e5bd939dad9ec7504b85b968d3d114574",
+          "headers": 176,
+          "folded": 76,
+          "gas": 3117604,
+          "lastHeight": 969915
+        },
+        "markWithHeaders": {
+          "tx": "0xf8374473b4bb10810c62a5a9168c6dabfec12c082b1fb1dcd702fc30cccb5cc9",
+          "gas": 350070
+        },
+        "processMany": {
+          "tx": "0x5f5973799b8240e947b40957f61bc5a7e19a214aadcf51929d9627b5c5c70ce3",
+          "gas": 185870
+        },
+        "delay": "about 6 hours later than expected: the keeper process's network stack wedged at 04:16 UTC (every RPC call and Bitcoin peer failed for 8 hours while fresh processes connected fine); restarted at 12:04 UTC, it folded and processed within two minutes. The keeper now exits after 12 failed rounds in a row and runs under scripts/supervise.sh"
+      }
     }
   },
   "operators": {

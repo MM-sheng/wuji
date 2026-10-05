@@ -216,9 +216,18 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const source = env.ZK_FIXTURE_FILE ? fixtureFile(env.ZK_FIXTURE_FILE)
     : env.ZK_FIXTURE_SOURCE ? fixtureSource(env.ZK_FIXTURE_SOURCE) : createBitcoinSource();
   log(`zk keeper on ${INDEX} (chain ${CHAIN_ID}); batch ${MIN_BATCH}..${MAX_BATCH}, max wait ${MAX_WAIT_MIN} min, fallback ${FALLBACK}`);
+  // A process whose network stack wedges does not heal by itself (seen 2026-10-05: every fetch and every
+  // Bitcoin peer failed for 8 hours while fresh processes on the same machine connected fine). After this many
+  // failed rounds in a row the keeper exits; a supervisor (scripts/supervise.sh, Docker's restart policy)
+  // starts a fresh one.
+  const MAX_FAILED = Number(env.ZK_MAX_FAILED_ROUNDS || 12);
+  let failed = 0;
   for (;;) {
-    try { const r = await round(source); if (r.action === 'wait') log(`waiting: ${r.available} headers past ${r.height}`); }
-    catch (e) { log('error:', e.message); }
+    try { const r = await round(source); failed = 0; if (r.action === 'wait') log(`waiting: ${r.available} headers past ${r.height}`); }
+    catch (e) {
+      log('error:', e.message);
+      if (++failed >= MAX_FAILED) { log(`${failed} rounds failed in a row; exiting for a restart`); process.exit(1); }
+    }
     if (ACCOUNTS.length) await maintainAccounts(source);
     if (env.ZK_ONCE) break;
     await new Promise(r => setTimeout(r, INTERVAL * 1000));
