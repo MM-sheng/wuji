@@ -97,15 +97,15 @@ def frame(canvas,doc):
     canvas.saveState();w,h=A4
     canvas.setFillColor(muted);canvas.setFont('Wuji',8)
     canvas.drawString(44,h-27,'WUJI / 可验证的随机结算指数')
-    canvas.drawRightString(w-44,h-27,'v0.1 · TESTNET RESEARCH')
+    canvas.drawRightString(w-44,h-27,'v0.2 · TESTNET RESEARCH')
     canvas.setStrokeColor(line);canvas.line(44,37,w-44,37)
-    canvas.drawString(44,24,'2026-09-21 · MD SHA256 '+source_hash)
+    canvas.drawString(44,24,'2026-10-03 · MD SHA256 '+source_hash)
     canvas.drawRightString(w-44,24,f'{doc.page} / {total_pages}' if total_pages else f'{doc.page}')
     canvas.restoreState()
 OUTPUT.parent.mkdir(parents=True,exist_ok=True)
 def build(target):
     SimpleDocTemplate(target,pagesize=A4,leftMargin=44,rightMargin=44,topMargin=47,bottomMargin=50,
-     title='WUJI · 无极 — 可验证的随机结算指数与公开市场基准',author='WUJI',subject='Technical whitepaper v0.1; testnet research',invariant=1).build(make_story(),onFirstPage=frame,onLaterPages=frame)
+     title='WUJI · 无极 — 可验证的随机结算指数与公开市场基准',author='WUJI',subject='Technical whitepaper v0.2; testnet research',invariant=1).build(make_story(),onFirstPage=frame,onLaterPages=frame)
 # First pass counts the pages so every footer can say "n / total"; the second writes the file.
 probe=io.BytesIO();build(probe);total_pages=len(PdfReader(probe).pages)
 build(str(OUTPUT))

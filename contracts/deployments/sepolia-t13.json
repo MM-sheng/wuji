@@ -101,12 +101,14 @@
       },
       "pricedAt": 969672,
       "principalEach": "997000000000000 (0.3% entry fee to the buffer)",
-      "expect": "processed once 969672 is folded, i.e. once the Bitcoin tip passes 969772 (K = 100) and the keeper folds: about 2026-10-04 01:00 UTC; the keeper marks it from headers and calls processMany"
+      "outcome": "abandoned 2026-10-03 by owner decision: this index is no longer folded (stopped at 969455), so the two requests stay pending; the end-to-end check moves to the new pools in sepolia-header.json",
+      "expect": "(original plan) processed once 969672 is folded, i.e. once the Bitcoin tip passes 969772 (K = 100) and the keeper folds: about 2026-10-04 01:00 UTC; the keeper marks it from headers and calls processMany"
     }
   },
   "operators": {
     "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), header-only mode, ZK_REWARD_TOKENS=WETH, ACCOUNTS = the three pools; log /tmp/wuji-sepolia-t13-keeper.log",
     "watcher": "not needed for a header-only index; the T12 watcher was stopped"
   },
-  "supersedes": "sepolia-zk-t12-v2.json as the running Sepolia ZK-family index (that contract and its pools stay on chain, no longer maintained)"
+  "supersedes": "sepolia-zk-t12-v2.json as the running Sepolia ZK-family index (that contract and its pools stay on chain, no longer maintained)",
+  "supersededBy": "sepolia-header.json (2026-10-03: minimal WujiHeaderIndex; the keeper stopped folding this index)"
 }

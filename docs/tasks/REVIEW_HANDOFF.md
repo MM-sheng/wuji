@@ -7,15 +7,16 @@ claim here as something to check.
 ## 0. Priority: T13, the planned mainnet path
 
 The project decided ([decision](../decisions/2026-10-02-header-path-first.md), [T13](T13_ZK_REORG_EXIT.md)) that
-mainnet runs a **header-path-only `ZkWujiIndex`** (no verifier, no challenge window, no watchers) under three
-rules. This is what must be reviewed before mainnet; §1–§3 (the ZK challenge window) are a testnet option.
+mainnet runs **`WujiHeaderIndex`** (`contracts/src/WujiHeaderIndex.sol`, about 440 lines with comments: no verifier,
+no challenge window, no watchers) under three rules. Its rule code is carried over unchanged from `ZkWujiIndex`'s
+header path, which a differential test checks over 1,000 real headers. This is what must be reviewed before mainnet; §1–§3 (the ZK challenge window) are a testnet option.
 
 | object | identifier |
 |---|---|
-| deployed index (Sepolia) | `0xc076e54b7c6Cc999883908453BBF7b349fc3Ea78`, K = 100 — [manifest](../../contracts/deployments/sepolia-t13.json) |
-| its reserve and fee router | `RelayerRewards` `0x72C276A12bb3b3E642216BcB67DE40e26e24Cb79`, `FeeRouter` `0x20B4367795a3886aE69dec0127Ebc8492E49cFC2` |
-| T11 pools on it (WETH) | factory `0x1f1773D691987833eEB3007FD9e404F66EA89985`, pools in the manifest |
-| source | `a79e176` for all of the above; branch `t12-challenge-window` |
+| deployed index (Sepolia) | `WujiHeaderIndex` `0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7`, K = 100 — [manifest](../../contracts/deployments/sepolia-header.json) |
+| its reserve and fee router | `RelayerRewards` `0x7aAe0Cd0e2F0341F1cE0466BbBA1752924ec2D0f`, `FeeRouter` `0xebA01F024d6100c375D63BadE6dF0aDf93b73B28` |
+| T11 pools on it (WETH) | factory `0x0086b301e9837686A399eaF09b4bD6bDA3F33a4e`, pools in the manifest |
+| source | `7dffab4` for all of the above; branch `t13-mainnet-docs`. The earlier header-only `ZkWujiIndex` deployment ([sepolia-t13.json](../../contracts/deployments/sepolia-t13.json)) is superseded |
 
 Scope, with the questions the authors most want answered:
 

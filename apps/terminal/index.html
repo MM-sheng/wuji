@@ -1201,7 +1201,7 @@ function exitActionAllowed(state, action) {
     if(n>=2n**256n)throw Error('数量过大');return n;
   }
   // ---------------------------------------------------------------- ZK index (T12): direct reads
-  const ZK_RELEASE={chainId:11155111,index:'0xc076e54b7c6Cc999883908453BBF7b349fc3Ea78',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
+  const ZK_RELEASE={chainId:11155111,index:'0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
   const ZK_SEL={tip:'0x2755cd2d',S:'0x4be1c796',firstPending:'0x6faf954b',nextBatch:'0xe7c51f1b',batch:'0x0eaa75fe',window:'0xd62aad29',bond:'0x4c68ae63',seenHeight:'0x42fc5369',seenTime:'0xaebd3c19',frozen:'0x054f7d9c',conf:'0x0438b0a4'};
   let ZK=null,zkError=null,zkBusy=false;
   async function readZk(){
@@ -1212,10 +1212,12 @@ function exitActionAllowed(state, action) {
       const block=await rpc('eth_getBlockByNumber',['latest',false]);
       // Every value comes from one block, so a batch cannot appear both pending and finalized.
       const call=sel=>rpc('eth_call',[{to:ZK_RELEASE.index,data:sel},block.number]);
+      // WujiHeaderIndex (the mainnet shape) has no proof queue: its missing views read as zero.
+      const opt=sel=>call(sel).catch(()=>'0x'+'0'.repeat(64));
       const wd=(hex,i)=>BigInt('0x'+hex.slice(2+64*i,66+64*i));
       const sg=(v,bits)=>v>=1n<<BigInt(bits-1)?v-(1n<<BigInt(bits)):v;
       const pad=n=>BigInt(n).toString(16).padStart(64,'0');
-      const [tip,S,first,next,win,sh,st,fr,cf]=await Promise.all([call(ZK_SEL.tip),call(ZK_SEL.S),call(ZK_SEL.firstPending),call(ZK_SEL.nextBatch),call(ZK_SEL.window),
+      const [tip,S,first,next,win,sh,st,fr,cf]=await Promise.all([call(ZK_SEL.tip),call(ZK_SEL.S),opt(ZK_SEL.firstPending),opt(ZK_SEL.nextBatch),opt(ZK_SEL.window),
         call(ZK_SEL.seenHeight),call(ZK_SEL.seenTime),call(ZK_SEL.frozen),call(ZK_SEL.conf)]);
       const z={block:Number(block.number),now:Number(block.timestamp),height:Number(wd(tip,1)),time:Number(wd(tip,3)),
         S:sg(wd(S,0),256),first:Number(wd(first,0)),next:Number(wd(next,0)),window:Number(wd(win,0)),batches:[],

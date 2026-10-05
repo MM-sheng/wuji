@@ -22,6 +22,7 @@ import { contractClient, decodeContinuity, sel, uint } from './zk-challenge.mjs'
 import { within as withinMs } from './zk-challenge.mjs';
 import { watch } from './zk-watcher.mjs';
 import { maintainPool } from './accounts.mjs';
+import { loadStates, planSeal, saveState } from './seal.mjs';
 export { decodeContinuity };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,6 +52,9 @@ if (REWARD_TOKENS.some(t => !/^0x[0-9a-f]{40}$/.test(t)) || new Set(REWARD_TOKEN
   throw Error('ZK_REWARD_TOKENS must be up to 8 distinct token addresses');
 }
 const tokens = `[${REWARD_TOKENS.join(',')}]`;
+// RelayerRewards.credit refuses more than MAX_HEIGHTS (256) heights per call when tokens are listed, which would
+// revert the whole fold: fail at start rather than on every fold.
+if (REWARD_TOKENS.length && MAX_FOLD > 256) throw Error('ZK_MAX_FOLD above 256 cannot collect bounties (RelayerRewards.MAX_HEIGHTS)');
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
@@ -68,19 +72,31 @@ function prove(inputFile, outFile) {
     (e, so, se) => e ? reject(Error('prover: ' + String(se || e.message).trim().split('\n').slice(-1)[0])) : resolve(JSON.parse(fs.readFileSync(outFile, 'utf8')))));
 }
 
-let immut, lastProgress = Date.now(), lastHeight = -1;
+let immut, lastProgress = Date.now(), lastHeight = -1, frozenLogged = false;
+// Finalized states seen on chain, kept so a deep reorg can be sealed from one of them (seal.mjs).
+const STATES = path.join(WORK, `sealable-states-${INDEX}.json`);
 export async function round(source) {
   assertChain(await rpc('eth_chainId', []), CHAIN_ID);
+  // WujiHeaderIndex (the mainnet contract) has no proof path: its ZK-only views do not exist and read as absent.
+  const optional = async (sig, fallback) => { try { return BigInt(await call(sel(sig))); } catch { return fallback; } };
   immut ||= {
     genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
     interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
     confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
     maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
-    maxProofHeaders: Number(BigInt(await call(sel('MAX_PROOF_HEADERS()')))),
-    headerOnly: BigInt(await call(sel('verifier()'))) === 0n,
+    maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
+    headerOnly: (await optional('verifier()', 0n)) === 0n,
+    margin: Number(await optional('REORG_MARGIN()', 144n)),
+    maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
   };
+  // Rule 3 sealed the index: nothing advances any more; pools exit through maintainAccounts (freezePool).
+  if ((await optional('frozen()', 0n)) === 1n) {
+    if (!frozenLogged) log('index is frozen (a deep reorg was sealed); nothing to fold');
+    frozenLogged = true;
+    return { action: 'frozen' };
+  }
   // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
-  const pending = Number(BigInt(await call(sel('pendingCount()'))));
+  const pending = Number(await optional('pendingCount()', 0n));
   if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
     const tx = await send('finalize(uint256)', 1_500_000, '8');
     log(`finalize gas ${tx.gas} ${tx.hash}`);
@@ -94,7 +110,25 @@ export async function round(source) {
       return { action: 'blocked' };
     }
   }
-  const start = decodeContinuity(await call(sel('continuity()')));
+  const raw = await call(sel('continuity()'));
+  const start = decodeContinuity(raw);
+  if (immut.headerOnly) {
+    saveState(STATES, raw);
+    const timed = { tip: () => within(source.tip(), 'Bitcoin tip'), at: h => within(source.at(h), `Bitcoin header ${h}`) };
+    const plan = await planSeal({ tip: start, states: loadStates(STATES), source: timed, confirmations: immut.confirmations,
+      margin: immut.margin, maxHeaders: immut.maxReorgHeaders });
+    if (plan.action === 'seal') {
+      const n = (plan.headers.length - 2) / 160;
+      await chain.simulate(INDEX, 'freezeOnReorg(bytes,bytes)', plan.base, plan.headers);
+      const tx = await send('freezeOnReorg(bytes,bytes)', headerGas(n), plan.base, plan.headers);
+      log(`freezeOnReorg: Bitcoin reorganized past ${start.height}; sealed from ${plan.forkBase} with ${n} headers to ${plan.branchHeight}, gas ${tx.gas} ${tx.hash}`);
+      return { action: 'sealed', ...tx, headers: n };
+    }
+    if (plan.action === 'wait') {
+      log('reorg:', plan.reason);
+      return { ...plan, action: 'reorg-wait' };
+    }
+  }
   if (start.height !== lastHeight) { lastHeight = start.height; lastProgress = Date.now(); }
   const tip = await within(source.tip(), 'Bitcoin tip');
   const available = tip - start.height;
@@ -179,11 +213,21 @@ export async function maintainAccounts(source, pools = ACCOUNTS) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const source = env.ZK_FIXTURE_SOURCE ? fixtureSource(env.ZK_FIXTURE_SOURCE) : createBitcoinSource();
+  const source = env.ZK_FIXTURE_FILE ? fixtureFile(env.ZK_FIXTURE_FILE)
+    : env.ZK_FIXTURE_SOURCE ? fixtureSource(env.ZK_FIXTURE_SOURCE) : createBitcoinSource();
   log(`zk keeper on ${INDEX} (chain ${CHAIN_ID}); batch ${MIN_BATCH}..${MAX_BATCH}, max wait ${MAX_WAIT_MIN} min, fallback ${FALLBACK}`);
+  // A process whose network stack wedges does not heal by itself (seen 2026-10-05: every fetch and every
+  // Bitcoin peer failed for 8 hours while fresh processes on the same machine connected fine). After this many
+  // failed rounds in a row the keeper exits; a supervisor (scripts/supervise.sh, Docker's restart policy)
+  // starts a fresh one.
+  const MAX_FAILED = Number(env.ZK_MAX_FAILED_ROUNDS || 12);
+  let failed = 0;
   for (;;) {
-    try { const r = await round(source); if (r.action === 'wait') log(`waiting: ${r.available} headers past ${r.height}`); }
-    catch (e) { log('error:', e.message); }
+    try { const r = await round(source); failed = 0; if (r.action === 'wait') log(`waiting: ${r.available} headers past ${r.height}`); }
+    catch (e) {
+      log('error:', e.message);
+      if (++failed >= MAX_FAILED) { log(`${failed} rounds failed in a row; exiting for a restart`); process.exit(1); }
+    }
     if (ACCOUNTS.length) await maintainAccounts(source);
     if (env.ZK_ONCE) break;
     await new Promise(r => setTimeout(r, INTERVAL * 1000));
@@ -191,6 +235,16 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
 }
 
 /// Test-only Bitcoin source backed by the committed mainnet fixture (heights checkpoint+1 ...).
+/// Drills only (scripts/seal-drill.mjs): a chain in a JSON file {first, headers: [hex…]}, re-read on every call
+/// so a drill can swap in a reorganized chain while the keeper runs.
+export function fixtureFile(file) {
+  const load = () => JSON.parse(fs.readFileSync(file, 'utf8'));
+  return {
+    tip: async () => { const c = load(); return c.first + c.headers.length - 1; },
+    at: async h => { const c = load(), header = c.headers[h - c.first]; if (!header) throw Error(`no header ${h}`); return { height: h, header, hash: step(header).hash }; },
+  };
+}
+
 function fixtureSource(count) {
   const meta = JSON.parse(fs.readFileSync(path.join(root, 'contracts/test/fixtures/bitcoin-timestamps.json'), 'utf8'));
   const hex = fs.readFileSync(path.join(root, 'contracts/test/fixtures/bitcoin-timestamps.hex'), 'utf8').trim().replace(/^0x/, '');

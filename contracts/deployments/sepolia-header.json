@@ -1,0 +1,132 @@
+{
+  "version": "t13-header-index-sepolia-v1",
+  "chainId": 11155111,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "deployedAt": "2026-10-03",
+  "sourceCommit": "7dffab4 (branch t13-mainnet-docs); pools from the same source",
+  "shape": "mainnet shape: minimal WujiHeaderIndex (three rules, no proof path), CONFIRMATIONS = 100, own RelayerRewards (BOUNTY_DIVISOR 100000) + FeeRouter",
+  "WujiHeaderIndex": "0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7",
+  "RelayerRewards": "0x7aAe0Cd0e2F0341F1cE0466BbBA1752924ec2D0f",
+  "FeeRouter": "0xebA01F024d6100c375D63BadE6dF0aDf93b73B28",
+  "anchor": "contracts/deployments/sepolia-header-anchor.json",
+  "anchorHeight": 969545,
+  "genesisHeight": 969546,
+  "checkpointInterval": 4320,
+  "confirmations": 100,
+  "reorgMargin": 144,
+  "transactions": [
+    {
+      "contract": "RelayerRewards",
+      "hash": "0xf9e78c969b1f98989eb5532d6a4c727907ac893b1d6bb068787caa7fe5fe033d",
+      "gas": 1111113
+    },
+    {
+      "contract": "WujiHeaderIndex",
+      "hash": "0xb3e90e1f651f8711fba93ad85a1e7ae62c8ed5eb50a7d0470f5b6e354ec61cfa",
+      "gas": 2445732
+    },
+    {
+      "contract": "FeeRouter",
+      "hash": "0x8773ed2e293b9736f1873e1d33fdb0ab1f83df9229d5d39a3c11c4e914e6a634",
+      "gas": 322014
+    }
+  ],
+  "verification": "runtime bytecode of all three equals the local build with immutables masked; CONFIRMATIONS 100, REORG_MARGIN 144, rewards bound both ways, committedAt(anchor) set, not frozen",
+  "firstFold": {
+    "tx": "0x93a02a3138dd6d4336f24a3354c3ebd31fdee6c172dbdcc0dd9620e2e11f72d9",
+    "headers": 140,
+    "folded": 40,
+    "gas": 2460816,
+    "lastHeight": 969585,
+    "seenHeight": 969685
+  },
+  "accounts": {
+    "factory": "0x0086b301e9837686A399eaF09b4bD6bDA3F33a4e",
+    "collateral": {
+      "symbol": "WETH",
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+    },
+    "treasury": "0xebA01F024d6100c375D63BadE6dF0aDf93b73B28 (this index's FeeRouter)",
+    "pricing": "one rule: seenHeight + margin for seenTime's age; refuses past 24 h",
+    "pools": [
+      {
+        "tier": "5%/yr",
+        "address": "0x84c42E7BC1d8F30f4Cc44f792cCE339A3fEb9716"
+      },
+      {
+        "tier": "10%/yr",
+        "address": "0x0c92Bd736842268d85dDFD45036A104b9a6998A2"
+      },
+      {
+        "tier": "25%/yr",
+        "address": "0xAAEfF83519b2590E448B83EB144c5Cb624F6402e"
+      }
+    ],
+    "transactions": [
+      {
+        "what": "factory",
+        "hash": "0x8fafbfdb1338ce0c310b67830053aaeb56c47173744b878c1390de1ae44f2bf7",
+        "gas": 5028449
+      },
+      {
+        "what": "create tier 0",
+        "hash": "0x564c793bc292e2e3945c6b8d653b4251ba322cea99ad4cdef265e508ddf52b6e",
+        "gas": 4053110
+      },
+      {
+        "what": "create tier 1",
+        "hash": "0x10f37f7ad28f5d77793f681653ba76f712fbf979d91dcaa122853070ff17de97",
+        "gas": 4053122
+      },
+      {
+        "what": "create tier 2",
+        "hash": "0x493a1668afb9c8f6714194e01adde4371bafa27fbfc0a373877185659a26de6f",
+        "gas": 4053122
+      }
+    ],
+    "verification": "pool runtime equals the local build (immutables masked); factory index/treasury = above; each pool index = WujiHeaderIndex, RELAY_TIP false, INDEX_CAN_FREEZE true, treasury = FeeRouter above, next pricing 969738 at check",
+    "smoke": {
+      "date": "2026-10-04",
+      "pool": "0x0c92Bd736842268d85dDFD45036A104b9a6998A2 (10%/yr)",
+      "owner": "deployer 0x8596…e8Fd (owner approved)",
+      "transactions": {
+        "approve 0.001 WETH": "0x6f72ab8f4f7e4bf933aa4cec5a350062e594dbce09d2d6e2119351e9f2824928",
+        "enter yang 0.0005 (id 1)": "0x9bd7d57617b5edf8c67d3962e5ad4ce003c6413ce107ca933892937b2c90acc8",
+        "enter yin 0.0005 (id 2)": "0xa0618da58e14f81d178b229ed24bb2aa1a917a1c92b78deb69a78c5ed7c59c13"
+      },
+      "gas": {
+        "approve": 46052,
+        "first requestEnter": 265752,
+        "second requestEnter": 131186
+      },
+      "bitcoinTipAtRequest": 969783,
+      "pricedAt": 969858,
+      "principalEach": "498500000000000 (0.3% entry fee to the buffer)",
+      "expect": "processed once 969858 is folded, i.e. once the Bitcoin tip passes 969958 (K = 100) and the keeper folds: about 2026-10-05 06:00 UTC; the keeper marks it from headers and calls processMany",
+      "outcome": {
+        "date": "2026-10-05",
+        "result": "processed: ids 1 and 2 open at principal 0.0004985 WETH each (valueOf = principal at their own epoch)",
+        "fold": {
+          "tx": "0xc1a3d2ee53ac0210c9c201b6190c797e5bd939dad9ec7504b85b968d3d114574",
+          "headers": 176,
+          "folded": 76,
+          "gas": 3117604,
+          "lastHeight": 969915
+        },
+        "markWithHeaders": {
+          "tx": "0xf8374473b4bb10810c62a5a9168c6dabfec12c082b1fb1dcd702fc30cccb5cc9",
+          "gas": 350070
+        },
+        "processMany": {
+          "tx": "0x5f5973799b8240e947b40957f61bc5a7e19a214aadcf51929d9627b5c5c70ce3",
+          "gas": 185870
+        },
+        "delay": "about 6 hours later than expected: the keeper process's network stack wedged at 04:16 UTC (every RPC call and Bitcoin peer failed for 8 hours while fresh processes connected fine); restarted at 12:04 UTC, it folded and processed within two minutes. The keeper now exits after 12 failed rounds in a row and runs under scripts/supervise.sh"
+      }
+    }
+  },
+  "operators": {
+    "keeper": "indexer/zk-keeper.mjs as 0x2302…53E4 (wuji-sepolia-v4), header-only mode, ZK_REWARD_TOKENS=WETH, ACCOUNTS = the three pools; log /tmp/wuji-sepolia-header-keeper.log"
+  },
+  "supersedes": "sepolia-t13.json (ZkWujiIndex in header-only shape; that contract and its pools stay on chain, no longer folded)"
+}

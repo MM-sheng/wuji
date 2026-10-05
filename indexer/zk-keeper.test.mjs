@@ -1,6 +1,8 @@
 import test from 'node:test'; import assert from 'node:assert/strict';
 process.env.RPC ||= 'http://127.0.0.1:1'; process.env.CHAIN_ID ||= '31337';
 process.env.ZK_INDEX ||= '0x' + '11'.repeat(20); process.env.ZK_UNLOCKED_FROM ||= '0x' + '22'.repeat(20);
+// The keeper saves finalized states for sealing (seal.mjs); keep them out of indexer/data.
+process.env.ZK_WORK_DIR ||= (await import('node:fs')).mkdtempSync((await import('node:path')).join((await import('node:os')).tmpdir(), 'wuji-keeper-test-'));
 const { decodeContinuity } = await import('./zk-keeper.mjs');
 const w = n => (BigInt.asUintN(256, BigInt(n))).toString(16).padStart(64, '0');
 test('continuity() decodes into the host input shape, including a negative U', () => {
