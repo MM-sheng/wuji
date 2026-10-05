@@ -51,6 +51,9 @@ if (REWARD_TOKENS.some(t => !/^0x[0-9a-f]{40}$/.test(t)) || new Set(REWARD_TOKEN
   throw Error('ZK_REWARD_TOKENS must be up to 8 distinct token addresses');
 }
 const tokens = `[${REWARD_TOKENS.join(',')}]`;
+// RelayerRewards.credit refuses more than MAX_HEIGHTS (256) heights per call when tokens are listed, which would
+// revert the whole fold: fail at start rather than on every fold.
+if (REWARD_TOKENS.length && MAX_FOLD > 256) throw Error('ZK_MAX_FOLD above 256 cannot collect bounties (RelayerRewards.MAX_HEIGHTS)');
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
