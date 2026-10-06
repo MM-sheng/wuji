@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WUJI · μ</title>
+<meta name="description" content="A public random index computed from Bitcoin block hashes and verified by an Ethereum contract with no owner, no admin and no token.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230e1116'/%3E%3Ctext x='32' y='46' font-family='Menlo,monospace' font-size='40' text-anchor='middle' fill='%23d8dee9'%3E%CE%BC%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0e1116;--panel:#131820;--panel2:#171d27;--line:#222a36;--line2:#2c3644;
+  --ink:#d8dee9;--muted:#8a94a6;--dim:#5b6575;--up:#22c58b;--dn:#ef5350;--acc:#4c8dff;--warn:#f5b342;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:5;background:rgba(14,17,22,.88);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:20px;height:56px}
+.brand{font:600 15px var(--mono);letter-spacing:.18em;color:var(--ink)}
+.brand b{font-weight:400;color:var(--muted);margin-right:10px;letter-spacing:0}
+nav{display:flex;gap:18px;margin-left:auto;font-size:14px}
+nav a{color:var(--muted)}nav a:hover{color:var(--ink);text-decoration:none}
+.lang{font:13px var(--mono);background:none;border:1px solid var(--line2);color:var(--muted);border-radius:6px;padding:4px 9px;cursor:pointer}
+.lang:hover{color:var(--ink);border-color:var(--muted)}
+section{padding:72px 0;border-bottom:1px solid var(--line);scroll-margin-top:56px}
+h1{font:600 clamp(48px,9vw,96px)/1 var(--mono);letter-spacing:.14em;margin:0 0 18px}
+h2{font:600 13px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 22px}
+h3{font-size:17px;margin:0 0 8px}
+.lead{font-size:clamp(18px,2.4vw,22px);color:var(--ink);max-width:720px;margin:0 0 10px}
+.motto{color:var(--muted);font-size:15px;margin:0 0 36px}
+.hero{padding-top:64px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px}
+.live{display:grid;grid-template-columns:1.1fr 2fr;gap:20px}
+.big{font:600 clamp(40px,6vw,64px)/1 var(--mono);margin:6px 0 4px}
+.label{font:12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:7px 0;border-top:1px solid var(--line)}
+.kv span{color:var(--muted)}.kv b{font:500 13px var(--mono);text-align:right;word-break:break-all}
+.badge{display:inline-block;font:12px var(--mono);border:1px solid var(--line2);border-radius:999px;padding:2px 10px;color:var(--warn)}
+.ok{color:var(--up)}.bad{color:var(--dn)}.dim{color:var(--dim)}
+.chart{position:relative;min-height:260px}
+.chart svg{display:block;width:100%;height:260px}
+.chart .tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line2);border-radius:6px;padding:6px 9px;font:12px var(--mono);white-space:nowrap;display:none}
+.verify{margin-top:14px;font:13px var(--mono);color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.grid .card p{margin:0;color:var(--muted);font-size:15px}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;font:13px/1.6 var(--mono);color:var(--ink);margin:0 0 16px}
+.rules{counter-reset:r;list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.rules li{counter-increment:r;position:relative;padding:16px 18px 16px 58px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.rules li::before{content:counter(r);position:absolute;left:18px;top:14px;font:600 20px var(--mono);color:var(--acc)}
+.rules p{margin:0;color:var(--muted);font-size:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.two>*,.live>*{min-width:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500}
+td.num{font-family:var(--mono);text-align:right}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.step .label{color:var(--acc)}
+.step.now{border-color:var(--acc)}
+p.note{color:var(--muted);font-size:14px}
+footer{padding:40px 0 60px;color:var(--dim);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between}
+@media (max-width:820px){.live,.two{grid-template-columns:1fr}nav{display:none}section{padding:52px 0}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#"><b>μ</b>WUJI</a>
+  <nav>
+    <a href="#index" data-i18n="nav.index">Index</a>
+    <a href="#how" data-i18n="nav.how">How it works</a>
+    <a href="#verify" data-i18n="nav.verify">Verify</a>
+    <a href="#run" data-i18n="nav.run">Run a keeper</a>
+    <a href="#security" data-i18n="nav.security">Security</a>
+    <a href="https://github.com/MM-sheng/wuji">GitHub</a>
+  </nav>
+  <button class="lang" id="lang" type="button" aria-label="Switch language">中文</button>
+</div></header>
+
+<main>
+<section class="hero" id="index"><div class="wrap">
+  <h1>WUJI</h1>
+  <p class="lead" data-i18n="hero.lead">A public random index computed from Bitcoin block hashes, kept by an Ethereum contract with no owner, no admin and no token.</p>
+  <p class="motto" data-i18n="hero.motto">From nothing, one; from one, two — and the two are always whole.</p>
+
+  <div class="live">
+    <div class="card">
+      <div class="label" data-i18n="live.level">Index level · 100·e<sup>S</sup></div>
+      <div class="big" id="level">—</div>
+      <div class="mono dim" id="sval">S = —</div>
+      <div style="margin:14px 0 10px"><span class="badge" id="netbadge">—</span></div>
+      <div class="kv"><span data-i18n="live.height">Counted Bitcoin height</span><b id="height">—</b></div>
+      <div class="kv"><span data-i18n="live.tip">Bitcoin tip</span><b id="btctip">—</b></div>
+      <div class="kv"><span data-i18n="live.seen">Newest header validated</span><b id="seen">—</b></div>
+      <div class="kv"><span data-i18n="live.status">Status</span><b id="status">—</b></div>
+      <div class="kv"><span data-i18n="live.contract">Contract</span><b id="contract">—</b></div>
+    </div>
+    <div class="card">
+      <div class="label" data-i18n="live.path">The last two days of counted heights: each step is a Bitcoin block hash, the end is the contract's S</div>
+      <div class="chart" id="chart"><svg id="svg" viewBox="0 0 800 260" preserveAspectRatio="none" role="img" aria-label="Index path"></svg><div class="tip" id="tip"></div></div>
+      <div class="verify" id="verify" data-i18n="live.loading">Loading…</div>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 data-i18n="what.title">What it is</h2>
+  <div class="grid">
+    <div class="card"><h3 data-i18n="what.1t">Anchored to Bitcoin work</h3><p data-i18n="what.1p">Every Bitcoin block moves S by a fixed function of its hash. Steering it means discarding blocks, and every discarded block costs its miner the block reward.</p></div>
+    <div class="card"><h3 data-i18n="what.2t">Anyone can recompute it</h3><p data-i18n="what.2p">The rule fits in five lines. The chart above is rebuilt in your browser from public block hashes and checked against the contract.</p></div>
+    <div class="card"><h3 data-i18n="what.3t">No owner, no admin, no token</h3><p data-i18n="what.3p">Nothing can pause, upgrade or redirect the contracts. There is no project token and nobody to trust with keys.</p></div>
+    <div class="card"><h3 data-i18n="what.4t">Runs unattended</h3><p data-i18n="what.4p">Anyone may submit Bitcoin headers. If nobody does, the index waits; it never computes a wrong value.</p></div>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2 data-i18n="how.title">How it works</h2>
+  <div class="two">
+    <div>
+      <p data-i18n="how.formula">For the raw 80-byte Bitcoin header at height h:</p>
+<pre>H = SHA256(SHA256(header))     <span class="dim">// block hash</span>
+R = SHA256(H)                  <span class="dim">// rehash</span>
+d = (sum of R's 32 bytes) − 4080
+S = 1.2e−5 × Σ d               <span class="dim">// from the anchor on</span>
+level = 100 × e^S</pre>
+      <p class="note" data-i18n="how.stats">Each block moves S by about ±0.5% (one standard deviation), never more than ±4.9%. With no selective publication, the expected move is zero.</p>
+    </div>
+    <ol class="rules">
+      <li><h3 data-i18n="how.r1t">Valid headers only</h3><p data-i18n="how.r1p">The contract checks proof of work, difficulty retargets, timestamps and linkage exactly as Bitcoin does.</p></li>
+      <li><h3 data-i18n="how.r2t">100 confirmations</h3><p data-i18n="how.r2p">A height counts only once 100 valid blocks follow it, Bitcoin's own maturity for new coins.</p></li>
+      <li><h3 data-i18n="how.r3t">Deep reorganization seals</h3><p data-i18n="how.r3p">If Bitcoin ever reorganizes past a counted height, anyone can prove it and the index freezes for good on its last consistent value.</p></li>
+    </ol>
+  </div>
+</div></section>
+
+<section id="verify"><div class="wrap">
+  <h2 data-i18n="verify.title">Verify it yourself</h2>
+  <p data-i18n="verify.p1">Every Bitcoin header since height 11 has been replayed through the production contract and matched against an independent computation. Repeat it:</p>
+<pre>git clone https://github.com/MM-sheng/wuji && cd wuji
+node scripts/replay-history.mjs                <span class="dim"># needs a local header file</span>
+cd contracts && WUJI_REPLAY_DIR=cache/replay \
+  forge test --match-contract FullHistoryReplay --gas-limit 18446744073709551615</pre>
+  <p class="note"><span data-i18n="verify.p2">Contract source:</span> <a href="https://github.com/MM-sheng/wuji/blob/main/contracts/src/WujiHeaderIndex.sol">WujiHeaderIndex.sol</a> · <span data-i18n="verify.p3">Whitepaper:</span> <a href="https://github.com/MM-sheng/wuji/blob/main/docs/WHITEPAPER.pdf">WHITEPAPER.pdf</a> · <span data-i18n="verify.p4">Deployments:</span> <a href="https://github.com/MM-sheng/wuji/tree/main/contracts/deployments">contracts/deployments</a></p>
+</div></section>
+
+<section id="run"><div class="wrap">
+  <h2 data-i18n="run.title">Run a keeper</h2>
+  <div class="two">
+    <p data-i18n="run.p1">A keeper downloads Bitcoin headers straight from the Bitcoin network and submits them. It needs Node 18, Foundry and a small amount of ETH for gas. Keepers are paid from fees once the operations reserve holds any; anyone can run one, and the more independent keepers, the less WUJI depends on anybody.</p>
+    <p data-i18n="run.p2">A keeper also watches for deep Bitcoin reorganizations and seals the index by itself if one happens. Keep it running: it can only seal from states it has seen.</p>
+  </div>
+  <p class="note"><a href="https://github.com/MM-sheng/wuji/blob/main/docs/KEEPERS.md" data-i18n="run.link">Keeper runbook →</a></p>
+</div></section>
+
+<section id="security"><div class="wrap">
+  <h2 data-i18n="sec.title">Security</h2>
+  <div class="two">
+    <div>
+      <p data-i18n="sec.p1">The index contracts have not had a paid audit. They hold no user funds. The evidence so far:</p>
+      <table><tbody>
+        <tr><td data-i18n="sec.e1">Full Bitcoin history replayed through the contract</td><td class="ok">✓</td></tr>
+        <tr><td data-i18n="sec.e2">Static analysis (Slither, Aderyn), every result triaged</td><td class="ok">✓</td></tr>
+        <tr><td data-i18n="sec.e3">Deep-reorg seal drilled end to end</td><td class="ok">✓</td></tr>
+        <tr><td data-i18n="sec.e4">Live testnet deployment with a pool round trip</td><td class="ok">✓</td></tr>
+        <tr><td data-i18n="sec.e5">Independent audit (before any pool holds funds)</td><td class="dim">—</td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <p data-i18n="sec.p2">Bug bounty, paid in ETH for valid findings in the index, reserve and router contracts:</p>
+      <table><tbody>
+        <tr><td data-i18n="sec.b1">Critical</td><td class="num">USD 200</td></tr>
+        <tr><td data-i18n="sec.b2">Medium</td><td class="num">USD 80</td></tr>
+        <tr><td data-i18n="sec.b3">Low</td><td class="num">USD 20</td></tr>
+      </tbody></table>
+      <p class="note"><span data-i18n="sec.p3">Total budget USD 300. Report privately:</span> <a href="https://github.com/MM-sheng/wuji/security/advisories/new" data-i18n="sec.report">Report a vulnerability</a> · <a href="https://github.com/MM-sheng/wuji/blob/main/SECURITY.md">SECURITY.md</a></p>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 data-i18n="road.title">Roadmap</h2>
+  <div class="steps">
+    <div class="card step now"><div class="label" data-i18n="road.1l">Stage 1 · now</div><h3 data-i18n="road.1t">The index on Ethereum</h3><p class="note" data-i18n="road.1p">Index, operations reserve and fee router. No user funds. Running on Sepolia; mainnet next.</p></div>
+    <div class="card step"><div class="label" data-i18n="road.2l">Stage 2 · after audit</div><h3 data-i18n="road.2t">Pools</h3><p class="note" data-i18n="road.2p">YANG and YIN accounts on the index, with caps that keep miner manipulation unprofitable and halve with Bitcoin's subsidy.</p></div>
+    <div class="card step"><div class="label" data-i18n="road.3l">Stage 3</div><h3 data-i18n="road.3t">Nobody in particular</h3><p class="note" data-i18n="road.3p">Independent keepers, a reserve paid by fees, everything public: WUJI keeps running whoever stays.</p></div>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <div><span class="mono">μ WUJI</span> · <span data-i18n="foot.1">No token. No admin. Not investment advice.</span></div>
+  <div><a href="https://github.com/MM-sheng/wuji">GitHub</a> · <a href="https://github.com/MM-sheng/wuji/blob/main/docs/WHITEPAPER.pdf" data-i18n="foot.wp">Whitepaper</a> · <a href="https://github.com/MM-sheng/wuji/blob/main/SECURITY.md" data-i18n="foot.sec">Security</a> · MIT</div>
+</div></footer>
+
+<script>
+// Live data comes from two public sources only: an Ethereum RPC for the contract, mempool.space for Bitcoin
+// block hashes. Nothing is sent anywhere else; no cookies; localStorage only caches public block data.
+const NETWORKS = {
+  sepolia: {
+    name: { en: 'Sepolia testnet · mainnet launching', zh: 'Sepolia 测试网 · 主网即将上线' },
+    chainId: 11155111,
+    rpc: ['https://ethereum-sepolia-rpc.publicnode.com', 'https://ethereum-sepolia.publicnode.com'],
+    index: '0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7',
+    anchor: 969545,            // GENESIS_HEIGHT − 1; checkpoints every 4320 heights after it
+    explorer: 'https://sepolia.etherscan.io',
+  },
+};
+const NET = NETWORKS.sepolia;
+const BTC = 'https://mempool.space/api';
+const UNIT = 12000000000000n; // S_wad per unit of d
+const WINDOW = 288;            // heights on the chart: about two days
+const AUTO = 600;              // verify automatically up to this many blocks; above, on request
+const INTERVAL = 4320;
+
+const T = {
+  zh: {
+    'nav.index':'指数','nav.how':'原理','nav.verify':'验证','nav.run':'运行 keeper','nav.security':'安全',
+    'hero.lead':'一个由比特币区块哈希算出的公开随机指数，由一份没有所有者、没有管理员、没有代币的以太坊合约保管。',
+    'hero.motto':'无极生太极，太极生两仪。',
+    'live.level':'指数水平 · 100·e<sup>S</sup>','live.height':'已计入的比特币高度','live.tip':'比特币链尾','live.seen':'验证过的最新区块',
+    'live.status':'状态','live.contract':'合约','live.path':'最近约两天已计入的高度：每一步来自一个比特币区块哈希，终点是合约里的 S','live.loading':'读取中…',
+    'what.title':'是什么','what.1t':'锚定比特币算力','what.1p':'每个比特币区块按自己哈希的固定函数推动 S。想操纵它只能丢弃区块，而每丢一个块，矿工就损失一个区块的奖励。',
+    'what.2t':'任何人都能重算','what.2p':'规则只有五行。上面的走势图就是你的浏览器从公开的区块哈希重新算出来的，并和合约核对过。',
+    'what.3t':'没有所有者、管理员和代币','what.3p':'没有任何人能暂停、升级或改动合约。没有项目代币，也没有需要信任的密钥持有人。',
+    'what.4t':'无人值守','what.4p':'任何人都可以提交比特币区块头。没人提交时指数只是暂停，永远不会算错。',
+    'how.title':'原理','how.formula':'对高度 h 的原始 80 字节比特币区块头：',
+    'how.stats':'每个区块让 S 变动约 ±0.5%（一个标准差），最多不超过 ±4.9%。没有选择性发布时，期望变动为零。',
+    'how.r1t':'只收合法区块头','how.r1p':'合约按比特币的规则检查工作量证明、难度调整、时间戳和前后链接。',
+    'how.r2t':'满 100 个确认','how.r2p':'一个高度后面有 100 个合法区块才计入，和比特币新币的成熟期相同。',
+    'how.r3t':'深度重组即封存','how.r3p':'如果比特币重组越过已计入的高度，任何人都能证明，指数随即永久冻结在最后一致的值上。',
+    'verify.title':'自己验证','verify.p1':'从高度 11 起的每一个比特币区块头，都已经在生产合约上重放，并与独立计算逐段核对。你可以自己再做一遍：',
+    'verify.p2':'合约源码：','verify.p3':'白皮书：','verify.p4':'部署记录：',
+    'run.title':'运行 keeper','run.p1':'keeper 直接从比特币网络下载区块头并提交。需要 Node 18、Foundry 和少量 ETH 付 gas。运营储备有钱后，keeper 可以从手续费里领赏金；任何人都可以运行，独立的 keeper 越多，WUJI 就越不依赖任何人。',
+    'run.p2':'keeper 还会盯着比特币的深度重组，一旦发生就自动封存指数。请让它一直运行：它只能从自己见过的状态发起封存。','run.link':'keeper 运行手册 →',
+    'sec.title':'安全','sec.p1':'指数合约还没有做过付费审计，它们不保管用户资金。目前的证据：',
+    'sec.e1':'比特币全部历史区块头在合约上重放','sec.e2':'静态分析（Slither、Aderyn），逐条处理','sec.e3':'深度重组封存的完整演练','sec.e4':'测试网实盘部署和池子往返','sec.e5':'独立审计（在池子保管资金之前）',
+    'sec.p2':'漏洞赏金：指数、运营储备、手续费路由合约中的有效漏洞，以 ETH 支付：','sec.b1':'严重','sec.b2':'中等','sec.b3':'轻微',
+    'sec.p3':'总预算 300 美元。私密报告：','sec.report':'提交漏洞报告',
+    'road.title':'路线','road.1l':'第一步 · 现在','road.1t':'指数上以太坊','road.1p':'指数、运营储备、手续费路由，不保管用户资金。正在 Sepolia 运行，下一步上主网。',
+    'road.2l':'第二步 · 审计之后','road.2t':'池子','road.2p':'基于指数的阳、阴账户；规模上限保证矿工操纵无利可图，并随比特币补贴一起减半。',
+    'road.3l':'第三步','road.3t':'不依赖任何人','road.3p':'独立的 keeper、靠手续费运转的储备、一切公开：无论谁留下，WUJI 都继续运行。',
+    'foot.1':'没有代币，没有管理员，不构成投资建议。','foot.wp':'白皮书','foot.sec':'安全',
+  },
+};
+const EN = {};
+let lang;
+try { lang = localStorage.getItem('wuji.lang'); } catch {}
+if (lang !== 'zh' && lang !== 'en') lang = (navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+const tr = (k) => (lang === 'zh' && T.zh[k]) || EN[k] || k;
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  for (const el of document.querySelectorAll('[data-i18n]')) {
+    const k = el.dataset.i18n;
+    if (!(k in EN)) EN[k] = el.innerHTML;
+    el.innerHTML = tr(k);
+  }
+  document.getElementById('lang').textContent = lang === 'zh' ? 'EN' : '中文';
+  render();
+}
+document.getElementById('lang').onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; try { localStorage.setItem('wuji.lang', lang); } catch {} applyLang(); };
+
+const $ = id => document.getElementById(id);
+const short = a => a.slice(0, 6) + '…' + a.slice(-4);
+const fmt = n => Number(n).toLocaleString('en-US');
+const ago = t => { const s = Math.max(0, Date.now() / 1000 - t), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return lang === 'zh' ? `${h} 小时 ${m} 分前` : `${h}h ${m}m ago`; };
+const word = (hex, i) => BigInt('0x' + hex.slice(2 + 64 * i, 66 + 64 * i));
+
+async function rpc(method, params) {
+  let last;
+  for (const url of NET.rpc) {
+    try {
+      const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) });
+      const j = await r.json();
+      if (j.error) throw Error(j.error.message);
+      return j.result;
+    } catch (e) { last = e; }
+  }
+  throw last;
+}
+const call = (data, block) => rpc('eth_call', [{ to: NET.index, data }, block]);
+
+let state = null, path = null, verified = null, verifiedFrom = 0, error = null, done = 0, total = 0, pending = 0;
+
+async function loadChain() {
+  if (Number(await rpc('eth_chainId', [])) !== NET.chainId) throw Error('wrong chain');
+  const block = await rpc('eth_blockNumber', []); // one block for every read
+  const [s, last, seen, seenTime, frozen, tip] = await Promise.all(
+    ['0x4be1c796', '0x25159aa9', '0x42fc5369', '0xaebd3c19', '0x054f7d9c', '0x2755cd2d'].map(d => call(d, block)));
+  return { S: BigInt.asIntN(256, word(s, 0)), last: Number(word(last, 0)), seen: Number(word(seen, 0)),
+    seenTime: Number(word(seenTime, 0)), frozen: word(frozen, 0) === 1n, tipTime: Number(word(tip, 3)) };
+}
+
+// d for heights from..to, from mempool.space block hashes. Cached: deep blocks never change.
+const cacheKey = 'wuji.d.' + NET.anchor;
+let cache = {};
+try { cache = JSON.parse(localStorage.getItem(cacheKey) || '{}'); } catch {}
+async function deltas(from, to, progress) {
+  const missing = () => { const m = []; for (let h = from; h <= to; h++) if (!(h in cache)) m.push(h); return m; };
+  const total = missing().length;
+  const take = async top => {
+    const blocks = await (await fetch(`${BTC}/v1/blocks/${top}`)).json(); // 15 blocks ending at `top`
+    for (const b of blocks) {
+      if (b.height < from || b.height > to || b.height in cache) continue;
+      const internal = new Uint8Array(b.id.match(/../g).map(x => parseInt(x, 16)).reverse());
+      const r = new Uint8Array(await crypto.subtle.digest('SHA-256', internal));
+      cache[b.height] = r.reduce((a, x) => a + x, 0) - 4080;
+    }
+  };
+  for (let round = 0; round < 3; round++) {
+    const need = missing();
+    if (!need.length) break;
+    const tops = [];
+    for (let i = need.length - 1; i >= 0;) { tops.push(need[i]); const floor = need[i] - 14; while (i >= 0 && need[i] >= floor) i--; }
+    for (let i = 0; i < tops.length; i += 4) {
+      await Promise.all(tops.slice(i, i + 4).map(take));
+      progress && progress(total - missing().length, total);
+    }
+  }
+  if (missing().length) throw Error('block source missing ' + missing()[0]);
+  try { localStorage.setItem(cacheKey, JSON.stringify(cache)); } catch {}
+  const out = [];
+  for (let h = from; h <= to; h++) out.push(cache[h]);
+  return out;
+}
+
+// The chart ends at the contract's S and steps back through Bitcoin block hashes.
+async function loadPath(s) {
+  const from = Math.max(NET.anchor + 1, s.last - WINDOW + 1);
+  const d = await deltas(from, s.last);
+  const pts = [];
+  let S = s.S;
+  pts.push([s.last, S]);
+  for (let i = d.length - 1; i >= 0; i--) { S -= BigInt(d[i]) * UNIT; pts.push([from + i - 1, S]); }
+  return pts.reverse();
+}
+
+// Verification: from the last checkpoint the contract recorded (or the anchor), Σ d must reach the contract's S.
+async function verifyBase(s) {
+  const base = NET.anchor + Math.floor((s.last - NET.anchor) / INTERVAL) * INTERVAL;
+  if (base === NET.anchor) return { base, S0: 0n };
+  const pad = h => h.toString(16).padStart(64, '0');
+  if (word(await call('0x79a2496a' + pad(base), 'latest'), 0) !== 1n) throw Error('checkpoint missing at ' + base);
+  return { base, S0: BigInt.asIntN(256, word(await call('0x245bc84c' + pad(base), 'latest'), 0)) };
+}
+async function runVerify() {
+  const s = state;
+  verified = null; done = 0; total = 0; render();
+  const { base, S0 } = await verifyBase(s);
+  const d = await deltas(base + 1, s.last, (a, b) => { done = a; total = b; render(); });
+  const mine = d.reduce((acc, x) => acc + BigInt(x) * UNIT, S0);
+  verifiedFrom = base;
+  verified = mine === s.S ? true : `${(Number(mine) / 1e18).toFixed(6)} ≠ ${(Number(s.S) / 1e18).toFixed(6)}`;
+  render();
+}
+
+function render() {
+  if (!state) { $('verify').textContent = error ? (lang === 'zh' ? '读取失败：' : 'Could not load: ') + error : tr('live.loading'); return; }
+  const S = Number(state.S) / 1e18;
+  $('level').textContent = (100 * Math.exp(S)).toFixed(3);
+  $('sval').textContent = 'S = ' + S.toFixed(6);
+  $('netbadge').textContent = NET.name[lang];
+  $('height').textContent = '#' + fmt(state.last) + ' · ' + ago(state.tipTime);
+  $('seen').textContent = '#' + fmt(state.seen) + ' · ' + ago(state.seenTime);
+  $('btctip').textContent = state.btcTip ? '#' + fmt(state.btcTip) : '—';
+  $('status').innerHTML = state.frozen
+    ? `<span class="bad">${lang === 'zh' ? '已封存（深度重组）' : 'Sealed (deep reorganization)'}</span>`
+    : `<span class="ok">${lang === 'zh' ? '运行中' : 'Live'}</span>`;
+  $('contract').innerHTML = `<a href="${NET.explorer}/address/${NET.index}" target="_blank" rel="noopener">${short(NET.index)}</a>`;
+  drawChart();
+  const v = $('verify');
+  if (verified === null && error) v.innerHTML = `<span class="bad">✗</span> ` + (lang === 'zh' ? '读取比特币区块失败：' : 'Could not read Bitcoin blocks: ') + error;
+  else if (verified === 'ask') {
+    v.innerHTML = (lang === 'zh' ? `核对需要读取 ${fmt(pending)} 个比特币区块哈希。` : `Verifying reads ${fmt(pending)} Bitcoin block hashes. `)
+      + `<a href="#" id="go">${lang === 'zh' ? '在浏览器里核对' : 'Verify in your browser'}</a>`;
+    $('go').onclick = e => { e.preventDefault(); runVerify().catch(x => { error = x.message; render(); }); };
+  }
+  else if (verified === null) v.textContent = (lang === 'zh' ? '正在从比特币区块哈希重新计算…' : 'Recomputing from Bitcoin block hashes…') + (total ? ` ${fmt(done)} / ${fmt(total)}` : '');
+  else if (verified === true) {
+    const from = verifiedFrom === NET.anchor ? (lang === 'zh' ? '锚点' : 'the anchor') : (lang === 'zh' ? `检查点 #${fmt(verifiedFrom)}` : `checkpoint #${fmt(verifiedFrom)}`);
+    v.innerHTML = `<span class="ok">✓</span> ` + (lang === 'zh'
+      ? `你的浏览器从${from}起用 ${fmt(state.last - verifiedFrom)} 个比特币区块哈希算出的 S，与合约在 #${fmt(state.last)} 的值逐位一致。`
+      : `S recomputed in your browser from ${from} with ${fmt(state.last - verifiedFrom)} Bitcoin block hashes equals the contract's value at #${fmt(state.last)}, to the last digit.`);
+  }
+  else v.innerHTML = `<span class="bad">✗</span> ` + (lang === 'zh' ? `重算结果与合约不一致：${verified}` : `Recomputation differs from the contract: ${verified}`);
+}
+
+function drawChart() {
+  const svg = $('svg');
+  if (!path || path.length < 2) { svg.innerHTML = ''; return; }
+  const W = 800, H = 260, P = 8;
+  const lv = path.map(([, s]) => 100 * Math.exp(Number(s) / 1e18));
+  const lo = Math.min(...lv), hi = Math.max(...lv), pad = (hi - lo || 1) * 0.12;
+  const y0 = lo - pad, y1 = hi + pad;
+  const X = i => P + (W - 2 * P) * i / (path.length - 1), Y = v => H - P - (H - 2 * P) * (v - y0) / (y1 - y0);
+  let d = `M${X(0)},${Y(lv[0])}`;
+  for (let i = 1; i < lv.length; i++) d += `H${X(i).toFixed(1)}V${Y(lv[i]).toFixed(1)}`;
+  const base = Y(100);
+  svg.innerHTML =
+    `<line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="#2c3644" stroke-dasharray="4 4"/>` +
+    `<path d="${d}" fill="none" stroke="#4c8dff" stroke-width="1.6" vector-effect="non-scaling-stroke"/>` +
+    `<text x="${W - 4}" y="${base - 6}" fill="#5b6575" font-size="11" text-anchor="end" font-family="monospace">100</text>`;
+  const tip = $('tip'), box = $('chart');
+  box.onmousemove = e => {
+    const r = svg.getBoundingClientRect(), i = Math.round((e.clientX - r.left) / r.width * (path.length - 1));
+    if (i < 0 || i >= path.length) return;
+    tip.style.display = 'block';
+    tip.textContent = `#${fmt(path[i][0])}  ${lv[i].toFixed(3)}  S ${(Number(path[i][1]) / 1e18).toFixed(6)}`;
+    tip.style.left = Math.min(e.clientX - box.getBoundingClientRect().left + 12, box.clientWidth - tip.offsetWidth) + 'px';
+    tip.style.top = '8px';
+  };
+  box.onmouseleave = () => { tip.style.display = 'none'; };
+}
+
+async function refresh() {
+  try {
+    const s = await loadChain();
+    try { s.btcTip = Number(await (await fetch(`${BTC}/blocks/tip/height`)).text()); } catch {}
+    state = s; error = null; render();
+    if (!path || path[path.length - 1][0] !== s.last) {
+      path = await loadPath(s); render();
+      const base = NET.anchor + Math.floor((s.last - NET.anchor) / INTERVAL) * INTERVAL;
+      pending = 0;
+      for (let h = base + 1; h <= s.last; h++) if (!(h in cache)) pending++;
+      if (pending <= AUTO) await runVerify(); else { verified = 'ask'; render(); }
+    }
+  } catch (e) { error = e.message || String(e); }
+  render();
+}
+applyLang();
+refresh();
+setInterval(refresh, 120000);
+</script>
+</body>
+</html>
