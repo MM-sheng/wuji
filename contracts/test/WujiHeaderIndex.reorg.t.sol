@@ -213,7 +213,7 @@ contract WujiHeaderIndexReorgTest is Test {
         _foldMain();
         MockUSDT asset = new MockUSDT();
         WujiAccounts pool = new WujiAccounts(WujiAccounts.Config(
-            asset, WujiIndex(address(idx)), 11.5e18, 6, 2, 30 minutes, address(0xFEE), 0, 0, 1_000));
+            asset, WujiIndex(address(idx)), 11.5e18, 6, 2, 30 minutes, address(0xFEE), 0, 0, 1_000, type(uint128).max, 0));
         assertTrue(pool.INDEX_CAN_FREEZE());
         address alice = address(0xA11CE);
         asset.mint(alice, 100e18);

@@ -59,10 +59,19 @@ contract WujiAccounts is ReentrancyGuard {
     /// and farming it with dust requests drains at most one share per epoch (≈0.24%/day at 1/10000).
     uint256 public immutable BOUNTY_DIVISOR;
     uint256 public immutable BUFFER_BPS; // buffer kept against floor overshoot, relative to live principal
+    /// @notice Cap on each side's principal (live plus pending entries) while Bitcoin is in subsidy era CAP_ERA,
+    /// halved at every later halving: an entry priced at height h may not lift its side above `capAt(h)`.
+    /// A block can move S by at most 4080 · 1.2e-5 and costs its miner a block subsidy, so keeping every pool's
+    /// cap / K summed under subsidy / 0.04896 makes discarding or privately mining blocks unprofitable whatever
+    /// the outcome; the subsidy halves, so does the cap (docs/decisions/2026-10-06-pool-exposure.md).
+    uint256 public immutable MAX_PRINCIPAL;
+    uint64 public immutable CAP_ERA;
+    uint64 public constant HALVING_INTERVAL = 210_000;
 
     struct Config {
         IERC20 asset; WujiIndex index; int256 k; uint64 epoch; uint64 delay; uint256 maxTipAge;
         address treasury; uint256 feeBps; uint256 bountyDivisor; uint256 bufferBps;
+        uint256 maxPrincipal; uint64 capEra;
     }
 
     struct Account {
@@ -98,6 +107,8 @@ contract WujiAccounts is ReentrancyGuard {
     /// @notice Principal of entries requested but not yet priced. Counted in the buffer target so fees are not
     /// swept away before the accounts they protect have joined the pool.
     uint256 public pendingPrincipal;
+    /// @notice The same, per side [yin, yang]: counted against the cap so queued entries cannot overshoot it.
+    uint128[2] public pendingIn;
     /// @notice Losses beyond the floor that neither the losing account nor the buffer paid. Winners are still
     /// credited those amounts, so this is the pool's only possible shortfall. It stays zero while the buffer
     /// covers overshoot, which is what `retire` and its bounty are for.
@@ -128,12 +139,22 @@ contract WujiAccounts is ReentrancyGuard {
         require(address(c.asset).code.length > 0 && address(c.index).code.length > 0, "not contract");
         require(c.k > 0 && c.epoch > 0 && c.delay >= 1 && c.maxTipAge > 0 && c.maxTipAge <= 2 hours, "params");
         require(c.treasury != address(0) && c.feeBps <= 100 && c.bufferBps <= 10_000, "fees");
+        require(c.maxPrincipal > 0, "cap");
         (bool ok, bytes memory ret) = address(c.index).staticcall(abi.encodeWithSignature("frozen()"));
         INDEX_CAN_FREEZE = ok && ret.length == 32;
         (ok, ret) = address(c.index).staticcall(abi.encodeWithSignature("relay()"));
         RELAY_TIP = ok && ret.length == 32;
         asset = c.asset; index = c.index; K = c.k; EPOCH = c.epoch; DELAY = c.delay; MAX_TIP_AGE = c.maxTipAge;
         treasury = c.treasury; FEE_BPS = c.feeBps; BOUNTY_DIVISOR = c.bountyDivisor; BUFFER_BPS = c.bufferBps;
+        MAX_PRINCIPAL = c.maxPrincipal; CAP_ERA = c.capEra;
+    }
+
+    /// @notice Each side's principal cap for entries priced at Bitcoin height `height`.
+    function capAt(uint64 height) public view returns (uint256) {
+        uint64 era = height / HALVING_INTERVAL;
+        if (era <= CAP_ERA) return MAX_PRINCIPAL;
+        uint64 halvings = era - CAP_ERA;
+        return halvings >= 256 ? 0 : MAX_PRINCIPAL >> halvings;
     }
 
     // ---------------------------------------------------------------- requests
@@ -233,6 +254,8 @@ contract WujiAccounts is ReentrancyGuard {
     function _enter(bool yang, uint128 amount, uint64 e) internal returns (uint256 id) {
         uint128 fee = _entryFee(amount);
         uint128 principal = amount - fee;
+        uint256 side = yang ? 1 : 0;
+        require(uint256(principalOf[side]) + pendingIn[side] + principal <= capAt(e), "pool full");
         uint256 before = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), amount);
         // Fee-on-transfer and other short-paying tokens would credit principal that never arrived.
@@ -243,6 +266,7 @@ contract WujiAccounts is ReentrancyGuard {
         accounts[id] = Account(msg.sender, yang, e, 0, principal);
         epochs[e].enterIn[yang ? 1 : 0] += principal;
         pendingPrincipal += principal;
+        pendingIn[side] += principal;
         emit EnterRequested(id, msg.sender, yang, principal, e);
     }
 
@@ -405,6 +429,7 @@ contract WujiAccounts is ReentrancyGuard {
         started = true; lastS = s;
         principalOf[0] -= ep.exitOut[0]; principalOf[1] -= ep.exitOut[1];
         pendingPrincipal -= uint256(ep.enterIn[0]) + ep.enterIn[1];
+        pendingIn[0] -= ep.enterIn[0]; pendingIn[1] -= ep.enterIn[1];
         if (!ep.frozenRefund) { principalOf[0] += ep.enterIn[0]; principalOf[1] += ep.enterIn[1]; }
         ep.acc = acc; ep.processed = true;
         head++;
