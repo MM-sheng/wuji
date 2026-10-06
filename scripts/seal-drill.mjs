@@ -72,8 +72,8 @@ try {
   const idxArgs = cast('abi-encode', 'f(bytes,uint64,uint32[11],uint64)', '0x' + main[ANCHOR - FIRST], String(ANCHOR), times, String(K));
   const INDEX = create(artifact('WujiHeaderIndex.reorg.t.sol', 'EasyHeaderIndex') + idxArgs.slice(2));
   const USDT = create(artifact('MockUSDT.sol', 'MockUSDT'));
-  const cfg = `(${USDT},${INDEX},11500000000000000000,6,2,1800,0x000000000000000000000000000000000000fEE0,0,0,1000)`;
-  const POOL = create(artifact('WujiAccounts.sol', 'WujiAccounts') + cast('abi-encode', 'f((address,address,int256,uint64,uint64,uint256,address,uint256,uint256,uint256))', cfg).slice(2));
+  const cfg = `(${USDT},${INDEX},11500000000000000000,6,2,1800,0x000000000000000000000000000000000000fEE0,0,0,1000,1000000000000000000000,0)`;
+  const POOL = create(artifact('WujiAccounts.sol', 'WujiAccounts') + cast('abi-encode', 'f((address,address,int256,uint64,uint64,uint256,address,uint256,uint256,uint256,uint256,uint64))', cfg).slice(2));
   log('index', INDEX, 'pool', POOL);
 
   // The production keeper, configured as on Sepolia but signing with anvil's unlocked account.

@@ -129,4 +129,4 @@ The release audit and production-parameter checks below remain separate from suc
 - [ ] Deploy the exact independently reviewed T9 release on a separate public testnet and verify a real wallet there. The current candidate has a separate [Sepolia v4 deployment](tasks/T9_SEPOLIA_V4_REPORT.md); independent release review and public MetaMask acceptance remain open. Existing v3 addresses cannot be upgraded.
 - [ ] Accept and disclose unallocated reserve/post-freeze fee retention, or separately redesign and review it before mainnet.
 - [ ] Complete the 48-hour author-shutdown drill with independent operators and document user exit (T8).
-- [ ] Publish conservative exposure policy and its private-cost assumptions; do not label the toy attack threshold a proven safe cap.
+- [x] Publish conservative exposure policy and its private-cost assumptions; do not label the toy attack threshold a proven safe cap. Replaced by a distribution-free bound (Σ m/K < subsidy / 0.04896) and enforced in the pools: per-side caps halving with the subsidy, one collateral per factory ([pool exposure](decisions/2026-10-06-pool-exposure.md)); part of the pool audit.

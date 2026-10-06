@@ -35,7 +35,7 @@ contract WujiAccountsTest is Test {
     }
 
     function make(int256 k) internal returns (WujiAccounts p) {
-        p = new WujiAccounts(WujiAccounts.Config(asset, idx, k, EPOCH, DELAY, 30 minutes, treasury, FEE, BOUNTY, 1_000));
+        p = new WujiAccounts(WujiAccounts.Config(asset, idx, k, EPOCH, DELAY, 30 minutes, treasury, FEE, BOUNTY, 1_000, type(uint128).max, 0));
         address[3] memory users = [alice, bob, carol];
         for (uint256 i; i < 3; i++) {
             asset.mint(users[i], 1_000_000e18);
@@ -169,7 +169,7 @@ contract WujiAccountsTest is Test {
     /// BSC testnet v3 has no frozen exit. A pool on it must still take requests and price epochs.
     function test_worksOnAnIndexWithoutFrozenExit() public {
         LegacyIndexMock legacy = new LegacyIndexMock(idx);
-        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(asset, WujiIndex(address(legacy)), K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000));
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(asset, WujiIndex(address(legacy)), K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, type(uint128).max, 0));
         assertFalse(p.INDEX_CAN_FREEZE());
         assertTrue(pool.INDEX_CAN_FREEZE());
         vm.prank(alice); asset.approve(address(p), type(uint256).max);
@@ -384,7 +384,7 @@ contract WujiAccountsTest is Test {
     }
 
     function test_factoryFixesTheMenu() public {
-        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000);
+        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000, asset, 300e18, 0);
         WujiAccounts[3] memory pools;
         for (uint256 t; t < 3; t++) {
             uint256 g = gasleft();
@@ -402,10 +402,80 @@ contract WujiAccountsTest is Test {
         f.create(asset, 3);
     }
 
+    /// The menu's exposure to S is bounded: per-side caps K · budget / 3, so Σ cap / K is the budget.
+    function test_factoryCapsTheMenusExposure() public {
+        uint256 budget = 300e18;
+        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000, asset, budget, 4);
+        uint256 sum;
+        for (uint256 t; t < 3; t++) {
+            WujiAccounts p = f.create(asset, t);
+            assertEq(p.MAX_PRINCIPAL(), f.capOf(t));
+            assertEq(p.CAP_ERA(), 4);
+            sum += p.MAX_PRINCIPAL() * 1e18 / uint256(p.K());
+        }
+        assertApproxEqAbs(sum, budget, 3, "sum of cap / K is the budget");
+        assertEq(f.capOf(2), 460e18, "K 4.6: 4.6 x 300 / 3");
+    }
+
+    /// One collateral per factory: nobody can widen the exposure with pools in other tokens.
+    function test_factoryTakesOneCollateral() public {
+        WujiAccountsFactory f = new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000, asset, 300e18, 0);
+        MockUSDT other = new MockUSDT();
+        vm.expectRevert(bytes("collateral"));
+        f.create(other, 0);
+        assertEq(address(f.pool(address(other), 0)), address(0));
+        vm.expectRevert(bytes("budget"));
+        new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000, asset, 0, 0);
+    }
+
+    function test_aPoolNeedsACap() public {
+        vm.expectRevert(bytes("cap"));
+        new WujiAccounts(WujiAccounts.Config(asset, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, 0, 0));
+    }
+
+    /// A side's live plus pending principal never exceeds the cap; the other side is unaffected; exits free room.
+    function test_eachSideIsCapped() public {
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(asset, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, 100e18, 0));
+        for (uint256 i; i < 3; i++) { vm.prank([alice, bob, carol][i]); asset.approve(address(p), type(uint256).max); }
+        advance(10);
+        (uint256 a,) = enter(p, alice, true, 60e18);
+        enter(p, bob, true, 40e18);          // pending entries count: yang is now full
+        vm.prank(carol);
+        vm.expectRevert(bytes("pool full"));
+        p.requestEnter(true, 1);
+        enter(p, carol, false, 100e18);      // yin has its own cap
+        vm.prank(carol);
+        vm.expectRevert(bytes("pool full"));
+        p.requestEnter(false, 1);
+        (,, uint64 e,,) = p.accounts(a);
+        if (idx.lastHeight() < e) advance(e - idx.lastHeight());
+        p.processMany(10);
+        assertEq(p.pendingIn(1), 0);
+        assertEq(p.principalOf(1), 100e18, "processed entries move from pending to live, still at the cap");
+        vm.prank(carol);
+        vm.expectRevert(bytes("pool full"));
+        p.requestEnter(true, 1);
+        uint64 x = exit(p, alice, a);        // an exit frees room once it is processed
+        if (idx.lastHeight() < x) advance(x - idx.lastHeight());
+        p.processMany(10);
+        enter(p, carol, true, 60e18);
+    }
+
+    /// The cap halves with Bitcoin's subsidy, by the pricing height alone.
+    function test_theCapHalvesWithEachHalving() public {
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(asset, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, 100e18, 4));
+        assertEq(p.capAt(0), 100e18, "earlier eras keep the cap");
+        assertEq(p.capAt(1_049_999), 100e18, "era 4: heights 840000..1049999");
+        assertEq(p.capAt(1_050_000), 50e18);
+        assertEq(p.capAt(1_260_000), 25e18);
+        assertEq(p.capAt(1_470_000), 12.5e18);
+        assertEq(p.capAt(type(uint64).max), 0, "eventually nothing new can enter");
+    }
+
     /// Invariant 7: yield accrues to holders through the token's own NAV and never enters the bet.
     function test_yieldTokenNavAccruesOutsideTheBet() public {
         MockWstETH w = new MockWstETH();
-        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(w, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000));
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(w, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, type(uint128).max, 0));
         w.mint(alice, 100e18); w.mint(bob, 100e18);
         vm.prank(alice); w.approve(address(p), type(uint256).max);
         vm.prank(bob); w.approve(address(p), type(uint256).max);
@@ -537,7 +607,7 @@ contract WujiAccountsTest is Test {
 
     function test_review_feeOnTransferTokenRejected() public {
         FeeToken f = new FeeToken();
-        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(f, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000));
+        WujiAccounts p = new WujiAccounts(WujiAccounts.Config(f, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, type(uint128).max, 0));
         f.mint(alice, 10e18);
         vm.prank(alice); f.approve(address(p), type(uint256).max);
         advance(10);

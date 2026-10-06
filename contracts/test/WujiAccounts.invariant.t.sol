@@ -157,7 +157,7 @@ contract WujiAccountsInvariantTest is Test {
         idx = new WujiIndex(BitcoinRelay(address(r)), 1000, 4320, RelayerRewards(address(0)));
         token = new MockUSDT();
         // K = 0.01: roughly 50% of principal per block, so floors, ceilings and overshoot happen within a run.
-        pool = new WujiAccounts(WujiAccounts.Config(token, idx, 0.01e18, 6, 2, 30 minutes, address(0xFEE), 30, 10_000, 1_000));
+        pool = new WujiAccounts(WujiAccounts.Config(token, idx, 0.01e18, 6, 2, 30 minutes, address(0xFEE), 30, 10_000, 1_000, type(uint128).max, 0));
         h = new AccountsHandler(pool, idx, r, token, freezes());
         h.mine(10);
         targetContract(address(h));
@@ -187,19 +187,21 @@ contract WujiAccountsInvariantTest is Test {
 
     /// Principal bookkeeping matches the accounts exactly.
     function invariant_principalBooks() public view {
-        uint256 pending; uint256[2] memory live;
+        uint256 pending; uint256[2] memory live; uint256[2] memory pendingSide;
         for (uint256 i; i < h.idCount(); i++) {
             uint256 id = h.ids(i);
             (address owner, bool yang, uint64 enterEpoch, uint64 exitEpoch, uint128 principal) = pool.accounts(id);
             if (owner == address(0)) continue;
             (bool entered, bool refunded) = pool.epochInfo(enterEpoch);
-            if (!entered) { pending += principal; continue; }
+            if (!entered) { pending += principal; pendingSide[yang ? 1 : 0] += principal; continue; }
             if (refunded) continue;
             bool exited;
             if (exitEpoch != 0) (,, exited) = pool.epochAcc(exitEpoch);
             if (!exited) live[yang ? 1 : 0] += principal;
         }
         assertEq(pool.pendingPrincipal(), pending, "pending");
+        assertEq(pool.pendingIn(0), pendingSide[0], "pending yin");
+        assertEq(pool.pendingIn(1), pendingSide[1], "pending yang");
         assertEq(pool.principalOf(0), live[0], "yin");
         assertEq(pool.principalOf(1), live[1], "yang");
     }
