@@ -314,10 +314,12 @@ contract ZkWujiIndex {
     }
 
     /// @dev Make a replay from the finalized state the new finalized state, as the header path always has.
-    function _commitReplay(Working memory w, uint64[] memory heights, int64[] memory us, address[] calldata rewardTokens)
-        internal
-        returns (uint64 folded)
-    {
+    function _commitReplay(
+        Working memory w,
+        uint64[] memory heights,
+        int64[] memory us,
+        address[] calldata rewardTokens
+    ) internal returns (uint64 folded) {
         for (uint256 i = 0; i < heights.length; ++i) {
             _recordCheckpoint(heights[i], int256(us[i]) * UNIT);
         }
@@ -699,13 +701,11 @@ contract ZkWujiIndex {
     // ------------------------------------------------------------------ rules (identical to the guest)
 
     /// @dev Mutates `state` and `times` in place (they are memory references) and returns the new work.
-    function _apply(
-        Continuity memory state,
-        uint32[11] memory times,
-        uint256 work,
-        bytes calldata raw,
-        uint32 maxTime
-    ) internal pure returns (uint256) {
+    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint32 maxTime)
+        internal
+        pure
+        returns (uint256)
+    {
         uint64 height = state.height + 1;
         uint32 bits = _read32c(raw, 72);
         uint32 time = _read32c(raw, 68);
@@ -742,7 +742,12 @@ contract ZkWujiIndex {
     }
 
     function _median(uint32[11] memory input) internal pure returns (uint32) {
-        uint32[11] memory t = input;
+        // Memory-to-memory assignment aliases the array. Sort a copy so the caller can still evict
+        // the oldest block, rather than the smallest timestamp, when advancing its MTP window.
+        uint32[11] memory t;
+        for (uint256 i; i < 11; ++i) {
+            t[i] = input[i];
+        }
         for (uint256 i = 1; i < 11; ++i) {
             uint32 key = t[i];
             uint256 j = i;

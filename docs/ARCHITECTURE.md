@@ -8,6 +8,12 @@ WUJI 是一个可验证的纯随机结算市场与公开基准，提供可由公
 数学边界与研究方法见 [WUJI_FOUNDATIONS.md](WUJI_FOUNDATIONS.md)。
 任务规范见 [BTC_SOURCE.md](tasks/BTC_SOURCE.md)。
 
+**2026-10-12 MTP 修复状态：** `WujiHeaderIndex` 与 `ZkWujiIndex` 的 Solidity 区块头重放原先在计算
+中位数时原地排序了按区块先后排列的时间窗口，可能拒绝满足 Bitcoin MTP 规则的头。源码现改为复制后排序，
+正常推进和重组封存共用此修复；指数公式、确认深度和封存工作量阈值不变。Sepolia
+`0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7` 的旧运行时代码已比对确认仍含该缺陷，不能由源码修改升级。
+新增回归与完整历史窗口验证见 [修复报告](reviews/2026-10-12-mtp-window.md)。新部署与旧池迁移尚未执行。
+
 ## 0. 原则
 
 - 无 owner、管理员、暂停、升级、治理或项目代币。部署参数 immutable。

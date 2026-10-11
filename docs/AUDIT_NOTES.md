@@ -138,6 +138,24 @@ chooses the stopping header and Bitcoin allows timestamps 2 h ahead: a recent bl
 already-mined pricing height likely (≈ 0.07–0.43). Fix: B uses A's skew-aware margin on the supplied tip's age
 (≈ 7 h wait instead of 3–4 h). Deployed pools predate it.
 
+### WUJI-15 — High (liveness) — Fixed in source, existing deployment unchanged — MTP sorting corrupts the rolling window
+
+Confirmed 2026-10-12. `WujiHeaderIndex._median` and `ZkWujiIndex._median` assigned one memory array to
+another, aliasing the caller's chronological timestamp window. Sorting then shifting evicted the smallest
+timestamp instead of the oldest block. Bitcoin permits timestamps to move backwards above MTP; the old
+implementation can reject a header that meets the canonical MTP rule, including during a reorg seal.
+
+Fix: copy the eleven timestamps before sorting. Seven regressions cover both replay implementations,
+cross-call window retention, the strict median boundary, reorg replay and real-header canonical windows.
+The full-history replay now checks every committed timestamp window, not just S, work and tip hash.
+All 24 historical segments pass after the fix. No change to randomness, confirmation depth, work threshold,
+permissions or pool accounting. No fund-theft exploit or live rejection is claimed.
+
+Sepolia `WujiHeaderIndex` `0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7` matches the pre-fix runtime including
+metadata with only compiler-declared immutable slots masked. It remains affected and cannot be upgraded.
+The old ZK source has the same bug; this check does not verify every historical ZK deployment.
+Evidence, gas measurements and deployment follow-up: [MTP report](reviews/2026-10-12-mtp-window.md).
+
 ## Verification performed
 
 - 36 Foundry tests pass: unit, 256-run fuzz cases, real BSC hashes, and 64 invariant runs / 3840 calls.

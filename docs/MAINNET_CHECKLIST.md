@@ -12,6 +12,15 @@ window, no watchers. Design: [T13](tasks/T13_ZK_REORG_EXIT.md); decisions:
 The same shape runs on Sepolia as the minimal `WujiHeaderIndex` ([manifest](../contracts/deployments/sepolia-header.json)). The current review entry
 point is [REVIEW_HANDOFF.md](tasks/REVIEW_HANDOFF.md) §0.
 
+**Release blocker found 2026-10-12:** the old header path sorts its live MTP timestamp window in place.
+The source fix and regressions are in [the MTP report](reviews/2026-10-12-mtp-window.md); the current Sepolia
+header index is bytecode-confirmed to contain the old implementation. A source fix does not update that
+immutable deployment. Review and test a fresh deployment before treating it as the release candidate.
+
+- [x] Copy the MTP window before sorting in both Solidity replay implementations; pass backward-time,
+  cross-call, reorg and canonical timestamp-window regressions, plus the 24-segment historical replay.
+- [ ] Independently review the MTP fix and deploy/verify a corrected testnet index and consumers.
+
 **Staged launch (decided 2026-10-04):** the index, its reserve and router go to Ethereum mainnet first, without a
 paid audit: they hold no user funds (the reserve starts at zero), and the worst outcome of a bug is a wrong S, fixed
 by redeploying from a new anchor. Before that launch the paid review below is replaced by the free evidence marked

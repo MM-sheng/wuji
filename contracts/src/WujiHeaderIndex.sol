@@ -295,13 +295,11 @@ contract WujiHeaderIndex {
     // ------------------------------------------------------------------ header rules (identical to the guest)
 
     /// @dev Mutates `state` and `times` in place (they are memory references) and returns the new work.
-    function _apply(
-        Continuity memory state,
-        uint32[11] memory times,
-        uint256 work,
-        bytes calldata raw,
-        uint32 maxTime
-    ) internal pure returns (uint256) {
+    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint32 maxTime)
+        internal
+        pure
+        returns (uint256)
+    {
         uint64 height = state.height + 1;
         uint32 bits = _read32c(raw, 72);
         uint32 time = _read32c(raw, 68);
@@ -338,7 +336,12 @@ contract WujiHeaderIndex {
     }
 
     function _median(uint32[11] memory input) internal pure returns (uint32) {
-        uint32[11] memory t = input;
+        // Memory-to-memory assignment aliases the array. Sort a copy so the caller can still evict
+        // the oldest block, rather than the smallest timestamp, when advancing its MTP window.
+        uint32[11] memory t;
+        for (uint256 i; i < 11; ++i) {
+            t[i] = input[i];
+        }
         for (uint256 i = 1; i < 11; ++i) {
             uint32 key = t[i];
             uint256 j = i;

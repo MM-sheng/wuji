@@ -1,0 +1,15 @@
+{
+  "observedAtUTC": "2026-10-11T23:00:29.757Z",
+  "chainId": 11155111,
+  "block": 11894867,
+  "blockHash": "0xdd8f5df34182e1fb78a7e55c172038dc8e74dd131bdb16bd6e09b5c5b30f9b5e",
+  "address": "0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7",
+  "sourceCommit": "d443528d3ece8000ca03735c6ec1ce94186f2e70",
+  "runtime": {
+    "status": "PASS",
+    "bytes": 10104,
+    "immutableSlots": 15,
+    "actualSha256": "620e838af390c0f491bfbaeb34f7adb237330712cbde9717164a960a755cbe1a",
+    "maskedSha256": "3e3149c05ae695f2efdd85c4c0ecb4526058133c12d569033dc15031c8011647"
+  }
+}
