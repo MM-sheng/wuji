@@ -1,5 +1,15 @@
 # T11 wallet test — in progress
 
+## Task C checkpoint — 2026-10-11, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Post-round-2 upkeep receipts now total 0.40 ETH** (October 3–8 and October 10–11). The second-round target remains completed at **0.15 / 0.15 ETH** on October 1; upkeep receipts and the remaining wallet balance are tracked separately.
+
+Today's log was checked before submitting. The initial request was rate-limited until **2026-10-11 17:36:21 Asia/Shanghai**. One retry after the displayed cooldown succeeded using the existing Google session. No CAPTCHA challenge, new login or terms acceptance was presented. Google displayed `Transaction complete! Check your wallet address`.
+
+[Transaction](https://sepolia.etherscan.io/tx/0xf85998eabff3d416a285fc89be24c7d6dcb38ff320d30124c53f45e731f63fad) was verified through the public Sepolia RPC: chain ID `11155111`, receipt status `0x1`, recipient `0x85967858e2464535A12031103ABA38f2795Fe8Fd`, amount **50000000000000000 wei**. Balance at block `0xb570af` was **0.406750988891716708 ETH**, observed at **2026-10-11T09:37:33.215Z**. [Raw transaction, receipt, balance and cooldown response](../../contracts/deployments/t11-sepolia-fuel-2026-10-11.json); [completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-11.jpg).
+
+Today's collection is complete; do not submit another October 11 claim. No ineligible faucet was retried. No outgoing transfer, deployment or Task A signature was performed. The automation schedule remains unchanged.
+
 ## Task C checkpoint — 2026-10-10, upkeep collection complete
 
 **Today's 0.05 Sepolia ETH was received. Post-round-2 upkeep receipts now total 0.35 ETH** (October 3–8 and October 10). The second-round target remains completed at **0.15 / 0.15 ETH** on October 1. The October 9 failed attempt is not counted as a receipt, and the wallet balance is tracked separately.
@@ -202,6 +212,8 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-10-08, after 17:38 | Google Cloud Web3 | 0.05 ETH | `0x975d08e5bfb6eef2cac058919566cc6402b1fc0b05724a06a3386b5eb4892da5` | 0.306750988891716708 ETH; post-round-2 upkeep receipts 0.30 ETH |
 | 2026-10-09, approximately 17:39 | Google verification service / browser connection failed; claim not submitted | 0 ETH received by this attempt | None | 0.306750988891716708 ETH observed; post-round-2 upkeep receipts remain 0.30 ETH |
 | 2026-10-10, approximately 17:36 | Google Cloud Web3 | 0.05 ETH | `0x94999d9dd4aed5d09ea6c2bad4b6ab81caa83671ac3730ad7a69b1ea34f8c633` | 0.356750988891716708 ETH; post-round-2 upkeep receipts 0.35 ETH |
+| 2026-10-11, initial attempt | Google daily limit; eligible after 17:36:21 | 0 ETH (attempt only) | None | No balance observation for this attempt |
+| 2026-10-11, after 17:36:21 retry | Google Cloud Web3 | 0.05 ETH | `0xf85998eabff3d416a285fc89be24c7d6dcb38ff320d30124c53f45e731f63fad` | 0.406750988891716708 ETH; post-round-2 upkeep receipts 0.40 ETH |
 
 ## Historical report — 2026-09-26, v3
 
