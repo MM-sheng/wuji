@@ -1,0 +1,241 @@
+{
+  "version": "t13-header-index-sepolia-v2-mtp",
+  "status": "confirmed",
+  "chainId": 11155111,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "deployedAt": "2026-10-12T11:15:04.611Z",
+  "sourceCommit": "9baee1e",
+  "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "RelayerRewards": "0xc1dCDEAA991cA1c6e96b5acd6eedE78cA2ac432e",
+  "WujiHeaderIndex": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+  "FeeRouter": "0x6f3f95A6f201901F9a233cf59e7B5310645685D1",
+  "anchor": "contracts/deployments/sepolia-header-anchor.json",
+  "anchorHeight": 969545,
+  "genesisHeight": 969546,
+  "checkpointInterval": 4320,
+  "confirmations": 100,
+  "reorgMargin": 144,
+  "transactions": [
+    {
+      "contract": "RelayerRewards",
+      "hash": "0xc7ddc4a97d471475345b2069536a98b1182a0898530bbb7c67bc81a254abc338",
+      "nonce": 139,
+      "gasUsed": 7640329,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898527,
+      "address": "0xc1dCDEAA991cA1c6e96b5acd6eedE78cA2ac432e"
+    },
+    {
+      "contract": "WujiHeaderIndex",
+      "hash": "0x5a710ac04781e338354cdcba862048e3aabc5d89a942dec1db83e620c782b848",
+      "nonce": 140,
+      "gasUsed": 16698701,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898528,
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51"
+    },
+    {
+      "contract": "FeeRouter",
+      "hash": "0x1d1f9cc26642b6e2856720dfa834e6e4c365c3c05cbce56f0dbe4bb0e4787a66",
+      "nonce": 141,
+      "gasUsed": 2048194,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898529,
+      "address": "0x6f3f95A6f201901F9a233cf59e7B5310645685D1"
+    }
+  ],
+  "failedAttempts": [
+    {
+      "hash": "0xbf360c4b08bae7cf247182dbf31e6507f5bf98822587eede686eecb77cc054a4",
+      "contract": "RelayerRewards",
+      "nonce": 138,
+      "status": 0,
+      "gasUsed": 1444446,
+      "effectiveGasPrice": "1000000000",
+      "reason": "Local Prague gas simulation underestimated current Sepolia gas requirements; all gas exhausted; no contract created."
+    }
+  ],
+  "supersedes": "sepolia-header.json",
+  "migration": "New independent contracts using the same Bitcoin anchor; old pools and their funds have not been migrated or modified.",
+  "accounts": {
+    "factory": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+    "collateral": {
+      "symbol": "WETH",
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+    },
+    "treasury": "0x6f3f95A6f201901F9a233cf59e7B5310645685D1",
+    "pools": [
+      {
+        "tier": 0,
+        "modelAnnualVolatility": "5%",
+        "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8"
+      },
+      {
+        "tier": 1,
+        "modelAnnualVolatility": "10%",
+        "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940"
+      },
+      {
+        "tier": 2,
+        "modelAnnualVolatility": "25%",
+        "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9"
+      }
+    ],
+    "transactions": [
+      {
+        "what": "factory",
+        "hash": "0x7a9b17c2134473b7f0afac765fc55293e00b602b4e1f42910460e3b60db78c0a",
+        "nonce": 143,
+        "estimated": 36203284,
+        "gasLimit": 43443941,
+        "gasUsed": 35917061,
+        "effectiveGasPrice": "100000000",
+        "blockNumber": 11898548
+      },
+      {
+        "what": "pool-0",
+        "hash": "0x72af449cac1ccb69a13eaad528a4eb99e48ef4e23718cc10d755dff94a675355",
+        "nonce": 144,
+        "estimated": 30705046,
+        "gasLimit": 36846056,
+        "gasUsed": 30462116,
+        "effectiveGasPrice": "100000000",
+        "blockNumber": 11898549
+      },
+      {
+        "what": "pool-1",
+        "hash": "0x1de1ec7b6b76a5378cb2c5005968372bcdc8593f21233d751eab356b15a5602b",
+        "nonce": 145,
+        "estimated": 30705058,
+        "gasLimit": 36846070,
+        "gasUsed": 30462128,
+        "effectiveGasPrice": "100000000",
+        "blockNumber": 11898550
+      },
+      {
+        "what": "pool-2",
+        "hash": "0xd09b69e061680f6225c27b9f02111bc9974e704aac2ecf1f38bd142b832eb8b6",
+        "nonce": 146,
+        "estimated": 30705058,
+        "gasLimit": 36846070,
+        "gasUsed": 30462128,
+        "effectiveGasPrice": "100000000",
+        "blockNumber": 11898551
+      }
+    ],
+    "migration": "Empty new pools; old accounts and collateral remain in old deployment.",
+    "verifiedEmpty": true
+  },
+  "folds": [
+    {
+      "hash": "0xf38a5efdf79d1815d6f24bf7a6734f385d8a4eed847d3d5bc9f43c689ef576fc",
+      "firstHeight": 969546,
+      "lastHeight": 969795,
+      "folded": 250,
+      "seenHeight": 969895,
+      "gasUsed": 7367556,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898536
+    },
+    {
+      "hash": "0x646d5e27eb2e11f40fdd2ddafff85dce75a1f79e889731d459b127ed35b8a344",
+      "firstHeight": 969796,
+      "lastHeight": 970045,
+      "folded": 250,
+      "seenHeight": 970145,
+      "gasUsed": 7286333,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898537
+    },
+    {
+      "hash": "0x6ce8d54d62a0e618208cf55b5414f2ae193a0d449ca03248e60c4a0ef358e03d",
+      "firstHeight": 970046,
+      "lastHeight": 970295,
+      "folded": 250,
+      "seenHeight": 970395,
+      "gasUsed": 7267163,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898538
+    },
+    {
+      "hash": "0xce56b3b9692ed17b863ee1ec662538672783df275e0e2b43ed62a5b670bfb6ac",
+      "firstHeight": 970296,
+      "lastHeight": 970545,
+      "folded": 250,
+      "seenHeight": 970645,
+      "gasUsed": 7278121,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898539
+    },
+    {
+      "hash": "0x474499e86e168d402c4dfaa37d1db8e6ac03d7c2b64eb423cc0e1f71e674d765",
+      "firstHeight": 970546,
+      "lastHeight": 970795,
+      "folded": 250,
+      "seenHeight": 970895,
+      "gasUsed": 7268406,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898540
+    },
+    {
+      "hash": "0x6a803e1184d766424db650da0e2ae8ae979da680a98bec99d3732468fa210fe8",
+      "firstHeight": 970796,
+      "lastHeight": 970985,
+      "folded": 190,
+      "seenHeight": 971085,
+      "gasUsed": 6006569,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11898546
+    }
+  ],
+  "verification": "sepolia-header-v2-verification.json",
+  "bitcoinSourceCheck": {
+    "checkedAt": "2026-10-12T11:10:45.852Z",
+    "sources": [
+      {
+        "source": "https://mempool.space/api",
+        "height": 971085,
+        "hash": "000000000000000000008639605d60f313d9dccbb59d414878f46322df0890fb",
+        "matched": true
+      },
+      {
+        "source": "https://blockstream.info/api",
+        "height": 971085,
+        "hash": "000000000000000000008639605d60f313d9dccbb59d414878f46322df0890fb",
+        "matched": true
+      }
+    ]
+  },
+  "keeper": {
+    "address": "0xD0310442d42d791219aaDAa413Cb34f2Da660DFa",
+    "fundingWei": "20000000000000000",
+    "fundingTransaction": "0xa56b268eda92049e8e11278dfade46dfb238a8063a1a3e72a75c3925e356dadb",
+    "fundingGasUsed": 204600,
+    "fundingGasPriceWei": "100000000",
+    "sourceCommit": "9baee1e",
+    "service": "com.wuji.sepolia-header-v2-keeper",
+    "status": "running under macOS launchd; startup round and pool maintenance completed without errors",
+    "minFold": 36,
+    "maxFold": 250,
+    "intervalSeconds": 120,
+    "gasPriceWei": "100000000",
+    "retainedOldKeeper": true,
+    "balanceWeiAtVerification": "15752585200000000",
+    "checkedAt": "2026-10-12T11:25:33.221Z",
+    "localLog": "operator/sepolia-header-v2/keeper.log"
+  },
+  "costs": {
+    "totalTransactionGasWei": "21081386500000000",
+    "unit": "Sepolia test ETH",
+    "keeperFundingWei": "20000000000000000",
+    "note": "Keeper funding is a transfer between controlled test wallets, not a gas expense; includes failed initial transaction."
+  },
+  "verificationSnapshot": {
+    "evmBlock": 11898557,
+    "lastHeight": 970985,
+    "seenHeight": 971085,
+    "S_wad": "97116000000000000",
+    "contracts": 7,
+    "status": "PASS"
+  }
+}

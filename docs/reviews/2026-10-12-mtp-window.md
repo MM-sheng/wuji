@@ -115,4 +115,6 @@ it does not independently validate every immutable value, account balance or his
 5. Record the new deployment and update clients/keepers only after verification. Keep old deployments
    labelled as historical/affected. The separate pool bad-debt design and independent audit gate remain open.
 
-No funds were moved, no old service was stopped, and no corrected address has been deployed by this task.
+At the time of this source-fix report, no funds were moved, no old service was stopped, and no corrected
+address had been deployed. The user's subsequent redeployment request is completed separately in the
+[Sepolia v2 deployment report](2026-10-12-sepolia-header-v2.md). Old account claims remain in the old pools.

@@ -9,17 +9,25 @@ headers; a height counts only `CONFIRMATIONS = 100` deep; a branch that out-work
 `FeeRouter`, and T11 pools priced from the index's newest validated header. No verifier, no challenge
 window, no watchers. Design: [T13](tasks/T13_ZK_REORG_EXIT.md); decisions:
 [header path first](decisions/2026-10-02-header-path-first.md), [economics](decisions/2026-10-02-submitter-economics.md).
-The same shape runs on Sepolia as the minimal `WujiHeaderIndex` ([manifest](../contracts/deployments/sepolia-header.json)). The current review entry
+The corrected shape runs on Sepolia as the minimal `WujiHeaderIndex` ([v2 manifest](../contracts/deployments/sepolia-header-v2.json)). The current review entry
 point is [REVIEW_HANDOFF.md](tasks/REVIEW_HANDOFF.md) §0.
 
 **Release blocker found 2026-10-12:** the old header path sorts its live MTP timestamp window in place.
-The source fix and regressions are in [the MTP report](reviews/2026-10-12-mtp-window.md); the current Sepolia
+The source fix and regressions are in [the MTP report](reviews/2026-10-12-mtp-window.md); the historical Sepolia
 header index is bytecode-confirmed to contain the old implementation. A source fix does not update that
-immutable deployment. Review and test a fresh deployment before treating it as the release candidate.
+immutable deployment. A fresh corrected deployment now exists; independent review remains open.
 
 - [x] Copy the MTP window before sorting in both Solidity replay implementations; pass backward-time,
   cross-call, reorg and canonical timestamp-window regressions, plus the 24-segment historical replay.
-- [ ] Independently review the MTP fix and deploy/verify a corrected testnet index and consumers.
+- [x] Deploy and verify the corrected testnet index and three empty consumers; preserve the original anchor,
+  replay 1,440 heights, and compare full continuity including chronological timestamps ([report](reviews/2026-10-12-sepolia-header-v2.md)).
+- [ ] Independently review the MTP fix and repeat the complete consumer entry/exit lifecycle on v2.
+
+**Target-chain gas observation (2026-10-12):** local Prague simulation materially underestimates current
+Sepolia contract creation gas. The first reserve deployment exhausted its limit; subsequent transactions used
+live `eth_estimateGas` plus 20% margin and succeeded. The factory used 35,917,061 total gas. Do not apply
+the old 2^24 execution-gas cap as a universal total-gas cap for state creation, or reuse historical deployment
+gas figures. Recheck execution/state accounting and worst-case seal gas on the actual release chain.
 
 **Staged launch (decided 2026-10-04):** the index, its reserve and router go to Ethereum mainnet first, without a
 paid audit: they hold no user funds (the reserve starts at zero), and the worst outcome of a bug is a wrong S, fixed
