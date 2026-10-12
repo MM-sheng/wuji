@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import { step } from './bitcoin.mjs';
 
-const KEEP = 64; // saved states; at one fold a day this covers two months
+const KEEP = 64; // recent saved states, plus the earliest observed state for arbitrarily long proofs
 
 /// Bitcoin work of a header's compact target. No range check: the contract checks the rules, this only plans.
 export function headerWork(bits) {
@@ -25,7 +25,8 @@ export function saveState(file, hex) {
   try { states = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
   if (states[height] === hex) return states;
   states[height] = hex;
-  const keep = Object.keys(states).map(Number).sort((a, b) => b - a).slice(0, KEEP);
+  const heights = Object.keys(states).map(Number).sort((a, b) => b - a);
+  const keep = [...new Set([...heights.slice(0, KEEP), heights.at(-1)])];
   states = Object.fromEntries(keep.map(h => [h, states[h]]));
   fs.writeFileSync(file + '.tmp', JSON.stringify(states));
   fs.renameSync(file + '.tmp', file);
@@ -74,7 +75,7 @@ export async function planSeal({ tip, states, source, confirmations, margin, max
   }
   const short = Number((need - work + headerWork(bits) - 1n) / headerWork(bits));
   const reason = headers.length >= maxHeaders
-    ? `the branch from ${base.height} needs more than ${maxHeaders} headers; an older saved state is required`
+    ? `the branch from ${base.height} needs more than ${maxHeaders} headers; this deployment requires a closer recorded common base or a segmented-proof interface`
     : `the branch from ${base.height} is about ${short} blocks short of the seal threshold`;
   return { action: 'wait', reason, forkBase: base.height, short };
 }

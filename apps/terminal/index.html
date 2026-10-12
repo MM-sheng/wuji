@@ -980,10 +980,10 @@ function exitActionAllowed(state, action) {
       <div class="yy"><div class="yang" style="width:${100*y/t}%">阳 ${fmtAmount(y)}</div><div class="yin">${fmtAmount(n)} 阴</div></div>
       <div class="kv"><span>在押 · 闲置</span><b>${fmtW(p.matched_wad)} · ${p.idleSide?(p.idleSide==='yang'?'阳':'阴')+' '+fmtW(p.idle_wad):'无'}</b></div>
       <div class="kv"><span>排队中的定价</span><b>${p.pendingEpochs?p.pendingEpochs+' 个 · 下一个 #'+p.nextEpoch+(p.nextEpochReady?' · 可处理':''):'无'}</b></div>
-      <div class="kv"><span>新申请将定价于</span><b>${p.nextPricingHeight===null?'暂不接受（指数终结高度过旧）':'#'+p.nextPricingHeight.toLocaleString()}</b></div>
+      <div class="kv"><span>新申请将定价于</span><b>${p.frozen?'已终止接受申请':p.settling?'正在分批结算，完成后可再申请':p.nextPricingHeight===null?'暂不接受（指数终结高度过旧）':'#'+p.nextPricingHeight.toLocaleString()}</b></div>
       <div class="kv"><span>缓冲金 · 未覆盖亏空</span><b class="${BigInt(p.badDebt_wad)>0n?'bad':'ok'}">${fmtW(p.buffer_wad)} · ${fmtW(p.badDebt_wad)}</b></div>
       <div class="kv"><span>手续费 · 账户数</span><b>${p.feeBps/100}% · ${p.accountsCreated}</b></div>
-      <div class="kv"><span>池子</span><b>${p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
+      <div class="kv"><span>池子</span><b>${p.insolvent?'已按固定比例终止 · ':p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
   }
   async function lookAccount(){
     const pool=$('pjPool').value,id=+$('pjId').value;if(!pool||!id)return;
@@ -1017,6 +1017,7 @@ function exitActionAllowed(state, action) {
   const rememberId=(pool,id)=>{try{const l=myIds(pool);if(!l.includes(id))l.push(id);localStorage.setItem(myIdsKey(pool),JSON.stringify(l));}catch{}};
   // Contract revert reasons and wallet errors, in words a holder can act on.
   const PERP_REASONS={'not claimable':'还不能领取：要先申请退出，并等退出定价处理完','entry pending':'进场还没定价，定价后才能申请退出',
+    'settlement pending':'正在分批结算，处理完成后可再次申请',
     'exit pending':'这个账户已经申请过退出','same epoch':'进场还没定价，定价后才能申请退出','relay stale':'比特币数据暂时不够新（最新块超过 30 分钟），过几分钟再试',
     'pool frozen':'池子已停止接受申请（比特币深度重组或已冻结）','not owner':'这个账户不属于当前钱包','zero':'数量太小','short transfer':'这个代币转账会被扣费，池子不接受',
     'not at floor':'账户还没触底，不能清退','not live':'账户已结清'};

@@ -7,11 +7,12 @@ const SEL = {
   index: '0x2986c0e5', principalOf: '0x908de6c2', buffer: '0xedaafe20', badDebt: '0xbbcac557',
   head: '0x8f7dcfa3', queueLength: '0xab91c7b0', queue: '0xddf0b009', nextPricingHeight: '0x7dd7307d',
   frozen: '0x054f7d9c', nextId: '0x61b8ce8c', valueOf: '0xcadf338f', rawValueOf: '0xb68f590f',
-  lastS: '0xd894da4d', accounts: '0xf2a40db8', epochAcc: '0xa2e04c67', lastHeight: '0x25159aa9',
-  balanceOf: '0x70a08231', RELAY_TIP: '0x59cfd7b0', marked: '0x515f805e',
+  lastS: '0xd894da4d', accounts: '0xf2a40db8', epochAcc: '0xa2e04c67', lastHeight: '0x25159aa9', lastHash: '0x3fa21806',
+  balanceOf: '0x70a08231', RELAY_TIP: '0x59cfd7b0', marked: '0x515f805e', hashAt: '0x7c4b99b8',
+  insolvent: '0x22dd3904', settling: '0x0832dce9', claimableOf: '0x513bed12', epochInfo: '0xf9f3de7e',
 };
 const MAX_WALK = 1024;      // WujiAccounts.MAX_WALK: headers per markWithHeaders call
-const MARK_PER_ROUND = 8;   // as many epochs as one processMany(8) can use
+const MARK_PER_ROUND = 8;   // bounded historical catch-up ahead of one settlement batch per round
 const word = n => BigInt(n).toString(16).padStart(64, '0');
 const addr = a => a.slice(2).toLowerCase().padStart(64, '0');
 const uint = v => { if (!/^0x[0-9a-f]{64,}$/i.test(v)) throw Error('Invalid accounts ABI'); return BigInt(v.slice(0, 66)); };
@@ -31,7 +32,11 @@ export async function readPool(read, pool) {
       read(pool, SEL.nextPricingHeight).catch(() => null), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
     ]);
   const assetAddr = '0x' + asset.slice(-40), indexAddr = '0x' + index.slice(-40);
-  const [balance, folded] = await Promise.all([read(assetAddr, SEL.balanceOf + addr(pool)), read(indexAddr, SEL.lastHeight)]);
+  const [balance, folded, settling, insolvent] = await Promise.all([
+    read(assetAddr, SEL.balanceOf + addr(pool)), read(indexAddr, SEL.lastHeight),
+    read(pool, SEL.settling).then(v => uint(v) === 1n).catch(() => false),
+    read(pool, SEL.insolvent).then(v => uint(v) === 1n).catch(() => false),
+  ]);
   const P = [uint(yin), uint(yang)], matched = P[0] < P[1] ? P[0] : P[1];
   const h = uint(head), n = uint(qlen);
   const nextEpoch = h < n ? uint(await read(pool, SEL.queue + word(h))) : null;
@@ -45,7 +50,7 @@ export async function readPool(read, pool) {
     pendingEpochs: Number(n - h), nextEpoch: nextEpoch === null ? null : Number(nextEpoch),
     nextEpochReady: nextEpoch !== null && nextEpoch <= uint(folded),
     nextPricingHeight: next === null ? null : Number(uint(next)), lastS_wad: int(lastS).toString(),
-    frozen: uint(frozen) === 1n, accountsCreated: Number(uint(nextId) - 1n),
+    frozen: uint(frozen) === 1n, settling, insolvent, accountsCreated: Number(uint(nextId) - 1n),
   };
 }
 
@@ -58,17 +63,22 @@ export async function readAccount(read, pool, id) {
   const owner = '0x' + w(0).slice(-40);
   if (/^0x0{40}$/.test(owner)) return { id, closed: true };
   const enterEpoch = uint(w(2)), exitEpoch = uint(w(3)), principal = uint(w(4));
-  const [entered, exited] = await Promise.all([
+  const [entered, exited, frozen, payable, refunded] = await Promise.all([
     read(pool, SEL.epochAcc + word(enterEpoch)), exitEpoch ? read(pool, SEL.epochAcc + word(exitEpoch)) : null,
+    read(pool, SEL.frozen).then(v => uint(v) === 1n),
+    read(pool, SEL.claimableOf + word(id)).then(uint).catch(() => null),
+    read(pool, SEL.epochInfo + word(enterEpoch)).then(v => uint('0x' + v.slice(66, 130)) === 1n).catch(() => false),
   ]);
   const processed = v => v !== null && uint('0x' + v.slice(130, 194)) === 1n;
-  const v = uint(value);
+  const claimable = frozen || (processed(entered) && refunded) || (exitEpoch !== 0n && processed(exited));
+  const v = claimable && payable !== null ? payable : uint(value);
   return {
     id, owner, side: uint(w(1)) === 1n ? 'yang' : 'yin', principal_wad: principal.toString(),
     enterEpoch: Number(enterEpoch), exitEpoch: exitEpoch ? Number(exitEpoch) : null,
-    status: !processed(entered) ? 'entering' : exitEpoch && !processed(exited) ? 'exiting' : exitEpoch ? 'claimable' : 'open',
+    status: claimable ? 'claimable' : !processed(entered) ? 'entering' : exitEpoch && !processed(exited) ? 'exiting' : exitEpoch ? 'claimable' : 'open',
+    claimable_wad: payable === null ? null : payable.toString(),
     value_wad: v.toString(), pnl_wad: (v - (processed(entered) ? principal : v)).toString(),
-    atFloor: processed(entered) && v === 0n, overshoot_wad: (int(rawValue) < 0n ? -int(rawValue) : 0n).toString(),
+    atFloor: !claimable && processed(entered) && v === 0n, overshoot_wad: (int(rawValue) < 0n ? -int(rawValue) : 0n).toString(),
     multiple: principal ? Number(v * 10000n / principal) / 10000 : 0,
   };
 }
@@ -85,7 +95,12 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
   // Older indexes have no frozen exit (the call reverts); for them the pool can never freeze.
   const indexFrozen = await read(state.index, SEL.frozen).then(v => uint(v) === 1n, () => false);
   if (indexFrozen) {
-    await send(pool, 'freezePool(uint256)', 3_000_000, '50'); done.push('freezePool');
+    const relayTip = await read(pool, SEL.RELAY_TIP).then(v => uint(v) === 1n, () => true);
+    if (!relayTip && state.nextEpochReady) {
+      if (!headersFor) { log('frozen pool needs historical headers', pool); return { state, done, cursor }; }
+      done.push(...await markFromHeaders({ read, simulate, send, pool, index: state.index, headersFor, log }));
+    }
+    await send(pool, 'freezePool(uint256)', 8_000_000, '1'); done.push('freezePool');
     return { state, done, cursor };
   }
   if (state.nextEpochReady) {
@@ -96,7 +111,14 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
       done.push(...await markFromHeaders({ read, simulate, send, pool, index: state.index, headersFor, log }));
     }
     // Ceiling, not a reservation: a catch-up chunk after a long absence walks 1024 heights (≈5.5M gas).
-    await send(pool, 'processMany(uint256)', 8_000_000, '8'); done.push('processMany');
+    await send(pool, 'processMany(uint256)', 8_000_000, '1'); done.push('processMany');
+    // A large epoch finishes over bounded account batches. Retiring or sweeping during the snapshot
+    // would change the book; the contract rejects them. Also stop after an automatic insolvency close.
+    const [settling, frozen] = await Promise.all([
+      read(pool, SEL.settling).then(v => uint(v) === 1n, () => false),
+      read(pool, SEL.frozen).then(v => uint(v) === 1n),
+    ]);
+    if (settling || frozen) return { state, done, cursor };
   }
   // Retirement: scan a window of ids per round so cost stays bounded as the pool grows.
   const last = state.accountsCreated;
@@ -123,6 +145,7 @@ export async function markFromHeaders({ read, simulate, send, pool, index, heade
   const folded = uint(await read(index, SEL.lastHeight));
   const head = uint(await read(pool, SEL.head)), qlen = uint(await read(pool, SEL.queueLength));
   const isMarked = async h => uint(await read(pool, SEL.marked + word(h))) === 1n;
+  const hasHash = async h => uint(await read(pool, SEL.hashAt + word(h))) !== 0n;
   const ready = [];
   for (let i = head; i < qlen && ready.length < MARK_PER_ROUND; i++) {
     const e = uint(await read(pool, SEL.queue + word(i)));
@@ -131,7 +154,8 @@ export async function markFromHeaders({ read, simulate, send, pool, index, heade
   }
   const done = [];
   const mark = async (h, to) => {
-    const headers = await headersFor(Number(h) + 1, Number(to));
+    const anchorHash = to === folded ? await read(index, SEL.lastHash) : await read(pool, SEL.hashAt + word(to));
+    const headers = await headersFor(Number(h) + 1, Number(to), anchorHash);
     const args = [String(h), String(to), headers];
     await simulate(pool, 'markWithHeaders(uint64,uint64,bytes)(int256)', ...args);
     await send(pool, 'markWithHeaders(uint64,uint64,bytes)', 200_000 + 12_000 * Number(to - h), ...args);
@@ -139,9 +163,17 @@ export async function markFromHeaders({ read, simulate, send, pool, index, heade
   };
   let anchor = folded;
   for (const e of ready.reverse()) {
-    if (e === folded || await isMarked(e)) { anchor = e; continue; }
+    if (e === folded) { anchor = e; continue; }
+    if (await isMarked(e)) {
+      if (await hasHash(e)) anchor = e;
+      continue;
+    }
     while (anchor - e > BigInt(MAX_WALK)) {
-      const mid = anchor - BigInt(MAX_WALK);
+      let mid = anchor - BigInt(MAX_WALK);
+      // Old immutable pools cannot fill a missing hash on an existing mark. Choose an unused or
+      // authenticated intermediate height within MAX_WALK, without discarding the valid upper anchor.
+      while (mid < anchor && await isMarked(mid) && !await hasHash(mid)) mid++;
+      if (mid === anchor) throw Error('No usable historical hash anchor within MAX_WALK');
       if (!await isMarked(mid)) await mark(mid, anchor);
       anchor = mid;
     }

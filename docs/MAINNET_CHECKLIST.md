@@ -1,5 +1,11 @@
 # Mainnet deployment checklist
 
+**2026-10-12 post-rescan source revision:** reserve isolation, deterministic insolvency allocation,
+authenticated frozen prices, bounded account processing and segmented reorg proofs are local changes,
+not features of the current Sepolia deployment. Before any release, verify the revised factory's immutable
+creation-code data contracts as well as the created pools; run the complete entry/exit/freeze lifecycle and
+archive-recovery rehearsal. See [the source repair report](reviews/2026-10-12-security-fixes.md).
+
 Every item is required unless it is explicitly marked informational. Record links, hashes, addresses,
 and reviewer names in the release ticket; a checked box without evidence is insufficient.
 

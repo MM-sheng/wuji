@@ -74,7 +74,7 @@ contract AccountsHandler is Test {
         bool exited;
         if (exitEpoch != 0) (exited,) = pool.epochInfo(exitEpoch);
         // Claimable: a refunded entry, a priced exit, or any priced account once the pool is frozen.
-        if (!(entered && refunded) && !exited && !(pool.frozen() && entered)) return;
+        if (!(entered && refunded) && !exited && !(pool.frozen() && entered) && !pool.insolvent()) return;
         vm.prank(owner);
         pool.claim(id);
         ghostClaims++;
@@ -82,7 +82,7 @@ contract AccountsHandler is Test {
     }
 
     function retire(uint256 idSeed) external {
-        if (ids.length == 0 || pool.frozen()) return;
+        if (ids.length == 0 || pool.frozen() || pool.settling()) return;
         uint256 id = ids[idSeed % ids.length];
         (address owner,,, uint64 exitEpoch,) = pool.accounts(id);
         if (owner == address(0) || exitEpoch != 0 || !_entered(id) || pool.valueOf(id) != 0) return;
@@ -100,6 +100,7 @@ contract AccountsHandler is Test {
     }
 
     function process() external {
+        if (pool.frozen()) return;
         if (idx.frozen()) { if (!pool.frozen()) pool.freezePool(3); return; }   // small max: freezes over several calls
         ghostProcessed += pool.processMany(5);
     }
@@ -116,6 +117,7 @@ contract AccountsHandler is Test {
     }
 
     function sweep() external {
+        if (pool.settling()) return;
         pool.sweep();
     }
 
@@ -163,26 +165,26 @@ contract WujiAccountsInvariantTest is Test {
         targetContract(address(h));
     }
 
-    /// Every account's claim is covered, except losses past the floor that are either recorded as badDebt or
-    /// belong to accounts nobody has retired yet. Pending entries are held in full; the buffer is on top.
+    /// Actual cash covers every claim including protected pending/refunded entries and reserved net exits.
+    /// Neither recorded debt nor a negative account is allowed to stand in for missing tokens.
     function invariant_solvent() public view {
-        uint256 owed; uint256 unretired;
+        uint256 owed;
         for (uint256 i; i < h.idCount(); i++) {
             uint256 id = h.ids(i);
-            (address owner,, uint64 enterEpoch,, uint128 principal) = pool.accounts(id);
+            (address owner,, uint64 enterEpoch, uint64 exitEpoch, uint128 principal) = pool.accounts(id);
             if (owner == address(0)) continue;
             (bool entered, bool refunded) = pool.epochInfo(enterEpoch);
             if (!entered || refunded) { owed += principal; continue; }
-            owed += pool.valueOf(id);
-            int256 raw = pool.rawValueOf(id);
-            if (raw < 0) unretired += uint256(-raw);
+            bool exited;
+            if (exitEpoch != 0) (exited,) = pool.epochInfo(exitEpoch);
+            owed += exited ? pool.exitClaim(id) : pool.valueOf(id);
         }
-        assertGe(token.balanceOf(address(pool)) + pool.badDebt() + unretired, owed + pool.buffer());
+        assertGe(token.balanceOf(address(pool)), owed + pool.buffer());
     }
 
     /// The buffer only ever counts tokens the pool really holds.
     function invariant_bufferBacked() public view {
-        assertLe(pool.buffer(), token.balanceOf(address(pool)));
+        assertLe(pool.buffer() + pool.pendingPrincipal() + pool.refundReserve() + pool.reservedClaims(), token.balanceOf(address(pool)));
     }
 
     /// Principal bookkeeping matches the accounts exactly.

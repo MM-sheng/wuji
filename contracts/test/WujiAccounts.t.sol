@@ -361,7 +361,7 @@ contract WujiAccountsTest is Test {
         assertEq(p.buffer(), 0.6e18);
     }
 
-    function test_badDebtAbsorbedByBufferFirst() public {
+    function test_offsettingFloorAndCeilingDoNotInventBadDebt() public {
         FEE = 100; BOUNTY = 0;
         WujiAccounts p = make(0.001e18);
         advance(10);
@@ -374,13 +374,10 @@ contract WujiAccountsTest is Test {
         if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
         p.processMany(10);
         uint256 loser = p.valueOf(a) == 0 ? a : b;
-        int256 raw = p.rawValueOf(loser);
         uint256 bufferBefore = p.buffer();
         p.retire(loser);
-        uint256 debt = uint256(-raw);
-        uint256 absorbed = debt < bufferBefore ? debt : bufferBefore;
-        assertEq(p.buffer(), bufferBefore - absorbed);
-        assertEq(p.badDebt(), debt - absorbed);
+        assertEq(p.buffer(), bufferBefore, "matched capped gains are fully backed");
+        assertEq(p.badDebt(), 0);
     }
 
     function test_factoryFixesTheMenu() public {
@@ -396,6 +393,14 @@ contract WujiAccountsTest is Test {
         assertEq(pools[2].K(), 4.6e18);
         assertEq(address(f.pool(address(asset), 1)), address(pools[1]));
         assertEq(pools[1].BOUNTY_DIVISOR(), 10_000);
+        bytes memory left = f.codeLeft().code;
+        bytes memory right = f.codeRight().code;
+        assertEq(uint8(left[0]), 0, "creation-code data is non-executable");
+        assertEq(uint8(right[0]), 0, "creation-code data is non-executable");
+        WujiAccounts direct = new WujiAccounts(WujiAccounts.Config(
+            asset, idx, f.K_10(), EPOCH, DELAY, 30 minutes, treasury, 30, 10_000, 1_000
+        ));
+        assertEq(address(pools[1]).code, address(direct).code, "factory preserves exact immutable pool runtime");
         vm.expectRevert("exists");
         f.create(asset, 1);
         vm.expectRevert(bytes("tier"));
@@ -571,6 +576,7 @@ contract WujiAccountsTest is Test {
         uint256[] memory ids = new uint256[](40);
         uint256 n;
         for (uint256 round; round < 25; round++) {
+            if (p.frozen()) { _claimAndCheck(p, ids, n); break; }
             uint256 x = uint256(keccak256(abi.encode(seed, round)));
             address who = users[x % 3];
             if (x % 5 < 3 || n == 0) {
@@ -593,21 +599,18 @@ contract WujiAccountsTest is Test {
 
     /// Claim anything claimable, then check solvency against every remaining account.
     function _claimAndCheck(WujiAccounts p, uint256[] memory ids, uint256 n) internal {
-        uint256 owed; uint256 unretired;
+        uint256 owed;
         for (uint256 i; i < n; i++) {
             (address owner,,, uint64 ex, uint128 principal) = p.accounts(ids[i]);
             if (owner == address(0)) continue;
             (,, bool entered) = p.epochAcc(_enterEpoch(p, ids[i]));
-            if (!entered) { owed += principal; continue; }
+            if (!entered && !p.insolvent()) { owed += principal; continue; }
             bool exited;
             if (ex != 0) (,, exited) = p.epochAcc(ex);
-            if (exited) { vm.prank(owner); p.claim(ids[i]); continue; }
+            if (exited || p.frozen()) { vm.prank(owner); p.claim(ids[i]); continue; }
             owed += p.valueOf(ids[i]);
-            int256 raw = p.rawValueOf(ids[i]);
-            if (raw < 0) unretired += uint256(-raw);
         }
-        // The only shortfall is losses past the floor: recorded ones plus those of accounts not yet retired.
-        assertGe(asset.balanceOf(address(p)) + p.badDebt() + unretired, owed + p.buffer(), "insolvent beyond floor overshoot");
+        assertGe(asset.balanceOf(address(p)), owed + p.buffer(), "claims must be cash backed");
     }
 
     function _enterEpoch(WujiAccounts p, uint256 id) internal view returns (uint64 e) {

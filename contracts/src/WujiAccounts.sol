@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {WujiIndex} from "./WujiIndex.sol";
 
 /// @notice What a pool needs from an index that keeps no header relay (ZkWujiIndex): the newest Bitcoin
@@ -29,6 +30,7 @@ contract WujiAccounts is ReentrancyGuard {
     int256 internal constant ONE = 1e18;
     int256 internal constant ACC = 1e27;   // accumulator precision per unit of principal
     uint256 public constant MAX_WALK = 1024;
+    uint256 public constant ACCOUNT_BATCH = 64;
     /// @notice Pools on an index without a relay refuse requests once its newest validated header is older.
     uint256 public constant MAX_SEEN_AGE = 24 hours;
     /// @dev Margin by the newest validated header's age rounded up to whole hours (0..24 h), as big-endian uint16:
@@ -92,15 +94,38 @@ contract WujiAccounts is ReentrancyGuard {
     int256 public lastS;
     bool public started;
     bool public frozen;
-    bool internal afterFallback;
-    /// @notice Fees held in the pool: pays bounties and absorbs floor overshoot before anything else.
+    /// @notice A deterministic insolvency close uses one fixed pro-rata snapshot for all remaining live claims.
+    bool public insolvent;
+    bool public settling;
+    bool internal closing;
+    uint256 public refundReserve;
+    uint256 public reservedClaims;
+    uint256 public settlementAssets;
+    uint256 public settlementLiabilities;
+    mapping(uint256 => uint256) public exitClaim;
+    uint256[] internal activeIds;
+    mapping(uint256 => uint256) internal activePosition;
+    mapping(uint64 => uint256[]) internal entrants;
+    struct Settlement {
+        uint64 epoch;
+        int256 s;
+        int256[2] acc;
+        uint256 cursor;
+        uint256 joinCursor;
+        uint256 owed;
+        uint256 exitNet;
+        uint256 exitFees;
+        bool joining;
+    }
+    Settlement internal settlement;
+    uint256 internal accountBudget;
+    /// @notice Unreserved fees: bounties and actual net shortfalls are paid only from this backing.
     uint256 public buffer;
     /// @notice Principal of entries requested but not yet priced. Counted in the buffer target so fees are not
     /// swept away before the accounts they protect have joined the pool.
     uint256 public pendingPrincipal;
-    /// @notice Losses beyond the floor that neither the losing account nor the buffer paid. Winners are still
-    /// credited those amounts, so this is the pool's only possible shortfall. It stays zero while the buffer
-    /// covers overshoot, which is what `retire` and its bounty are for.
+    /// @notice Nominal shortfall at an automatic insolvency close. Actual remaining claims share available
+    /// assets at the fixed snapshot ratio; pending principal and already reserved exits are excluded.
     uint256 public badDebt;
     /// @notice Accounts not yet claimed or retired (pending, open, exiting or frozen).
     uint256 public openAccounts;
@@ -123,6 +148,7 @@ contract WujiAccounts is ReentrancyGuard {
     event Bounty(address indexed to, uint256 amount);
     event BadDebt(uint256 debt, uint256 absorbed);
     event Swept(uint256 amount);
+    event InsolvencyClosed(uint64 indexed epoch, uint256 assets, uint256 liabilities);
 
     constructor(Config memory c) {
         require(address(c.asset).code.length > 0 && address(c.index).code.length > 0, "not contract");
@@ -165,7 +191,7 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice Whether a request made now would be accepted (UI, deploy checks). Same conditions as `_schedule`.
     function acceptingRequests() external view returns (bool) {
-        return !frozen && !_indexFrozen() && _historyConsistent() && _tipFresh();
+        return !settling && !frozen && !_indexFrozen() && _historyConsistent() && _tipFresh();
     }
 
     function _tipFresh() internal view returns (bool) {
@@ -178,6 +204,7 @@ contract WujiAccounts is ReentrancyGuard {
     }
 
     function _schedule() internal returns (uint64) {
+        require(!settling, "settlement pending");
         require(!frozen && !_indexFrozen() && _historyConsistent(), "pool frozen");
         // The index's own freshness bound (3h) is for folding, far too loose for pricing: a relay that lags
         // lets a requester see the pricing block before asking. Use this pool's tighter bound instead.
@@ -243,6 +270,7 @@ contract WujiAccounts is ReentrancyGuard {
         accounts[id] = Account(msg.sender, yang, e, 0, principal);
         epochs[e].enterIn[yang ? 1 : 0] += principal;
         pendingPrincipal += principal;
+        entrants[e].push(id);
         emit EnterRequested(id, msg.sender, yang, principal, e);
     }
 
@@ -294,10 +322,12 @@ contract WujiAccounts is ReentrancyGuard {
     /// @notice Record S at a folded height by walking relay headers back from `from`, which is either the
     /// index's last folded height or an already marked height.
     function mark(uint64 height, uint64 from) public returns (int256 s) {
-        if (marked[height]) return sAt[height];
+        if (marked[height] && hashAt[height] != bytes32(0)) return sAt[height];
         require(_historyConsistent(), "deep Bitcoin reorg");
+        uint64 tipHeight = index.lastHeight();
+        require(RELAY_TIP || (height == tipHeight && from == tipHeight), "headers required");
         int256 value;
-        if (from == index.lastHeight()) value = index.S();
+        if (from == tipHeight) value = index.S();
         else { require(marked[from], "unknown base"); value = sAt[from]; }
         require(height <= from && from - height <= MAX_WALK, "walk");
         for (uint64 h = from; h > height; h--) {
@@ -305,7 +335,9 @@ contract WujiAccounts is ReentrancyGuard {
             require(hash != bytes32(0), "header unavailable");
             value -= _increment(sha256(abi.encodePacked(hash)));
         }
+        if (marked[height]) require(sAt[height] == value, "price mismatch");
         sAt[height] = value; marked[height] = true;
+        hashAt[height] = height == tipHeight ? index.lastHash() : index.relay().headerAt(height);
         return value;
     }
 
@@ -314,7 +346,7 @@ contract WujiAccounts is ReentrancyGuard {
     /// relay history, so it works for an index that keeps only its tip (ZkWujiIndex). Headers are bound by
     /// hash linkage alone: supplying a different chain would require a sha256 second preimage.
     function markWithHeaders(uint64 height, uint64 to, bytes calldata headers) public returns (int256 value) {
-        if (marked[height]) return sAt[height];
+        if (marked[height] && hashAt[height] != bytes32(0)) return sAt[height];
         uint256 n = headers.length / 80;
         require(headers.length == n * 80 && n > 0 && n <= MAX_WALK && to == height + n, "headers");
         bytes32 anchor;
@@ -328,6 +360,7 @@ contract WujiAccounts is ReentrancyGuard {
             value -= _increment(sha256(abi.encodePacked(hash)));
             expect = bytes32(raw[4:36]);
         }
+        if (marked[height]) require(sAt[height] == value, "price mismatch");
         sAt[height] = value; marked[height] = true; hashAt[height] = expect;
     }
 
@@ -350,10 +383,14 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice Process the next queued epoch once its height is folded. Anyone may call.
     function process() public nonReentrant returns (bool) {
+        accountBudget = ACCOUNT_BATCH;
         return _process();
     }
 
     function _process() internal returns (bool) {
+        if (frozen || _indexFrozen()) return false;
+        require(_historyConsistent(), "deep Bitcoin reorg");
+        if (settling) return _price(settlement.epoch, settlement.s);
         if (head >= queue.length) return false;
         uint64 e = queue[head];
         if (!marked[e]) {
@@ -364,9 +401,7 @@ contract WujiAccounts is ReentrancyGuard {
                 // (`markWithHeaders`); one exactly at the tip is read from the index.
                 if (e != last) return false;
                 sAt[e] = index.S(); marked[e] = true; hashAt[e] = index.lastHash();
-                _advance(e, sAt[e]);
-                _payBounty(msg.sender);
-                return true;
+                return _price(e, sAt[e]);
             }
             // After a long keeper absence the epoch can lie more than MAX_WALK below the tip. Walk down one
             // MAX_WALK chunk per call, remembering the lowest point reached, until the epoch is in range.
@@ -380,35 +415,96 @@ contract WujiAccounts is ReentrancyGuard {
             }
             mark(e, from);
         }
-        _advance(e, sAt[e]);
-        _payBounty(msg.sender);
-        return true;
+        return _price(e, sAt[e]);
     }
 
     function processMany(uint256 max) external nonReentrant returns (uint256 n) {
-        while (n < max && _process()) n++;
+        accountBudget = ACCOUNT_BATCH;
+        while (n < max && accountBudget > 0 && _process()) n++;
     }
 
-    function _advance(uint64 e, int256 s) internal {
-        Epoch storage ep = epochs[e];
-        if (started) {
-            int256 dS = s - lastS;
+    function _price(uint64 e, int256 s) internal returns (bool done) {
+        done = _advance(e, s);
+        if (done) _payBounty(msg.sender);
+    }
+
+    function _removeActive(uint256 id) internal {
+        uint256 pos = activePosition[id];
+        if (pos == 0) return;
+        uint256 moved = activeIds[activeIds.length - 1];
+        activeIds[pos - 1] = moved; activePosition[moved] = pos;
+        activeIds.pop(); delete activePosition[id];
+    }
+
+    /// @dev At most ACCOUNT_BATCH accounts per call. Requests/retirements/sweep wait for completion;
+    /// previously reserved claims may still be paid because their cash is excluded from this snapshot.
+    function _advance(uint64 e, int256 s) internal returns (bool) {
+        Settlement storage w = settlement;
+        if (!settling) {
+            delete settlement;
+            w.epoch = e; w.s = s; w.acc = acc; settling = true;
+            int256 dS = started ? s - lastS : int256(0);
             uint256 m = principalOf[0] < principalOf[1] ? principalOf[0] : principalOf[1];
             if (m > 0 && dS != 0) {
-                // Per unit of principal: the matched part moves by ΔS/K, the idle excess by nothing.
                 int256 move = dS * ACC / K;
-                // Both sides round down, so rounding can only leave dust in the pool, never owe it.
-                acc[1] += _floorDiv(move * int256(m), int256(uint256(principalOf[1])));
-                acc[0] += _floorDiv(-move * int256(m), int256(uint256(principalOf[0])));
+                w.acc[1] += _floorDiv(move * int256(m), int256(uint256(principalOf[1])));
+                w.acc[0] += _floorDiv(-move * int256(m), int256(uint256(principalOf[0])));
             }
         }
-        started = true; lastS = s;
+        require(w.epoch == e && w.s == s, "settlement mismatch");
+        uint256 work;
+        uint256 budget = accountBudget;
+        if (!w.joining) {
+            while (w.cursor < activeIds.length && work < budget) {
+                uint256 id = activeIds[w.cursor];
+                Account storage a = accounts[id];
+                uint256 v = _value(a.principal, w.acc[a.yang ? 1 : 0] - _entryAcc(a));
+                w.owed += v;
+                if (a.exitEpoch == e) {
+                    uint256 fee = v * FEE_BPS / 10_000;
+                    exitClaim[id] = v - fee;
+                    w.exitNet += v - fee; w.exitFees += fee;
+                    _removeActive(id);
+                } else { w.cursor++; }
+                work++;
+            }
+            if (w.cursor < activeIds.length) { accountBudget -= work; return false; }
+            w.joining = true;
+        }
+        Epoch storage ep = epochs[e];
+        if (!ep.frozenRefund) {
+            uint256[] storage ids = entrants[e];
+            while (w.joinCursor < ids.length && work < budget) {
+                uint256 id = ids[w.joinCursor++];
+                activeIds.push(id); activePosition[id] = activeIds.length;
+                work++;
+            }
+            if (w.joinCursor < ids.length) { accountBudget -= work; return false; }
+        }
+        accountBudget -= work;
+        uint256 available = asset.balanceOf(address(this)) - pendingPrincipal - refundReserve - reservedClaims;
+        acc = w.acc; lastS = s; started = true; settling = false;
+        if (w.owed > available) {
+            insolvent = true; frozen = true; buffer = 0;
+            settlementAssets = available; settlementLiabilities = w.owed;
+            badDebt = w.owed - available;
+            emit InsolvencyClosed(e, available, w.owed);
+            emit PoolFrozen(s);
+            return false;
+        }
+        // All live values and every old claim now have real cash backing. Fees absorb any net overshoot.
+        uint256 spare = available - w.owed;
+        if (buffer > spare) { emit BadDebt(buffer - spare, buffer - spare); buffer = spare; }
+        reservedClaims += w.exitNet; buffer += w.exitFees;
         principalOf[0] -= ep.exitOut[0]; principalOf[1] -= ep.exitOut[1];
-        pendingPrincipal -= uint256(ep.enterIn[0]) + ep.enterIn[1];
+        uint256 entering = uint256(ep.enterIn[0]) + ep.enterIn[1];
+        pendingPrincipal -= entering;
         if (!ep.frozenRefund) { principalOf[0] += ep.enterIn[0]; principalOf[1] += ep.enterIn[1]; }
+        else { refundReserve += entering; }
         ep.acc = acc; ep.processed = true;
         head++;
         emit EpochProcessed(e, s, acc[0], acc[1]);
+        return true;
     }
 
     // ---------------------------------------------------------------- values and claims
@@ -439,20 +535,6 @@ contract WujiAccounts is ReentrancyGuard {
         return a.exitEpoch != 0 && epochs[a.exitEpoch].processed ? epochs[a.exitEpoch].acc[a.yang ? 1 : 0] : acc[a.yang ? 1 : 0];
     }
 
-    /// @dev Loss past the floor is charged to the buffer, then recorded as badDebt. Gain past the ceiling is
-    /// deliberately NOT credited anywhere: it is real money only if the matching loser stayed above its floor,
-    /// and crediting it early let `sweep` send out money that a floored loser never paid (found by the freeze
-    /// invariant suite). It stays in the pool as unaccounted margin, which is what covers such overshoot; once
-    /// every account is closed, `sweep` sends the whole remainder to the treasury.
-    function _recordBadDebt(Account storage a) internal {
-        int256 v = _raw(a.principal, _endAcc(a) - _entryAcc(a));
-        if (v >= 0) return;
-        uint256 debt = uint256(-v);
-        uint256 absorbed = debt < buffer ? debt : buffer;
-        buffer -= absorbed; badDebt += debt - absorbed;
-        emit BadDebt(debt, absorbed);
-    }
-
     function _payBounty(address to) internal {
         if (BOUNTY_DIVISOR == 0) return;
         uint256 amount = buffer / BOUNTY_DIVISOR;
@@ -464,6 +546,7 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice Send buffer above its target to the treasury (FeeRouter → RelayerRewards). Anyone may call.
     function sweep() external nonReentrant returns (uint256 amount) {
+        require(!settling, "settlement pending");
         if (openAccounts == 0) {
             // Nobody is owed anything: rounding dust and ceiling surplus leave with the buffer.
             amount = asset.balanceOf(address(this));
@@ -490,7 +573,21 @@ contract WujiAccounts is ReentrancyGuard {
     function valueOf(uint256 id) public view returns (uint256) {
         Account storage a = accounts[id];
         if (a.owner == address(0) || !epochs[a.enterEpoch].processed || epochs[a.enterEpoch].frozenRefund) return 0;
-        return _value(a.principal, _endAcc(a) - _entryAcc(a));
+        uint256 v = _value(a.principal, _endAcc(a) - _entryAcc(a));
+        if (insolvent && !(a.exitEpoch != 0 && epochs[a.exitEpoch].processed)) {
+            return Math.mulDiv(v, settlementAssets, settlementLiabilities);
+        }
+        return v;
+    }
+
+    /// @notice Net amount currently payable, including full pending refunds after an insolvency close.
+    function claimableOf(uint256 id) external view returns (uint256) {
+        Account storage a = accounts[id];
+        if (a.owner == address(0)) return 0;
+        Epoch storage ep = epochs[a.enterEpoch];
+        if ((ep.processed && ep.frozenRefund) || (insolvent && !ep.processed)) return a.principal;
+        if (a.exitEpoch != 0 && epochs[a.exitEpoch].processed) return exitClaim[id];
+        return frozen && ep.processed ? valueOf(id) : 0;
     }
 
     /// @notice Pay out a processed exit, a frozen-pool account, or a refunded entry.
@@ -499,40 +596,38 @@ contract WujiAccounts is ReentrancyGuard {
         require(a.owner == msg.sender, "not owner");
         uint256 amount;
         Epoch storage enter = epochs[a.enterEpoch];
-        if (enter.processed && enter.frozenRefund) {
+        if ((enter.processed && enter.frozenRefund) || (insolvent && !enter.processed)) {
             amount = a.principal;
+            if (enter.processed) refundReserve -= amount;
+            else pendingPrincipal -= amount;
         } else if (a.exitEpoch != 0 && epochs[a.exitEpoch].processed) {
-            amount = valueOf(id);
-            _recordBadDebt(a);
-            uint256 fee = amount * FEE_BPS / 10_000;
-            buffer += fee; amount -= fee;
+            amount = exitClaim[id];
+            reservedClaims -= amount;
+            delete exitClaim[id];
         } else {
             require(frozen && enter.processed, "not claimable");
             amount = valueOf(id);
-            _recordBadDebt(a);
             principalOf[a.yang ? 1 : 0] -= a.principal;
         }
+        // An in-progress settlement only removes exits whose epoch is still unprocessed and unclaimable.
+        // Old reserved exits and refund claims do not occur in activeIds.
+        _removeActive(id);
         delete accounts[id];
         openAccounts--;
-        uint256 balance = asset.balanceOf(address(this));
-        if (amount > balance) amount = balance; // only reachable if floor overshoot exhausted everything
+        require(asset.balanceOf(address(this)) >= amount + pendingPrincipal + refundReserve + reservedClaims, "reserves");
         asset.safeTransfer(msg.sender, amount);
-        // A winner's value can include a floored loser's unpaid overshoot. Paying it consumes real tokens that
-        // the buffer counted as its own: the buffer has then absorbed that overshoot, so it can never claim
-        // more than the pool actually holds (else bounties and sweep would revert and brick the pool).
-        uint256 left = balance - amount;
-        if (buffer > left) { emit BadDebt(buffer - left, buffer - left); buffer = left; }
         emit Claimed(id, msg.sender, amount);
     }
 
     /// @notice Remove an account that has reached its floor so it stops diluting the matched amount.
     function retire(uint256 id) external nonReentrant {
+        require(!settling, "settlement pending");
         Account storage a = accounts[id];
         require(a.owner != address(0) && a.exitEpoch == 0 && !frozen, "not live");
         require(epochs[a.enterEpoch].processed && !epochs[a.enterEpoch].frozenRefund, "entry pending");
         require(valueOf(id) == 0, "not at floor");
-        _recordBadDebt(a);
         principalOf[a.yang ? 1 : 0] -= a.principal;
+        _removeActive(id);
         delete accounts[id];
         openAccounts--;
         emit Retired(id);
@@ -541,32 +636,38 @@ contract WujiAccounts is ReentrancyGuard {
 
     // ---------------------------------------------------------------- frozen state
 
-    /// @notice After the index freezes, price every queued epoch: those already folded and markable at their
-    /// own S, the rest at the frozen S with their entries refunded. Then the pool stops.
+    /// @notice Header-only indexes require authenticated historical prices for folded epochs. Relay-based
+    /// indexes use frozen S for every still-unstarted epoch, independent of pre-existing marks. Later entries
+    /// are refunded in full. Repeated calls finish bounded account batches; there is no privileged caller.
     function freezePool(uint256 max) external nonReentrant {
         require(_indexFrozen(), "index live");
         require(!frozen, "pool frozen");
+        accountBudget = ACCOUNT_BATCH;
         int256 s = index.S();
         uint64 last = index.lastHeight();
         uint256 n;
-        while (head < queue.length && n < max) {
+        while (head < queue.length && n < max && accountBudget > 0) {
             uint64 e = queue[head];
-            // The relay no longer matches folded history, so unmarked heights cannot be recomputed; once
-            // one epoch falls back to the frozen S, every later one does too.
-            if (marked[e] && !afterFallback) { _advance(e, sAt[e]); }
+            int256 price = s;
+            if (settling) { price = settlement.s; }
             else {
-                afterFallback = true;
-                // Entries priced after the last folded height never had a price: refund them.
+                if (!RELAY_TIP && e <= last) {
+                    if (!marked[e] && e == last) mark(e, e);
+                    if (!marked[e]) return;
+                    price = sAt[e];
+                }
                 epochs[e].frozenRefund = e > last;
-                _advance(e, s);
             }
+            if (!_advance(e, price)) return;
             n++;
         }
         if (head < queue.length) return;
-        if (started) {
+        if (started && !closing) {
             // Move open accounts to the frozen S.
             uint64 e = type(uint64).max; // sentinel, never queued
-            queue.push(e); _advance(e, s);
+            closing = true;
+            queue.push(e);
+            if (!_advance(e, s)) return;
         }
         frozen = true;
         emit PoolFrozen(s);

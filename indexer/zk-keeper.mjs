@@ -23,6 +23,8 @@ import { within as withinMs } from './zk-challenge.mjs';
 import { watch } from './zk-watcher.mjs';
 import { maintainPool } from './accounts.mjs';
 import { loadStates, planSeal, saveState } from './seal.mjs';
+import { decodeReorgProof, planSegmentedSeal, submitReorgStep } from './seal-segments.mjs';
+import { HeaderHistory, recoverFoldTransaction } from './header-history.mjs';
 export { decodeContinuity };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -41,7 +43,7 @@ const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
 const within = (promise, what) => withinMs(promise, SOURCE_TIMEOUT_MS, what);
 const FALLBACK = env.ZK_FALLBACK !== '0';
 // Header-path-only index (verifier = 0, the mainnet plan in T13): fold once ZK_MIN_FOLD heights are past the
-// confirmation depth, at most ZK_MAX_FOLD per call, keeping a freeze proof inside one transaction later.
+// confirmation depth, at most ZK_MAX_FOLD per call. Fold size does not bound Bitcoin reorg depth.
 const MIN_FOLD = Number(env.ZK_MIN_FOLD || 36);
 const MAX_FOLD = Number(env.ZK_MAX_FOLD || 250);
 // Every transaction must stay under the 2^24 per-transaction gas cap (EIP-7825); ≈ 18.7k gas per header.
@@ -61,6 +63,13 @@ if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC,
 const chain = contractClient({ rpc: RPC, chainId: CHAIN_ID, to: INDEX, env });
 if (!chain.canSign) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE');
 fs.mkdirSync(WORK, { recursive: true });
+const headerHistory = new HeaderHistory(path.join(WORK, 'bitcoin-headers'));
+// Optional public transaction IDs for recovering history created before this archive existed (read-only).
+const HEADER_RECOVERY_TXS = (env.ZK_HEADER_RECOVERY_TXS || '').split(',').map(x => x.trim()).filter(Boolean);
+if (HEADER_RECOVERY_TXS.length > 32 || HEADER_RECOVERY_TXS.some(h => !/^0x[0-9a-f]{64}$/i.test(h))) {
+  throw Error('ZK_HEADER_RECOVERY_TXS must contain at most 32 public transaction hashes');
+}
+const recoveredHeaderTransactions = new Set();
 
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const { rpc, call } = chain;
@@ -75,6 +84,11 @@ function prove(inputFile, outFile) {
 let immut, lastProgress = Date.now(), lastHeight = -1, frozenLogged = false;
 // Finalized states seen on chain, kept so a deep reorg can be sealed from one of them (seal.mjs).
 const STATES = path.join(WORK, `sealable-states-${INDEX}.json`);
+const REORG_PROOF = path.join(WORK, `reorg-proof-${INDEX}.json`);
+function saveReorgProof(proof) {
+  fs.writeFileSync(REORG_PROOF + '.tmp', JSON.stringify({ proof }));
+  fs.renameSync(REORG_PROOF + '.tmp', REORG_PROOF);
+}
 export async function round(source) {
   assertChain(await rpc('eth_chainId', []), CHAIN_ID);
   // WujiHeaderIndex (the mainnet contract) has no proof path: its ZK-only views do not exist and read as absent.
@@ -88,6 +102,7 @@ export async function round(source) {
     headerOnly: (await optional('verifier()', 0n)) === 0n,
     margin: Number(await optional('REORG_MARGIN()', 144n)),
     maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
+    maxReorgSegmentHeaders: Number(await optional('MAX_REORG_SEGMENT_HEADERS()', 0n)),
   };
   // Rule 3 sealed the index: nothing advances any more; pools exit through maintainAccounts (freezePool).
   if ((await optional('frozen()', 0n)) === 1n) {
@@ -115,9 +130,28 @@ export async function round(source) {
   if (immut.headerOnly) {
     saveState(STATES, raw);
     const timed = { tip: () => within(source.tip(), 'Bitcoin tip'), at: h => within(source.at(h), `Bitcoin header ${h}`) };
-    const plan = await planSeal({ tip: start, states: loadStates(STATES), source: timed, confirmations: immut.confirmations,
-      margin: immut.margin, maxHeaders: immut.maxReorgHeaders });
+    const planning = { tip: start, states: loadStates(STATES), source: timed, confirmations: immut.confirmations, margin: immut.margin };
+    let plan;
+    if (immut.maxReorgSegmentHeaders > 0) {
+      let proof = null;
+      try {
+        proof = JSON.parse(fs.readFileSync(REORG_PROOF, 'utf8')).proof;
+        if (proof) decodeReorgProof(proof);
+      } catch { proof = null; }
+      if (proof && (await chain.simulate(INDEX, 'isReorgProof(bytes)(bool)', proof)) !== 'true') proof = null;
+      plan = await planSegmentedSeal({ ...planning, maxHeaders: immut.maxReorgSegmentHeaders, proof });
+      if (['begin', 'extend', 'finish'].includes(plan.action)) {
+        if (plan.headers) headerHistory.putBatch(plan.headers);
+        const result = await submitReorgStep({ chain, index: INDEX, plan, saveProof: saveReorgProof });
+        log(`reorg ${plan.action}: ${result.action}, gas ${result.gas} ${result.hash}`);
+        return result;
+      }
+    } else {
+      // Legacy WujiHeaderIndex and ZkWujiIndex deployments only have the existing one-call interface.
+      plan = await planSeal({ ...planning, maxHeaders: immut.maxReorgHeaders });
+    }
     if (plan.action === 'seal') {
+      headerHistory.putBatch(plan.headers);
       const n = (plan.headers.length - 2) / 160;
       await chain.simulate(INDEX, 'freezeOnReorg(bytes,bytes)', plan.base, plan.headers);
       const tx = await send('freezeOnReorg(bytes,bytes)', headerGas(n), plan.base, plan.headers);
@@ -143,6 +177,9 @@ export async function round(source) {
       if (s.hash !== b.hash) throw Error(`source hash mismatch at ${h}`);
       out.push(b.header); prev = s.internalHash;
     }
+    // Persist all raw bytes BEFORE proving/broadcasting, including the confirmation tail. Height-keyed
+    // Bitcoin sources may discard this branch after a reorg, while accounts still need its historical S.
+    headerHistory.putBatch(out);
     return out;
   };
   if (immut.headerOnly) {
@@ -194,11 +231,17 @@ const accountCursor = new Map();
 
 /// T11 pools on this index: same duties as the relay keeper, with epochs marked from this keeper's headers.
 export async function maintainAccounts(source, pools = ACCOUNTS) {
-  const headersFor = async (from, to) => {
-    let hex = '0x';
-    for (let h = from; h <= to; h++) hex += (await within(source.at(h), `Bitcoin header ${h}`)).header;
-    return hex;
-  };
+  if (!pools.length) return;
+  for (const transactionHash of HEADER_RECOVERY_TXS) {
+    if (recoveredHeaderTransactions.has(transactionHash)) continue;
+    try {
+      const n = await recoverFoldTransaction({ history: headerHistory, index: INDEX, transactionHash,
+        rpc: (method, args) => within(rpc(method, args), 'historical fold transaction') });
+      recoveredHeaderTransactions.add(transactionHash);
+      log('restored', n, 'historical headers from public fold', transactionHash);
+    } catch (e) { log('header recovery:', e.message); }
+  }
+  const headersFor = (from, to, anchorHash) => headerHistory.headersFor(source, from, to, anchorHash, within);
   for (const pool of pools) {
     try {
       const r = await maintainPool({

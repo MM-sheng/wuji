@@ -1,5 +1,12 @@
 # T11 design: perpetual accounts (只押本金、链上记账)
 
+**2026-10-12 source revision, not yet deployed:** the current rules in
+[ARCHITECTURE.md](../ARCHITECTURE.md) supersede this document's historical late-claimant-loss and
+mark-dependent frozen-price descriptions. Pending principal, refund principal and priced net exits have
+separate reserves; uncovered live liabilities cause a permanent, fixed pro-rata close. Pricing scans are
+bounded to 64 account visits per transaction. Header-only frozen epochs require their authenticated
+historical price. The earlier design and deployment notes below remain historical records.
+
 Status: steps 1–4 built (see end); step 5 (testnet deployment) not started. It is a **new contract** beside the existing series
 vaults; it reuses `WujiIndex` / `ZkWujiIndex`, `BitcoinRelay`, `RelayerRewards` and the P2P source unchanged.
 
