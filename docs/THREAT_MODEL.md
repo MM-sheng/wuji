@@ -236,7 +236,7 @@ requester chooses where the supplied chain stops and could pick a recent block s
 (WUJI-14). A requester can only show *more* real work than exists by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it
 relies on the index's own confirmation depth, as the index does.
 
-**Floor overshoot (source rule revised 2026-10-12; not yet deployed).** A loser can cross 0 between priced
+**Floor overshoot (rule revised 2026-10-12; deployed on Sepolia v3).** A loser can cross 0 between priced
 epochs while a winner retains nominal gains. The pool scans all live accounts before publishing each epoch,
 with at most 64 account visits per transaction. Pending entry principal, frozen refunds and already priced
 net exit claims have separate cash reserves. Net overshoot consumes actual buffer backing first. If the
