@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-15",
+  "observedAt": "2026-10-15T09:38:44.545Z",
+  "faucet": "Google Cloud Web3",
+  "faucetURL": "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": "0xaa36a7",
+  "recipient": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "status": "received",
+  "requestSubmitted": true,
+  "transactionHash": "0x8c406f9beaad9d7b15b3adbcace3c032c0c25dd02588527f8752c8b6a28465b8",
+  "receivedAmountWei": "50000000000000000",
+  "balanceObservedAtBlock": "0xb5e0e6",
+  "balanceWei": "526540708591716708",
+  "purpose": "ongoing upkeep after round 2 completion",
+  "round": 2,
+  "roundTargetWei": "150000000000000000",
+  "roundConfirmedReceivedWei": "150000000000000000",
+  "roundTargetReached": true,
+  "postRound2ConfirmedReceivedWei": "600000000000000000",
+  "browserNotes": "The stale page showed a reCAPTCHA connection error. One normal reload restored the form; no CAPTCHA challenge, new login or terms acceptance was presented.",
+  "priorAttempts": [
+    {
+      "status": "rate-limited",
+      "requestSubmitted": true,
+      "receivedAmountWei": "0",
+      "eligibleAfterLocal": "2026-10-15T17:37:41+08:00",
+      "message": "Each Google Account and wallet address gets one drip on Sepolia every 1 day. Try again after Oct 15, 2026, 5:37:41 PM."
+    }
+  ],
+  "transaction": {
+    "type": "0x2",
+    "chainId": "0xaa36a7",
+    "nonce": "0xb5e72",
+    "gas": "0x99cf0",
+    "maxFeePerGas": "0x10c902",
+    "maxPriorityFeePerGas": "0x10c8e0",
+    "to": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "value": "0xb1a2bc2ec50000",
+    "accessList": [],
+    "input": "0x",
+    "r": "0xb0581d062cf74f338c45d26959773927071a6e6914c2a1d1f0af33c53338d0bb",
+    "s": "0x290c13722068b0f4242a2a2ee18e57aca47a5da2df5da93f5646d06f2b4943f7",
+    "yParity": "0x1",
+    "v": "0x1",
+    "hash": "0x8c406f9beaad9d7b15b3adbcace3c032c0c25dd02588527f8752c8b6a28465b8",
+    "blockHash": "0x21aa41ed5bdf86cfd608396a99b71ce6be5ac11460f7428bc56c6c78015155fa",
+    "blockNumber": "0xb5e0e4",
+    "transactionIndex": "0x74",
+    "from": "0x6efb29cee3b414272eb7a8f3ebabf873d36bc033",
+    "gasPrice": "0x10c8f1",
+    "blockTimestamp": "0x6ad09f04"
+  },
+  "receipt": {
+    "type": "0x2",
+    "status": "0x1",
+    "cumulativeGasUsed": "0x465f0bd",
+    "logs": [
+      {
+        "address": "0xfffffffffffffffffffffffffffffffffffffffe",
+        "topics": [
+          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+          "0x0000000000000000000000006efb29cee3b414272eb7a8f3ebabf873d36bc033",
+          "0x00000000000000000000000085967858e2464535a12031103aba38f2795fe8fd"
+        ],
+        "data": "0x00000000000000000000000000000000000000000000000000b1a2bc2ec50000",
+        "blockHash": "0x21aa41ed5bdf86cfd608396a99b71ce6be5ac11460f7428bc56c6c78015155fa",
+        "blockNumber": "0xb5e0e4",
+        "blockTimestamp": "0x6ad09f04",
+        "transactionHash": "0x8c406f9beaad9d7b15b3adbcace3c032c0c25dd02588527f8752c8b6a28465b8",
+        "transactionIndex": "0x74",
+        "logIndex": "0xe3",
+        "removed": false
+      }
+    ],
+    "logsBloom": "0x00000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000001020000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000010000000000000000000000000000000010000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000002000000000008000000000200000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+    "transactionHash": "0x8c406f9beaad9d7b15b3adbcace3c032c0c25dd02588527f8752c8b6a28465b8",
+    "transactionIndex": "0x74",
+    "blockHash": "0x21aa41ed5bdf86cfd608396a99b71ce6be5ac11460f7428bc56c6c78015155fa",
+    "blockNumber": "0xb5e0e4",
+    "gasUsed": "0x5208",
+    "effectiveGasPrice": "0x10c8f1",
+    "from": "0x6efb29cee3b414272eb7a8f3ebabf873d36bc033",
+    "to": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "contractAddress": null
+  }
+}
