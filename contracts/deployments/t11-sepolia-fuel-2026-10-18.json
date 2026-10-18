@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-18T09:37:18.427Z",
+  "dateAsiaShanghai": "2026-10-18",
+  "task": "C",
+  "status": "not-submitted",
+  "chainId": 11155111,
+  "address": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "faucet": "Google Cloud Web3",
+  "amountReceivedByThisAttemptWei": "0",
+  "transactionHash": null,
+  "receipt": null,
+  "browser": {
+    "attempts": 2,
+    "result": "Existing Chrome tab inventory failed; browser inventory recovery also failed. No browser transport available. No faucet request submitted."
+  },
+  "balance": {
+    "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+    "blockNumber": "0xb63180",
+    "blockHash": "0xf3cd420a57c16fb450ecc4cddf9017954b4fa5ccc6535ce4742d4bfb6e1c0784",
+    "wei": "568469518691317708",
+    "eth": "0.568469518691317708"
+  },
+  "scope": "Read-only balance observation only. No outgoing transfer, deployment, Task A signature, login or CAPTCHA attempt. Existing round-2/upkeep totals not changed."
+}
