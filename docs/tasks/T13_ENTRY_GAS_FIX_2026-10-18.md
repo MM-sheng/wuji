@@ -49,3 +49,28 @@ scripts/replay-metamask-entry-gas.mjs。脚本固定 loopback RPC、检查初始
 没有私钥，也不向公共 RPC 广播。
 
 ![真实复验签名等待](../../contracts/deployments/t13-gas-fix-wait-2026-10-18.jpg)
+
+## 真实复验结果（后续确认）
+
+用户签名后，真实交易
+`0x51de27248e423130f3ca9d4bdd6502c6b8d5188f8639c8a57b5e70eaa84e5a33`
+在 Sepolia 块 `0xb62adc` 成功（status 1，块哈希已核对）。
+
+- owner：0x6657289562f870677325124f3acbdebb0ea80b95；10% 池；阳；账户 3。
+- WETH Transfer 入池：10000000000000 wei（0.00001）。
+- EnterRequested 本金：9970000000000 wei（0.00000997），0.3% 费用 30000000000 wei。
+- 进场定价高度：972012；账户状态 entering，尚未定价。WETH 剩余 0.00001。
+- latest/pending nonce 均 4，无额外待发交易；没有重复进场。
+- 交易为 type 2，仍由 DelegationManager 包装；账户已在上次 type 4 后具备 delegation。
+- 实际 gasLimit **1659992**，gasUsed **1408578**。钱包重建包装并重新计算 gas，
+  没有原样采用网页请求的 2737148 预算。不能把真实成功完全归因于预算被钱包采纳，
+  也不能据此宣布首次 type 4 授权路径已经普遍修复。
+
+结论：原始失败的内层 OutOfGas 已复现；增加预算在同笔原交易的本地对照中成功；
+当前已 delegated 账户的真实网页进场成功。首次升级账户的包装 gas 兼容性仍有边界，需在独立测试账户
+进一步验收；不撤销当前用户 delegation 来强行复现，不重复消耗当前账户资金。
+真实收据、事件、同块账户状态与余额见
+[成功原始证据](../../contracts/deployments/t13-metamask-entry-success-2026-10-18.json)。
+后续等待 972012、K=100 和链上处理，按协议完成退出/领取；完整往返仍 OPEN。
+
+![真实成功账户状态](../../contracts/deployments/t13-metamask-entry-success-2026-10-18.jpg)

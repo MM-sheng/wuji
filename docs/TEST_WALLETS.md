@@ -53,3 +53,5 @@ WETH 仍为 0.00002、allowance 仍为 0.00001、nextId 仍为 3；相同直接�
 [原始交易、收据及后续只读检查](../contracts/deployments/t13-metamask-entry-2026-10-18.json)。
 
 后续已通过完整重放定位内层 OutOfGas，并以增加 gasLimit 的本地分叉对照成功验证修复。追加 0.003 Sepolia ETH，本轮 gas 补给累计 0.008；最新余额、修复和真实重试进度见 [gas 修复报告](tasks/T13_ENTRY_GAS_FIX_2026-10-18.md)。此前“原因未定位/暂停”描述是历史步骤。
+
+真实重试已成功创建阳账户 #3：投入 0.00001 WETH，本金 0.00000997，定价高度 972012，目前 entering。剩余 WETH 0.00001。实际钱包重新计算 gas，没有原样保留网页预算；首次 type 4 路径兼容性不能据此全称通过。详见 gas 修复报告的真实复验节。
