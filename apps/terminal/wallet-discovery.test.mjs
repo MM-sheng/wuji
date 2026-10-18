@@ -27,7 +27,7 @@ function fixture({order=['other','meta'],reject,pending=false,legacy=true}={}){
 }
 const target={address:'0x'+'11'.repeat(20),chainId:11155111,wallet:'metamask'};
 for(const order of [['other','meta'],['meta','other']])test('connects MetaMask despite a competing getter-only provider: '+order.join(','),async()=>{
- const f=fixture({order});await f.connect(target);assert.equal(f.W.acct,address);assert.equal(f.W.walletName,'MetaMask');assert.equal(f.eth(),f.providers.meta);
+ const f=fixture({order});await f.connect(target);assert.equal(f.W.acct,address);assert.equal(f.W.walletName,'MetaMask');assert.equal(f.W.chainId,11155111);assert.equal(f.eth(),f.providers.meta);
  assert.ok(f.calls.meta.includes('eth_requestAccounts'));assert.equal(f.calls.other.length,0);assert.equal(f.W.connecting,false);
 });
 test('does not silently connect a different announced wallet when MetaMask is absent',async()=>{

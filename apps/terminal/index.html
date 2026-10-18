@@ -1032,6 +1032,7 @@ function exitActionAllowed(state, action) {
     return null;
   }
   function perpError(e){
+    if(/insufficient funds.*gas|gas.*insufficient funds/i.test(String(e?.message)))return '测试网 gas 余额不足，无法发送这笔交易；补充测试币后重试';
     if(e?.code===4001||/denied|rejected/i.test(String(e?.message)))return '已在钱包中取消';
     const m=String(e?.message||e).match(/^Switch wallet to (.+)$/);if(m)return '请先把钱包切换到 '+m[1];
     const r=revertReason(e);if(r)return PERP_REASONS[r]||('合约拒绝：'+r);
@@ -1114,7 +1115,7 @@ function exitActionAllowed(state, action) {
     if(!W.acct){el.innerHTML='<button id="pjConnect" '+(W.connecting?'disabled':'')+'>'+(W.connecting?'等待 MetaMask 授权…':'连接 MetaMask')+'</button><div class="msg2">'+esc(W.msg||perpForm.msg||'Sepolia 测试网 · 仅使用测试 WETH')+'</div>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId,wallet:'metamask'});return;}
     $('pjPool').disabled=!!(perpForm.busy||perpForm.flowBusy);
     const dis=perpForm.busy||perpForm.flowBusy?'disabled':'',mine=myIds(rel.address);
-    el.innerHTML=`<div class="msg2">${esc(W.walletName||'钱包')} · ${esc(short(W.acct))}</div>${W.msg?'<div class="msg2">'+esc(W.msg)+'</div>':''}<div class="row2"><span style="color:var(--dim)">方向</span>
+    el.innerHTML=`<div class="msg2">${esc(W.walletName||'钱包')} · ${esc(walletNetworks[W.chainId]?.chainName||'请核对钱包网络')}</div><div class="msg2" style="overflow-wrap:anywhere">本次账户：${esc(W.acct)}</div>${W.msg?'<div class="msg2">'+esc(W.msg)+'</div>':''}<div class="row2"><span style="color:var(--dim)">方向</span>
       <button id="pjYang" class="${perpForm.side==='yang'?'pri':''}" ${dis}>阳</button><button id="pjYin" class="${perpForm.side==='yin'?'pri':''}" ${dis}>阴</button>
       <input id="pjAmt" type="text" inputmode="decimal" placeholder="数量 ${esc(rel.symbol||'')}" value="${esc(perpForm.amount)}"><button class="pri" id="pjEnter" ${dis}>进场</button></div>
       <div class="row2"><button id="pjExit" ${dis}>申请退出（按上方编号）</button><button id="pjClaim" ${dis}>领取（按上方编号）</button></div>
@@ -1228,6 +1229,7 @@ function exitActionAllowed(state, action) {
       const want=target?.address?target.chainId:curVault()?.chainId; if(!want)throw Error('Wait for the deployed vault to load');
       const cur=Number(BigInt(await eth().request({method:'eth_chainId'})));
       if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&walletNetworks[want]) await eth().request({method:'wallet_addEthereumChain',params:[walletNetworks[want]]}); else throw e; } }
+      await requireWalletChain(want);
       if(provider.on&&walletEvents!==provider){walletEvents=provider;
         provider.on('accountsChanged',a=>{if(eth()!==provider)return;W.acct=a[0]||null;W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();renderPerpWallet();});
         provider.on('chainChanged',id=>{if(eth()!==provider)return;W.chainId=Number(BigInt(id));W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();renderPerpWallet();});
