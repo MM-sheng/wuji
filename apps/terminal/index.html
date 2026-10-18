@@ -1111,10 +1111,10 @@ function exitActionAllowed(state, action) {
     const el=$('pjWallet'),pool=$('pjPool').value,rel=pool&&releasedPool(pool);
     if(!pool){el.innerHTML='';return;}
     if(!rel){el.innerHTML='<div class="msg2">这个池子不在页面内置的发布清单里，不能从网页操作。只读显示仍可用。</div>';return;}
-    if(!W.acct){el.innerHTML='<button id="pjConnect">CONNECT WALLET</button><div class="msg2">'+esc(W.msg||perpForm.msg||'Sepolia 测试网 · 仅使用测试 WETH')+'</div>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId}).then(renderPerpWallet);return;}
+    if(!W.acct){el.innerHTML='<button id="pjConnect" '+(W.connecting?'disabled':'')+'>'+(W.connecting?'等待 MetaMask 授权…':'连接 MetaMask')+'</button><div class="msg2">'+esc(W.msg||perpForm.msg||'Sepolia 测试网 · 仅使用测试 WETH')+'</div>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId,wallet:'metamask'});return;}
     $('pjPool').disabled=!!(perpForm.busy||perpForm.flowBusy);
     const dis=perpForm.busy||perpForm.flowBusy?'disabled':'',mine=myIds(rel.address);
-    el.innerHTML=`<div class="row2"><span style="color:var(--dim)">方向</span>
+    el.innerHTML=`<div class="msg2">${esc(W.walletName||'钱包')} · ${esc(short(W.acct))}</div>${W.msg?'<div class="msg2">'+esc(W.msg)+'</div>':''}<div class="row2"><span style="color:var(--dim)">方向</span>
       <button id="pjYang" class="${perpForm.side==='yang'?'pri':''}" ${dis}>阳</button><button id="pjYin" class="${perpForm.side==='yin'?'pri':''}" ${dis}>阴</button>
       <input id="pjAmt" type="text" inputmode="decimal" placeholder="数量 ${esc(rel.symbol||'')}" value="${esc(perpForm.amount)}"><button class="pri" id="pjEnter" ${dis}>进场</button></div>
       <div class="row2"><button id="pjExit" ${dis}>申请退出（按上方编号）</button><button id="pjClaim" ${dis}>领取（按上方编号）</button></div>
@@ -1167,12 +1167,43 @@ function exitActionAllowed(state, action) {
   }
 
   // ---- wallet: raw EIP-1193, hand-rolled ABI. No third-party runtime library; wallet/chain trust still applies.
-  const W={acct:null,chainId:null,bal:{},busy:false,msg:''};
+  const W={acct:null,chainId:null,bal:{},busy:false,msg:'',connecting:false,walletName:''};
+  // EIP-6963 avoids the race between extensions writing window.ethereum. Metadata is self-reported.
+  const discoveredWallets=new Map();let selectedWallet=null;
+  window.addEventListener?.('eip6963:announceProvider',event=>{
+    try{const {info,provider}=event.detail||{};
+      if(!info||typeof info.uuid!=='string'||typeof info.rdns!=='string'||typeof info.name!=='string'||typeof provider?.request!=='function')return;
+      if(!discoveredWallets.has(info.uuid)&&discoveredWallets.size<32)discoveredWallets.set(info.uuid,{provider,name:info.name.slice(0,80),rdns:info.rdns});
+    }catch{}
+  });
+  function requestWallets(){if(window.dispatchEvent&&typeof Event==='function')window.dispatchEvent(new Event('eip6963:requestProvider'));}
+  requestWallets();
+  async function chooseWallet(metaMaskOnly=false){
+    if(W.acct&&selectedWallet)return selectedWallet;
+    requestWallets();
+    const meta=()=>[...discoveredWallets.values()].filter(w=>w.rdns==='io.metamask');
+    if(!meta().length&&window.dispatchEvent)await new Promise(resolve=>setTimeout(resolve,200));
+    const matches=meta();if(matches.length>1)throw Error('发现多个同名 MetaMask，请保留一个钱包实例后重试');
+    let choice=matches[0];
+    if(!choice&&!metaMaskOnly&&discoveredWallets.size===1)choice=[...discoveredWallets.values()][0];
+    if(!choice&&discoveredWallets.size)throw Error('未发现 MetaMask；请确认 Chrome 中已启用 MetaMask，再重试连接');
+    if(!choice){const legacy=window.ethereum;
+      if(!legacy?.request)throw Error('当前浏览器没有钱包；请在安装 MetaMask 的 Chrome 中打开此页面');
+      if(metaMaskOnly&&!legacy.isMetaMask)throw Error('默认钱包不是 MetaMask，请启用 MetaMask 后重试');
+      choice={provider:legacy,name:legacy.isMetaMask?'MetaMask':'浏览器钱包'};
+    }
+    selectedWallet=choice.provider;W.walletName=choice.name;return selectedWallet;
+  }
+  function connectionError(e){
+    if(e?.code===4001||/rejected|denied/i.test(String(e?.message)))return '钱包返回“连接已取消”；如未看到弹窗，请手动点 Chrome 工具栏的 MetaMask 图标查看';
+    if(e?.code===-32002)return 'MetaMask 已有待处理请求；请点工具栏的 MetaMask 图标完成或取消，再重试';
+    return String(e?.message||e).slice(0,180);
+  }
   const walletNetworks={
     97:{chainId:'0x61',chainName:'BNB Smart Chain Testnet',nativeCurrency:{name:'tBNB',symbol:'tBNB',decimals:18},rpcUrls:['https://bsc-testnet-rpc.publicnode.com'],blockExplorerUrls:['https://testnet.bscscan.com']},
     11155111:{chainId:'0xaa36a7',chainName:'Ethereum Sepolia',nativeCurrency:{name:'Sepolia ETH',symbol:'ETH',decimals:18},rpcUrls:['https://ethereum-sepolia-rpc.publicnode.com'],blockExplorerUrls:['https://sepolia.etherscan.io']}
   };
-  let walletEvents=false;
+  let walletEvents=null;
   async function requireWalletChain(expected){
     W.chainId=Number(BigInt(await eth().request({method:'eth_chainId'})));
     if(W.chainId!==expected)throw Error('Switch wallet to '+(walletNetworks[expected]?.chainName||expected));
@@ -1180,22 +1211,31 @@ function exitActionAllowed(state, action) {
   const pad=(h)=>h.replace(/^0x/,'').padStart(64,'0');
   const toWad=n=>BigInt(Math.round(n*1e6))*10n**12n;
   const hex=(b)=>'0x'+b.toString(16);
-  const eth=()=>window.ethereum;
+  const eth=()=>selectedWallet||window.ethereum;
   async function ethCall(to,data){return eth().request({method:'eth_call',params:[{to,data},'latest']});}
   async function refreshWallet(){ const c=HEAD.chain; const v=curVault(); if(!W.acct||!c||!v)return; W.bal={}; await requireWalletChain(v.chainId); const account=W.acct, me=pad(account);
     const [u,y,n,al]=await Promise.all([ethCall(v.asset,'0x70a08231'+me),ethCall(v.yang,'0x70a08231'+me),ethCall(v.yin,'0x70a08231'+me),ethCall(v.asset,'0xdd62ed3e'+me+pad(v.address))]);
     await requireWalletChain(v.chainId); if(W.acct!==account||curVault()?.address!==v.address)return;
     W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; renderWallet(); }
-  async function connect(target){ if(!eth()){W.msg='No wallet found. Install MetaMask.';renderWallet();return;}
-    try{ const a=await eth().request({method:'eth_requestAccounts'}); W.acct=a[0]; W.msg='';
+  async function connect(target){
+    if(W.connecting)return;
+    W.connecting=true;W.msg='正在检测钱包…';renderWallet();renderPerpWallet();
+    try{const provider=await chooseWallet(target?.wallet==='metamask');
+      W.msg='等待 '+W.walletName+' 授权；如未弹出，请点 Chrome 工具栏的钱包图标';renderWallet();renderPerpWallet();
+      const a=await provider.request({method:'eth_requestAccounts'});
+      if(!Array.isArray(a)||!/^0x[0-9a-f]{40}$/i.test(a[0]))throw Error('钱包没有返回有效测试地址，请重试连接');
+      W.acct=a[0];W.msg='';
       const want=target?.address?target.chainId:curVault()?.chainId; if(!want)throw Error('Wait for the deployed vault to load');
       const cur=Number(BigInt(await eth().request({method:'eth_chainId'})));
       if(cur!==want){ try{ await eth().request({method:'wallet_switchEthereumChain',params:[{chainId:hex(want)}]}); }catch(e){ if(e.code===4902&&walletNetworks[want]) await eth().request({method:'wallet_addEthereumChain',params:[walletNetworks[want]]}); else throw e; } }
-      if(eth().on&&!walletEvents){walletEvents=true;
-        eth().on('accountsChanged',a=>{W.acct=a[0]||null;W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();});
-        eth().on('chainChanged',id=>{W.chainId=Number(BigInt(id));W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();});
+      if(provider.on&&walletEvents!==provider){walletEvents=provider;
+        provider.on('accountsChanged',a=>{if(eth()!==provider)return;W.acct=a[0]||null;W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();renderPerpWallet();});
+        provider.on('chainChanged',id=>{if(eth()!==provider)return;W.chainId=Number(BigInt(id));W.bal={};refreshWallet().catch(e=>{W.msg=e.message;renderWallet();});renderWallet();renderPerpWallet();});
       }
-      await refreshWallet(); }catch(e){ W.msg=e.message||String(e); renderWallet(); } }
+      await refreshWallet();
+    }catch(e){W.msg=connectionError(e);}
+    finally{W.connecting=false;renderWallet();renderPerpWallet();}
+  }
   async function send(to,data,label,context){ W.busy=true;W.msg=label+' · confirm in wallet…';renderWallet();let success=false;
     try{ if(!context||W.acct!==context.account||curVault()?.address!==context.vault)throw Error('Wallet or vault changed; retry');
       await requireWalletChain(context.chainId);assertVerifiedWallet(curVault());
