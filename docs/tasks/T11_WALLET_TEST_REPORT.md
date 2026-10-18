@@ -1,5 +1,12 @@
 # T11 wallet test — in progress
 
+## 当前版本提示 — 2026-10-18
+
+Sepolia header v3 的专用测试钱包完整协议往返已于 10 月 15 日完成，10 月 18 日重新查询链上收据和
+收款事件验证通过；当前后台及同高指数复验也通过。见 [运行与完整往返报告](T13_RUNTIME_2026-10-18.md)。
+这不覆盖下文旧 BSC v4 的 MetaMask 真人界面验收；后者仍未完成。勿按下方旧清单启动历史 keeper。
+
+
 ## Task C checkpoint — 2026-10-16, upkeep collection complete
 
 **Today's 0.05 Sepolia ETH was received. Post-round-2 upkeep receipts now total 0.65 ETH** (October 3–8 and October 10–16). The second-round target remains completed at **0.15 / 0.15 ETH** on October 1; upkeep receipts and the remaining wallet balance are tracked separately.

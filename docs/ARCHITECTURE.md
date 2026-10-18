@@ -8,6 +8,17 @@ WUJI 是一个可验证的纯随机结算市场与公开基准，提供可由公
 数学边界与研究方法见 [WUJI_FOUNDATIONS.md](WUJI_FOUNDATIONS.md)。
 任务规范见 [BTC_SOURCE.md](tasks/BTC_SOURCE.md)。
 
+## 当前运行版本提示（2026-10-18）
+
+本 checkout 的源代码仍是历史版本；实际运行的是另一 worktree
+`/Users/m/Documents/Codex/2026-10-11/ya/work/wuji-mtp-fix` 的 Sepolia header v3。
+该 worktree 的架构记录包含 10 月 12 日 MTP 窗口修复、退出款准备金和分段重组封存修订。
+这些规则与源码尚未合入本 checkout，不能把下面的历史实现描述当成 v3 完整规范。
+当前不可变指数为 `0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a`，部署源码 `03f6256`，
+operator 的冻结运行快照记录为 `193269d`。公开部署清单现同步至
+[sepolia-header-v3.json](../contracts/deployments/sepolia-header-v3.json)。
+恢复和验收结果见 [运行报告](tasks/T13_RUNTIME_2026-10-18.md)。旧部署不随源码或文档升级。
+
 ## 0. 原则
 
 - 无 owner、管理员、暂停、升级、治理或项目代币。部署参数 immutable。

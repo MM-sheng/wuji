@@ -1,5 +1,7 @@
 # Next tasks (post Bitcoin-source merge, 2026-09-20)
 
+> 当前运行状态先看 [2026-10-18 后台与往返复验](T13_RUNTIME_2026-10-18.md)。本主目录的历史任务状态与另一 worktree 的 v3 operator 不同步，不能仅按旧地址判断现状。
+
 Read `AGENTS.md` and `docs/ARCHITECTURE.md` first. Work top to bottom; each task is one PR unless noted.
 The bar for every task: `forge test` green, invariants untouched, nothing gains an owner.
 

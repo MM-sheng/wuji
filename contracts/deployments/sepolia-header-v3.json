@@ -1,0 +1,484 @@
+{
+  "version": "t13-header-index-sepolia-v3-reserves-reorg",
+  "status": "confirmed",
+  "chainId": 11155111,
+  "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+  "sourceCommit": "03f6256c2821e5a67a8b98739ee9b199a32da27a",
+  "deployedAt": "2026-10-12T14:54:46.906Z",
+  "deployer": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "startNonce": 147,
+  "RelayerRewards": "0xe6933fB941861b6Ef3888Eb11e2Dfb476B3aAB35",
+  "WujiHeaderIndex": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "FeeRouter": "0xcc32633A49eDf61400cBc48a0eE082a8866946b4",
+  "anchor": "contracts/deployments/sepolia-header-anchor.json",
+  "anchorHeight": 969545,
+  "genesisHeight": 969546,
+  "checkpointInterval": 4320,
+  "confirmations": 100,
+  "reorgMargin": 144,
+  "operations": [
+    {
+      "label": "RelayerRewards",
+      "hash": "0x3ab67561093396a8537d3616f6b09227b3bf3c18a0cd03c91a82179b23b9b0fe",
+      "nonce": 147,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": null,
+      "valueWei": "0",
+      "estimated": 7702134,
+      "gasLimit": 9627668,
+      "status": "confirmed",
+      "gasUsed": 7640329,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899624
+    },
+    {
+      "label": "WujiHeaderIndex",
+      "hash": "0xc63750a5eb823c4a7dbfe0cbb8cd996d10400d02f349ef545905be9a5da1374e",
+      "nonce": 148,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": null,
+      "valueWei": "0",
+      "estimated": 20021350,
+      "gasLimit": 25026688,
+      "status": "confirmed",
+      "gasUsed": 19862544,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899626
+    },
+    {
+      "label": "FeeRouter",
+      "hash": "0xf398adc5b27bbdc36b4e4c78fc49dfac31baacd66feea386434da5a91951abb1",
+      "nonce": 149,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": null,
+      "valueWei": "0",
+      "estimated": 2065617,
+      "gasLimit": 2582022,
+      "status": "confirmed",
+      "gasUsed": 2048194,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899633
+    },
+    {
+      "label": "WujiAccountsFactory",
+      "hash": "0x1e8a1c546c8c8a5ee165b7c7bad134e3a90007018e48b1b1a8f4b2736860ffaa",
+      "nonce": 150,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": null,
+      "valueWei": "0",
+      "estimated": 43858617,
+      "gasLimit": 54823272,
+      "status": "confirmed",
+      "gasUsed": 43512115,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899634
+    },
+    {
+      "label": "pool-0",
+      "hash": "0x39858e6c6c8d8a9cc7749b6fe1414e239ab213f2f6392ea53960124ed386f878",
+      "nonce": 151,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": "0xF2C7BAa3Cdd8a69c2ED2576478140d13c29c48a9",
+      "valueWei": "0",
+      "estimated": 37056502,
+      "gasLimit": 46320628,
+      "status": "confirmed",
+      "gasUsed": 36763560,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899635
+    },
+    {
+      "label": "pool-1",
+      "hash": "0x06fa50c614e02301a1e1619669364e7c9b5db252af62a9fb15e7d22749899ea3",
+      "nonce": 152,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": "0xF2C7BAa3Cdd8a69c2ED2576478140d13c29c48a9",
+      "valueWei": "0",
+      "estimated": 37056514,
+      "gasLimit": 46320643,
+      "status": "confirmed",
+      "gasUsed": 36763572,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899637
+    },
+    {
+      "label": "pool-2",
+      "hash": "0x74e28ea3942a60f4e92797d3fe6e245148e0ad1af8936526ff5990cee81c29de",
+      "nonce": 153,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": "0xF2C7BAa3Cdd8a69c2ED2576478140d13c29c48a9",
+      "valueWei": "0",
+      "estimated": 37056514,
+      "gasLimit": 46320643,
+      "status": "confirmed",
+      "gasUsed": 36763572,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899639
+    },
+    {
+      "label": "keeper-funding",
+      "hash": "0xa9541a38d9dcbbe14a255b4d3aba3e9bad7d32166ccc9ead05231c9e34697da5",
+      "nonce": 154,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "valueWei": "20000000000000000",
+      "estimated": 207391,
+      "gasLimit": 259239,
+      "status": "confirmed",
+      "gasUsed": 204600,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899640
+    },
+    {
+      "label": "fold-969545",
+      "hash": "0x8939c800b500e00698ad2b28f11590679123b8981473fc8903e9a5a5a25baf29",
+      "nonce": 0,
+      "sender": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "to": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "valueWei": "0",
+      "estimated": 7432273,
+      "gasLimit": 9290342,
+      "status": "confirmed",
+      "gasUsed": 7367554,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899643,
+      "firstHeight": 969546,
+      "lastHeight": 969795,
+      "seenHeight": 969895,
+      "headers": 350,
+      "fullStateReplay": "PASS"
+    },
+    {
+      "label": "fold-969795",
+      "hash": "0x62e46960f78c70edd56c365a70634697bd80fd709bb21c86133d184a0da27b11",
+      "nonce": 1,
+      "sender": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "to": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "valueWei": "0",
+      "estimated": 7350406,
+      "gasLimit": 9188008,
+      "status": "confirmed",
+      "gasUsed": 7286331,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899645,
+      "firstHeight": 969796,
+      "lastHeight": 970045,
+      "seenHeight": 970145,
+      "headers": 350,
+      "fullStateReplay": "PASS"
+    },
+    {
+      "label": "fold-970045",
+      "hash": "0xff488490e639896ae93cb04d54a8f62d7e9ac0aaeca342225b1ea188da426360",
+      "nonce": 2,
+      "sender": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "to": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "valueWei": "0",
+      "estimated": 7331084,
+      "gasLimit": 9163855,
+      "status": "confirmed",
+      "gasUsed": 7267161,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899647,
+      "firstHeight": 970046,
+      "lastHeight": 970295,
+      "seenHeight": 970395,
+      "headers": 350,
+      "fullStateReplay": "PASS"
+    },
+    {
+      "label": "fold-970295",
+      "hash": "0x28cb633e7c81eb6f499724a539595bb365f884df1c40dfe50906a07aebdd0bb7",
+      "nonce": 3,
+      "sender": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "to": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "valueWei": "0",
+      "estimated": 7342128,
+      "gasLimit": 9177660,
+      "status": "confirmed",
+      "gasUsed": 7278119,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899649,
+      "firstHeight": 970296,
+      "lastHeight": 970545,
+      "seenHeight": 970645,
+      "headers": 350,
+      "fullStateReplay": "PASS"
+    },
+    {
+      "label": "fold-970545",
+      "hash": "0x1989713337558ff4a84a7ba878975a6a507bde5b76612cd6ad9c8f6540c2c9dc",
+      "nonce": 4,
+      "sender": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "to": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "valueWei": "0",
+      "estimated": 7332336,
+      "gasLimit": 9165420,
+      "status": "confirmed",
+      "gasUsed": 7268404,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899651,
+      "firstHeight": 970546,
+      "lastHeight": 970795,
+      "seenHeight": 970895,
+      "headers": 350,
+      "fullStateReplay": "PASS"
+    },
+    {
+      "label": "fold-970795",
+      "hash": "0x06962a407bf56e99910711cc09dbba2c7c0dfb78a6d7b06d0d4edd611a975018",
+      "nonce": 5,
+      "sender": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+      "to": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "valueWei": "0",
+      "estimated": 6503038,
+      "gasLimit": 8128798,
+      "status": "confirmed",
+      "gasUsed": 6445636,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899653,
+      "firstHeight": 970796,
+      "lastHeight": 971006,
+      "seenHeight": 971106,
+      "headers": 311,
+      "fullStateReplay": "PASS"
+    },
+    {
+      "label": "lifecycle-funding",
+      "hash": "0x9cc461e6206a959ba211eb8a9d988592046245d4e2447abd28cba063e6dd51ee",
+      "nonce": 155,
+      "sender": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+      "to": "0x1405D3d3f81F507be2315BF4708Fc9444BBbca3f",
+      "valueWei": "5000000000000000",
+      "estimated": 207391,
+      "gasLimit": 259239,
+      "status": "confirmed",
+      "gasUsed": 204600,
+      "effectiveGasPrice": "100000000",
+      "blockNumber": 11899666
+    }
+  ],
+  "supersedes": "sepolia-header-v2.json",
+  "migration": "New independent immutable contracts; existing accounts and funds are not migrated.",
+  "keeper": {
+    "address": "0x27b2474c8CA832d25C301eA43cF90C57C5a2dcD2",
+    "sourceCommit": "193269d3ce4eadcecc8519303d104d377c73df3b",
+    "status": "running; P2P synchronized and account maintenance active",
+    "fundingWei": "20000000000000000",
+    "service": "com.wuji.sepolia-header-v3-keeper",
+    "minFold": 36,
+    "maxFold": 250,
+    "intervalSeconds": 120,
+    "archivedHeaderCount": 1561,
+    "gasEstimateEnabled": true,
+    "gasMarginPercent": 25,
+    "maxGas": 50000000,
+    "runtimeHashManifest": {
+      "commit": "193269d3ce4eadcecc8519303d104d377c73df3b",
+      "files": [
+        {
+          "path": "frozen-keeper.mjs",
+          "sha256": "4c303e2e8ad926bfbeae774617c716e6ddb04cda739a785a3a043450da865bba"
+        },
+        {
+          "path": "accounts.mjs",
+          "sha256": "3551e48978dac98f2537ca4ce73b8dd0dfda6ad1ee3d958d69e5f14bda71d6f6"
+        },
+        {
+          "path": "keeper-rpc.mjs",
+          "sha256": "158c0da473f63e69cf1b28716af65bb1ab97b16f6e64fbd9a048d9d5c45ead3d"
+        },
+        {
+          "path": "seal-segments.mjs",
+          "sha256": "a1c7acaecff02efe10c62be79f373f2d908b7edeea385fd4da552edb6c1b61d0"
+        },
+        {
+          "path": "networks.mjs",
+          "sha256": "98e38293d31e31df9561ba6a651072ea3e4e51a61098adb137723d8b15b66fae"
+        },
+        {
+          "path": "bitcoin-index.mjs",
+          "sha256": "d938ae77b85686089a66510a6617063cf39023f5f58be92839fa446401509684"
+        },
+        {
+          "path": "zk-watcher.mjs",
+          "sha256": "2029dace693304f9a2e8bcf7cc2dccfe6fb85d1ad9fb420998df12a4c0d1cbf1"
+        },
+        {
+          "path": "seal.mjs",
+          "sha256": "3b825a145af235f950b457fbece5c43fcafd189a4b61217b517c9f9957140593"
+        },
+        {
+          "path": "keeper.mjs",
+          "sha256": "884c5228a846575b2c5bd88ac77a14e77ad500b0dffb0855eba8071728b3f890"
+        },
+        {
+          "path": "zk-test-helpers.mjs",
+          "sha256": "fc5974bc3829f817e167ed3fc3c412322fd8dbcae765cecda84acd5bba505ab7"
+        },
+        {
+          "path": "keeper-gas.mjs",
+          "sha256": "4f3022596038f396da913037632f58c8f2457a6b7b72fe5598070a7b54233165"
+        },
+        {
+          "path": "bitcoin.mjs",
+          "sha256": "d40d36c181ec11e7317245e9275d5fce4145fdd2f5d95b73d914826a122ed7a1"
+        },
+        {
+          "path": "evm-rpc.mjs",
+          "sha256": "b7a3cdef7629de3c88975fcb249f83cfda912b2895b040d6e5135ab72b4bb89b"
+        },
+        {
+          "path": "bitcoin-source.mjs",
+          "sha256": "2fbde6a20ff4ec5c0a8c4c80ecebc2b5dc1fda0b546a218b138e2d88f6ab81b3"
+        },
+        {
+          "path": "bitcoin-p2p.mjs",
+          "sha256": "e1d75ba67aab91dd82a73877839143264b517b1176efdc9a1e422f897264b345"
+        },
+        {
+          "path": "bitcoin-keeper.mjs",
+          "sha256": "7e8900b2df6b221ac45b4795154a4890e7222d9114c7a334b8ff56b120072684"
+        },
+        {
+          "path": "index.mjs",
+          "sha256": "241f83835bd28c4a05412cf7cb65feb6dee78657e1639cd912e3ec1066a11a8c"
+        },
+        {
+          "path": "zk-keeper.mjs",
+          "sha256": "f0a638cc44cb121522a53b62bb89e0a4883fe9d637de77b62c3f8ff766570a53"
+        },
+        {
+          "path": "bsc-keeper.mjs",
+          "sha256": "29a245597a52cf36e4dab9a73652ec8996a44adaeceedf653096fbaff16ef857"
+        },
+        {
+          "path": "header-history.mjs",
+          "sha256": "7098939e05d2f8e0b340326eb6d01b1883b9588b5c5445b4c8840aef7b9feab0"
+        },
+        {
+          "path": "frozen-exit.mjs",
+          "sha256": "3cd6704edccf76dcb901819ddce3167b37281de1b37ad00f32ea7f6b2eac42eb"
+        },
+        {
+          "path": "gap-sync.mjs",
+          "sha256": "865cbcb173f4023bff60717887ea208edd28e4f83dc6575756d4da4755e91e19"
+        },
+        {
+          "path": "zk-challenge.mjs",
+          "sha256": "5d648a25dbb8cde3d686b8ea7f25c8ad395b7c2ba0b305e5ab5f265a195e5149"
+        },
+        {
+          "path": "bsc-index.mjs",
+          "sha256": "2b2640b46d5d27c1f9a0ce53825e83d4630a7755052bd4ece38427e81a2be45d"
+        }
+      ]
+    }
+  },
+  "accounts": {
+    "factory": "0xF2C7BAa3Cdd8a69c2ED2576478140d13c29c48a9",
+    "collateral": {
+      "symbol": "WETH",
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+    },
+    "treasury": "0xcc32633A49eDf61400cBc48a0eE082a8866946b4",
+    "pools": [
+      {
+        "tier": 0,
+        "address": "0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68",
+        "modelAnnualVolatility": "5%"
+      },
+      {
+        "tier": 1,
+        "address": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+        "modelAnnualVolatility": "10%"
+      },
+      {
+        "tier": 2,
+        "address": "0xcd159a006aeb31535ead9514a9ea335466c9c137",
+        "modelAnnualVolatility": "25%"
+      }
+    ],
+    "codeLeft": "0xef8c6ffe1dca672e75f273653c75d5fe6baa428f",
+    "codeRight": "0x8247114377f490a22921e0ceec52e1443dbee826",
+    "verifiedEmpty": false,
+    "verifiedEmptyAtBlock": 11899653
+  },
+  "bitcoinSourceCheck": {
+    "checkedAt": "2026-10-12T14:53:20.646Z",
+    "sources": [
+      {
+        "source": "https://mempool.space/api",
+        "height": 971106,
+        "hash": "00000000000000000001520555e1176431c3edcd1abd6293a83ce0e5b2a90db7",
+        "matched": true
+      },
+      {
+        "source": "https://blockstream.info/api",
+        "height": 971106,
+        "hash": "00000000000000000001520555e1176431c3edcd1abd6293a83ce0e5b2a90db7",
+        "matched": true
+      }
+    ]
+  },
+  "caughtUpHeight": 971006,
+  "seenHeight": 971106,
+  "verification": "sepolia-header-v3-verification.json",
+  "lifecycle": {
+    "status": "waiting-entry",
+    "account": "0x1405D3d3f81F507be2315BF4708Fc9444BBbca3f",
+    "fundingWei": "5000000000000000",
+    "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+    "eachDepositWei": "10000000000000",
+    "totalDepositWei": "20000000000000",
+    "ids": [
+      1,
+      2
+    ],
+    "entryEpochs": [
+      971160,
+      971160
+    ],
+    "confirmedOperations": [
+      {
+        "action": "wrap",
+        "hash": "0x3e12fc897551f06c1ab7bf442eae7f3a893d320375cd1c97326d428f072695e4",
+        "blockNumber": 11899680,
+        "gasUsed": 133058
+      },
+      {
+        "action": "approve-exact",
+        "hash": "0x436cda88ebc388dbd81d932f393689a14cd2c0a982e9bb525d403076e04bd7c0",
+        "blockNumber": 11899681,
+        "gasUsed": 127948
+      },
+      {
+        "action": "enter-yang",
+        "hash": "0x6281d7decd35d92039e7d23ea82217b4815ed7a1621d3bde0e2e2c7d82181044",
+        "blockNumber": 11899682,
+        "gasUsed": 1294814
+      },
+      {
+        "action": "enter-yin",
+        "hash": "0x5cd25d42eaaa2ee3b167b859eaaaf7a162f329422eb4040a7f02647616c4aa36",
+        "blockNumber": 11899683,
+        "gasUsed": 468556
+      }
+    ],
+    "runner": "com.wuji.sepolia-header-v3-lifecycle",
+    "runnerStatus": "running; initial four transactions finalized; waits for Bitcoin pricing",
+    "initialOperationsFinalized": true,
+    "runnerSha256": "8eb18be75953cc59d0948da3acda3831eae138334e185d8ef72c6e43360809f2",
+    "checksSha256": "c8369b051e45d590fafe4821694f72aacd5635b24305115fd1642faaa0fdbe75",
+    "stateSnapshot": "sepolia-header-v3-lifecycle-start.json",
+    "liveSnapshot": "sepolia-header-v3-live.json"
+  },
+  "costs": {
+    "deploymentAndCatchupGasWei": "22667629100000000",
+    "initialLifecycleGasWei": "202437600000000",
+    "keeperInternalFundingWei": "20000000000000000",
+    "testWalletInternalFundingWei": "5000000000000000",
+    "note": "Internal funding is retained in user-controlled encrypted accounts; it is not gas spending. Later keeper/lifecycle transactions are excluded from this snapshot."
+  },
+  "recordedAt": "2026-10-12T15:29:24.006172+00:00"
+}
