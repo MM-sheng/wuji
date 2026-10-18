@@ -16,7 +16,8 @@ function fixture(options={}){
   if(method==='eth_chainId')return '0x'+chain.toString(16);
   if(method==='eth_accounts')return [owner];
   if(method==='eth_getBlockByNumber')return {number:'0x64',hash:params[0]!=='latest'&&options.reorg?w(2):w(1),timestamp:'0x'+(Math.floor(Date.now()/1000)-(options.stale?300:1)).toString(16)};
-  if(method==='eth_getCode')return options.badCode?'0x6002':'0x6001';
+  if(method==='eth_getCode')return params[0]===owner?(options.delegated?'0xef0100'+'12'.repeat(20):'0x'):(options.badCode?'0x6002':'0x6001');
+  if(method==='eth_estimateGas')return '0x'+BigInt(options.gasEstimate??1118574).toString(16);
   if(method==='eth_call'){
    const {to,data,from}=params[0],sig=data.slice(0,10);
    if(from){if(options.revert)throw Error('execution reverted: '+options.revert);return '0x';}
@@ -54,7 +55,8 @@ test('successful entry sends exact approval then chain-bound enter and pins veri
  const f=fixture();await f.perpEnter();assert.equal(f.sent.length,2);
  assert.equal(f.sent[0].data,'0x095ea7b3'+f.rel.address.slice(2).padStart(64,'0')+w(10000000000000n).slice(2));
  assert.equal(f.sent[1].data.slice(0,10),'0x94386983');assert.equal(f.sent[1].chainId,'0xaa36a7');
- assert.ok(f.calls.filter(c=>c.method==='eth_getCode').every(c=>c.params[1]==='0x64'));
+ assert.ok(f.calls.filter(c=>c.method==='eth_getCode'&&c.params[0]!==owner).every(c=>c.params[1]==='0x64'));
+ assert.equal(BigInt(f.sent[1].gas),1398218n);
  assert.equal(f.perpForm.busy,false);assert.equal(f.perpForm.flowBusy,false);
 });
 for(const amount of ['0','abc','-1'])test('invalid amount '+amount+' never requests a signature',async()=>{const f=fixture({amount});await f.perpEnter();assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/数量|输入/);});
@@ -74,4 +76,13 @@ test('exit and claim use the selected account id on the released pool',async()=>
 test('unpublished pool remains unable to enter',async()=>{const f=fixture();f.get('pjPool').value='0x'+'99'.repeat(20);await f.perpEnter();assert.equal(f.sent.length,0);});
 test('a second click during entry preflight cannot duplicate approvals or entries',async()=>{
  const f=fixture();await Promise.all([f.perpEnter(),f.perpEnter()]);assert.equal(f.sent.length,2);assert.equal(f.perpForm.flowBusy,false);
+});
+
+test('delegated wallet gets an explicit budget for wrapper hooks before signing',async()=>{
+ const f=fixture({delegated:true});await f.perpEnter();assert.equal(f.sent.length,2);
+ assert.ok(f.sent.every(tx=>BigInt(tx.gas)===2737148n));
+});
+test('unbounded gas estimates stop before wallet submission',async()=>{
+ const f=fixture({delegated:true,gasEstimate:3000000});await f.perpEnter();
+ assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/gas.*异常/);assert.equal(f.perpForm.flowBusy,false);
 });

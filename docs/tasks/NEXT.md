@@ -2,6 +2,8 @@
 
 > 当前钱包接入进度见 [2026-10-18 v3 钱包验收](T13_WALLET_UI_2026-10-18.md)。运行状态见 [后台与往返复验](T13_RUNTIME_2026-10-18.md)。本主目录的历史任务状态与另一 worktree 的 v3 operator 不同步，不能仅按旧地址判断现状。
 
+> 进场失败已定位为内层 OutOfGas，修复与本地成功对照见 [gas 修复报告](T13_ENTRY_GAS_FIX_2026-10-18.md)；真实钱包重试待用户签名及链上复验。
+
 > 当前执行规划见 [2026-10-18 后续推进规划](ROADMAP_2026-10-18.md)：先定位真实进场失败，再完成网页往返、收敛发布版本及运行/独立验收。
 
 Read `AGENTS.md` and `docs/ARCHITECTURE.md` first. Work top to bottom; each task is one PR unless noted.

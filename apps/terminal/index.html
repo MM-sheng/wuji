@@ -1070,7 +1070,21 @@ function exitActionAllowed(state, action) {
       await eth().request({method:'eth_call',params:[{from:account,to,data},'latest']});
       await requireWalletChain(rel.chainId);
       if(!same(W.acct,account)||!same($('pjPool').value,rel.address))throw Error('钱包或池子已改变，请重试');
-      const h=await eth().request({method:'eth_sendTransaction',params:[{from:account,to,data,chainId:hex(rel.chainId)}]});
+      // A delegated wallet may wrap this call with authorization and execution hooks.
+      // The wallet's implicit estimate underfunded the observed Sepolia entry. Supply a
+      // bounded explicit budget; unused gas is not charged and the wallet still confirms it.
+      const estimateHex=await eth().request({method:'eth_estimateGas',params:[{from:account,to,data}]});
+      if(!/^0x[0-9a-f]+$/i.test(estimateHex))throw Error('读不到 gas 预估，已停止发送');
+      const estimate=BigInt(estimateHex);
+      const accountCode=await eth().request({method:'eth_getCode',params:[account,'latest']});
+      const delegated=/^0xef0100[0-9a-f]{40}$/i.test(accountCode);
+      if(accountCode!=='0x'&&!delegated)throw Error('当前钱包账户类型暂不支持，请先检查钱包');
+      const gas=delegated?estimate*2n+500000n:(estimate*125n+99n)/100n;
+      if(estimate===0n||gas>5000000n)throw Error('本次交易 gas 预估异常，已停止发送');
+      await requireWalletChain(rel.chainId);
+      const selected=await eth().request({method:'eth_accounts',params:[]});
+      if(!same(selected[0],account)||!same(W.acct,account)||!same($('pjPool').value,rel.address))throw Error('钱包或池子已改变，请重试');
+      const h=await eth().request({method:'eth_sendTransaction',params:[{from:account,to,data,chainId:hex(rel.chainId),gas:hex(gas)}]});
       perpForm.msg=label+' · 已发送 '+short(h)+' · 等待确认…';renderPerpWallet();
       for(let i=0;i<120;i++){await requireWalletChain(rel.chainId);const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]});
         if(r){if(r.status!=='0x1')throw Error(label+' 失败 · '+short(h));perpForm.msg='✓ '+label+' · '+short(h);return r;}

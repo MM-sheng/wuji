@@ -51,3 +51,5 @@ WETH 仍为 0.00002、allowance 仍为 0.00001、nextId 仍为 3；相同直接�
 不能据此确定包装失败原因；主 RPC 不开放 trace，备用 trace 接口返回 429。
 暂停继续签名和补给，先排查钱包包装交易失败原因。没有撤销用户 delegation 或修改钱包设置。
 [原始交易、收据及后续只读检查](../contracts/deployments/t13-metamask-entry-2026-10-18.json)。
+
+后续已通过完整重放定位内层 OutOfGas，并以增加 gasLimit 的本地分叉对照成功验证修复。追加 0.003 Sepolia ETH，本轮 gas 补给累计 0.008；最新余额、修复和真实重试进度见 [gas 修复报告](tasks/T13_ENTRY_GAS_FIX_2026-10-18.md)。此前“原因未定位/暂停”描述是历史步骤。
