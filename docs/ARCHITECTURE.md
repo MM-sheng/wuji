@@ -19,6 +19,11 @@ operator 的冻结运行快照记录为 `193269d`。公开部署清单现同步�
 [sepolia-header-v3.json](../contracts/deployments/sepolia-header-v3.json)。
 恢复和验收结果见 [运行报告](tasks/T13_RUNTIME_2026-10-18.md)。旧部署不随源码或文档升级。
 
+本 checkout 的终端现单独内置该 v3 的三个永续池钱包发布清单。钱包发送前在同一个新鲜 EVM 块核对
+池/指数代码 SHA-256、抵押品、K、index、treasury、费率和确认深度，复查块哈希、当前钱包/池子/网络，
+先模拟再请求签名；网页没有从 indexer 动态授权池地址。该清单与旧两仪金库发布清单分开，
+不将旧金库的核验徽章当作 v3 指数的证明。实现与真人验收状态见 [钱包接入报告](tasks/T13_WALLET_UI_2026-10-18.md)。
+
 ## 0. 原则
 
 - 无 owner、管理员、暂停、升级、治理或项目代币。部署参数 immutable。

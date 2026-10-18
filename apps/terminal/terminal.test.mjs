@@ -98,7 +98,7 @@ test('perp wallet actions only for pools in the built-in release list, never fro
  const src=html.slice(html.indexOf('  function releasedPool('),html.indexOf('  const myIdsKey='));
  const same=(a,b)=>!!a&&!!b&&a.toLowerCase()===b.toLowerCase();
  const RELEASES={x:{chainId:11155111,accountPools:[{address:addr(7),asset:addr(8),k_wad:'11500000000000000000'}]},y:{chainId:97}};
- const c=vm.createContext({RELEASES,same});vm.runInContext(src+'\nthis.f=releasedPool;',c);
+ const c=vm.createContext({RELEASES,same,PERP_RELEASES:[]});vm.runInContext(src+'\nthis.f=releasedPool;',c);
  assert.equal(c.f(addr(9)),null);
  const hit=c.f(addr(7).toUpperCase().replace('0X','0x'));
  assert.equal(hit.chainId,11155111);assert.equal(hit.asset,addr(8));

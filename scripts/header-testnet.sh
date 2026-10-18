@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restore the read-only frontend for the current v3 operator. Existing keeper jobs stay independent.
+# Restore the frontend for the current v3 operator. Existing keeper jobs stay independent.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python3 - <<'PY'
@@ -14,7 +14,13 @@ runtime=op/'runtime'
 record=json.loads((op/'runtime-source.json').read_text())
 for f in record['files']:
     assert hashlib.sha256((runtime/'indexer'/f['path']).read_bytes()).hexdigest()==f['sha256'], 'operator runtime changed: '+f['path']
-assert (runtime/'apps/terminal/index.html').is_file(), 'restore the matching terminal snapshot first'
+# The frontend is versioned in the main checkout; keeper runtime files remain frozen.
+terminal=root/'apps/terminal/index.html'
+snapshot=runtime/'apps/terminal/index.html'
+snapshot.parent.mkdir(parents=True,exist_ok=True)
+temp=snapshot.with_suffix('.html.tmp')
+temp.write_bytes(terminal.read_bytes())
+temp.replace(snapshot)
 node=Path.home()/'.local/bin/node'
 assert node.is_file()
 label='com.wuji.sepolia-header-v3-indexer'

@@ -357,7 +357,7 @@
         </div>
         <div>
           <h4>规则</h4>
-          <div style="color:var(--muted);font-size:11px;line-height:1.7">本金固定，盈亏按 本金·ΔS/K 累加，最低 0、最高 2 倍，没有到期日。<br>进出场按一个申请时还没挖出的比特币高度定价（约 1–4 小时后），申请后不能撤销。<br>对面本金更少时，多出的一侧闲置，不涨不跌。<br>合约整数为准，这里只是显示。</div>
+          <div style="color:var(--muted);font-size:11px;line-height:1.7">本金固定，盈亏按 本金·ΔS/K 累加，最低 0、最高 2 倍，没有到期日。<br>进出场按一个申请时还没挖出的比特币高度定价（需等待确认和链上处理），申请后不能撤销。<br>对面本金更少时，多出的一侧闲置，不涨不跌。<br>合约整数为准，这里只是显示。</div>
         </div>
       </div>
     </div>
@@ -980,10 +980,10 @@ function exitActionAllowed(state, action) {
       <div class="yy"><div class="yang" style="width:${100*y/t}%">阳 ${fmtAmount(y)}</div><div class="yin">${fmtAmount(n)} 阴</div></div>
       <div class="kv"><span>在押 · 闲置</span><b>${fmtW(p.matched_wad)} · ${p.idleSide?(p.idleSide==='yang'?'阳':'阴')+' '+fmtW(p.idle_wad):'无'}</b></div>
       <div class="kv"><span>排队中的定价</span><b>${p.pendingEpochs?p.pendingEpochs+' 个 · 下一个 #'+p.nextEpoch+(p.nextEpochReady?' · 可处理':''):'无'}</b></div>
-      <div class="kv"><span>新申请将定价于</span><b>${p.nextPricingHeight===null?'暂不接受（指数终结高度过旧）':'#'+p.nextPricingHeight.toLocaleString()}</b></div>
+      <div class="kv"><span>新申请将定价于</span><b>${p.frozen?'已终止接受申请':p.settling?'正在分批结算，完成后可再申请':p.nextPricingHeight===null?'暂不接受（指数终结高度过旧）':'#'+p.nextPricingHeight.toLocaleString()}</b></div>
       <div class="kv"><span>缓冲金 · 未覆盖亏空</span><b class="${BigInt(p.badDebt_wad)>0n?'bad':'ok'}">${fmtW(p.buffer_wad)} · ${fmtW(p.badDebt_wad)}</b></div>
       <div class="kv"><span>手续费 · 账户数</span><b>${p.feeBps/100}% · ${p.accountsCreated}</b></div>
-      <div class="kv"><span>池子</span><b>${p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
+      <div class="kv"><span>池子</span><b>${p.insolvent?'已按固定比例终止 · ':p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
   }
   async function lookAccount(){
     const pool=$('pjPool').value,id=+$('pjId').value;if(!pool||!id)return;
@@ -1008,8 +1008,9 @@ function exitActionAllowed(state, action) {
   // Wallet actions only for pools listed in RELEASES: an indexer can suggest a pool, never authorize one.
   const PERP_TOPIC='0x6fb0fa55bce2819ab33da96cdb575107424ba90212579b2264b314a16d6cea88';
   const perpForm={side:'yang',amount:'',msg:'',busy:false};
+  const PERP_RELEASES=[{"chainId":11155111,"index":"0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a","treasury":"0xcc32633A49eDf61400cBc48a0eE082a8866946b4","confirmations":100,"indexCodeSha256":"ea424d4928c54dc45684938ec78d67359635650bd927546d82d857096bfe008c","accountPools":[{"address":"0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68","asset":"0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14","symbol":"WETH","k_wad":"23000000000000000000","feeBps":30,"codeSha256":"0e5baa860df1f27a760f39e00e3865578ef149da7519007a0d79d3ec6890248c"},{"address":"0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14","asset":"0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14","symbol":"WETH","k_wad":"11500000000000000000","feeBps":30,"codeSha256":"112a75cb131036bf525693730317162eeef6017010643559c732e79d371a8ada"},{"address":"0xcd159a006aeb31535ead9514a9ea335466c9c137","asset":"0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14","symbol":"WETH","k_wad":"4600000000000000000","feeBps":30,"codeSha256":"682ca00f243710c68a0c33a8d94c1caafc3f590767433a265156db88ed69fd14"}]}];
   function releasedPool(address){
-    for(const d of Object.values(RELEASES))for(const p of d.accountPools||[])if(same(p.address,address))return {...p,chainId:d.chainId};
+    for(const d of [...Object.values(RELEASES),...PERP_RELEASES])for(const p of d.accountPools||[])if(same(p.address,address))return {...p,chainId:d.chainId,index:d.index,treasury:d.treasury,confirmations:d.confirmations,indexCodeSha256:d.indexCodeSha256};
     return null;
   }
   const myIdsKey=pool=>'wuji:perp-ids:'+pool.toLowerCase()+':'+(W.acct||'').toLowerCase();
@@ -1017,6 +1018,7 @@ function exitActionAllowed(state, action) {
   const rememberId=(pool,id)=>{try{const l=myIds(pool);if(!l.includes(id))l.push(id);localStorage.setItem(myIdsKey(pool),JSON.stringify(l));}catch{}};
   // Contract revert reasons and wallet errors, in words a holder can act on.
   const PERP_REASONS={'not claimable':'还不能领取：要先申请退出，并等退出定价处理完','entry pending':'进场还没定价，定价后才能申请退出',
+    'settlement pending':'正在分批结算，处理完成后可再次申请',
     'exit pending':'这个账户已经申请过退出','same epoch':'进场还没定价，定价后才能申请退出','relay stale':'比特币数据暂时不够新（最新块超过 30 分钟），过几分钟再试',
     'pool frozen':'池子已停止接受申请（比特币深度重组或已冻结）','not owner':'这个账户不属于当前钱包','zero':'数量太小','short transfer':'这个代币转账会被扣费，池子不接受',
     'not at floor':'账户还没触底，不能清退','not live':'账户已结清'};
@@ -1035,19 +1037,41 @@ function exitActionAllowed(state, action) {
     const r=revertReason(e);if(r)return PERP_REASONS[r]||('合约拒绝：'+r);
     return String(e?.shortMessage||e?.message||e).slice(0,140);
   }
+  // Verify the immutable release through the wallet RPC at one fresh, canonical EVM block.
+  async function verifyPerpRelease(rel,account){
+    await requireWalletChain(rel.chainId);
+    const rpc=(method,params)=>eth().request({method,params});
+    const block=await rpc('eth_getBlockByNumber',['latest',false]);
+    if(!block||!WORD.test(block.hash)||Math.abs(Date.now()/1000-Number(BigInt(block.timestamp)))>120)throw Error('钱包 RPC 区块过期，请稍后重试');
+    const read=(to,data)=>rpc('eth_call',[{to,data},block.number]);
+    const [asset,k]=await Promise.all([read(rel.address,'0x38d52e0f'),read(rel.address,'0xa932492f')]);
+    if(!same(addressWord(asset),rel.asset)||word(k)!==BigInt(rel.k_wad))throw Error('链上池子与发布清单不一致，已停止');
+    if(rel.codeSha256){
+      const [index,fee,treasury,conf,code,indexCode]=await Promise.all([
+        read(rel.address,'0x2986c0e5'),read(rel.address,'0xbf333f2c'),read(rel.address,'0x61d027b3'),
+        read(rel.index,'0x0438b0a4'),rpc('eth_getCode',[rel.address,block.number]),rpc('eth_getCode',[rel.index,block.number])]);
+      if(!same(addressWord(index),rel.index)||!same(addressWord(treasury),rel.treasury)||word(fee)!==BigInt(rel.feeBps)||word(conf)!==BigInt(rel.confirmations))throw Error('链上部署绑定与发布清单不一致，已停止');
+      const digest=async hex=>{if(!/^0x(?:[0-9a-f]{2})+$/i.test(hex))throw Error('读不到发布合约代码');const bytes=Uint8Array.from(hex.slice(2).match(/../g),x=>parseInt(x,16));return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');};
+      if(await digest(code)!==rel.codeSha256||await digest(indexCode)!==rel.indexCodeSha256)throw Error('链上合约代码与发布版本不一致，已停止');
+    }
+    if((await rpc('eth_getBlockByNumber',[block.number,false]))?.hash!==block.hash)throw Error('核验期间发生链重组，请重试');
+    const accounts=await rpc('eth_accounts',[]);
+    await requireWalletChain(rel.chainId);
+    if(!same(accounts[0],account)||!same(W.acct,account)||!same($('pjPool').value,rel.address))throw Error('钱包或池子已改变，请重试');
+    return block;
+  }
   async function perpSend(rel,to,data,label){
     perpForm.busy=true;perpForm.msg=label+' · 请在钱包确认…';renderPerpWallet();
     try{
       const account=W.acct;if(!account)throw Error('先连接钱包');
-      await requireWalletChain(rel.chainId);
+      await verifyPerpRelease(rel,account);
       // Simulate first: a call that would revert never reaches the wallet, and the reason is shown instead.
       await eth().request({method:'eth_call',params:[{from:account,to,data},'latest']});
-      // Fresh read through the wallet's own RPC: the released address really is that pool on this chain.
-      const [asset,k]=await Promise.all([ethCall(rel.address,'0x38d52e0f'),ethCall(rel.address,'0xa932492f')]);
-      if(!same('0x'+asset.slice(-40),rel.asset)||BigInt(k)!==BigInt(rel.k_wad))throw Error('链上池子与发布清单不一致，已停止');
+      await requireWalletChain(rel.chainId);
+      if(!same(W.acct,account)||!same($('pjPool').value,rel.address))throw Error('钱包或池子已改变，请重试');
       const h=await eth().request({method:'eth_sendTransaction',params:[{from:account,to,data,chainId:hex(rel.chainId)}]});
       perpForm.msg=label+' · 已发送 '+short(h)+' · 等待确认…';renderPerpWallet();
-      for(let i=0;i<120;i++){const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]});
+      for(let i=0;i<120;i++){await requireWalletChain(rel.chainId);const r=await eth().request({method:'eth_getTransactionReceipt',params:[h]});
         if(r){if(r.status!=='0x1')throw Error(label+' 失败 · '+short(h));perpForm.msg='✓ '+label+' · '+short(h);return r;}
         await new Promise(r=>setTimeout(r,1500));}
       perpForm.msg='回执仍未出现 · '+h+' · 重试前请先查浏览器';return null;
@@ -1055,24 +1079,29 @@ function exitActionAllowed(state, action) {
     finally{perpForm.busy=false;renderPerpWallet();}
   }
   async function perpEnter(){
-    const rel=releasedPool($('pjPool').value);if(!rel||perpForm.busy)return;
+    const rel=releasedPool($('pjPool').value);if(!rel||perpForm.busy||perpForm.flowBusy)return;
     let amount;try{amount=exactAmount($('pjAmt').value.trim());if(amount===0n||amount>=2n**128n)throw Error('数量无效');}catch(e){perpForm.msg='✗ '+e.message;return renderPerpWallet();}
     perpForm.amount=$('pjAmt').value;
-    let allowance;
+    perpForm.flowBusy=true;renderPerpWallet();
     try{
-      await requireWalletChain(rel.chainId);
+    let allowance;const account=W.acct;
+    try{
+      const snapshot=await verifyPerpRelease(rel,account);
+      if(rel.codeSha256){const accepting=await eth().request({method:'eth_call',params:[{to:rel.address,data:'0xda980340'},snapshot.number]});if(word(accepting)!==1n)throw Error('池子当前不接受进场申请，请等待定价处理或查看状态');}
       const [bal,al]=await Promise.all([ethCall(rel.asset,'0x70a08231'+pad(W.acct)),ethCall(rel.asset,'0xdd62ed3e'+pad(W.acct)+pad(rel.address))]);
       if(!/^0x[0-9a-fA-F]{64}$/.test(bal)||!/^0x[0-9a-fA-F]{64}$/.test(al))throw Error('读不到抵押品余额，请确认钱包网络');
       if(BigInt(bal)<amount){perpForm.msg='✗ 余额不足：你有 '+fmtW(BigInt(bal).toString())+' '+(rel.symbol||'');return renderPerpWallet();}
       allowance=BigInt(al);
     }catch(e){perpForm.msg='✗ '+perpError(e);return renderPerpWallet();}
     if(allowance<amount&&!await perpSend(rel,rel.asset,'0x095ea7b3'+pad(rel.address)+pad(amount.toString(16)),'授权 '+(rel.symbol||'抵押品')))return;
+    if(!same(W.acct,account)||!same($('pjPool').value,rel.address)){perpForm.msg='钱包或池子已改变，请重试';return renderPerpWallet();}
     const r=await perpSend(rel,rel.address,'0x94386983'+pad(perpForm.side==='yang'?'1':'0')+pad(amount.toString(16)),'进场 '+(perpForm.side==='yang'?'阳':'阴'));
     const log=r?.logs?.find(l=>same(l.address,rel.address)&&l.topics?.[0]===PERP_TOPIC);
-    if(log){const id=Number(BigInt(log.topics[1]));rememberId(rel.address,id);perpForm.msg+=' · 账户 #'+id+' · 约 1–4 小时后定价';$('pjId').value=id;renderPerpWallet();}
+    if(log){const id=Number(BigInt(log.topics[1]));rememberId(rel.address,id);perpForm.msg+=' · 账户 #'+id+' · 等待未来比特币高度及确认后定价';$('pjId').value=id;renderPerpWallet();}
+    }finally{perpForm.flowBusy=false;renderPerpWallet();}
   }
   async function perpAction(kind){
-    const rel=releasedPool($('pjPool').value),id=+$('pjId').value;if(!rel||perpForm.busy)return;
+    const rel=releasedPool($('pjPool').value),id=+$('pjId').value;if(!rel||perpForm.busy||perpForm.flowBusy)return;
     if(!Number.isSafeInteger(id)||id<1){perpForm.msg='✗ 先在上面填账户编号';return renderPerpWallet();}
     if(kind==='exit'&&!confirm('退出申请不能撤销。账户会按一个还没挖出的比特币高度定价，金额在定价前会继续变动。确定？'))return;
     await perpSend(rel,rel.address,(kind==='exit'?'0x721c6513':'0x379607f5')+pad(id.toString(16)),(kind==='exit'?'申请退出 #':'领取 #')+id);
@@ -1082,14 +1111,15 @@ function exitActionAllowed(state, action) {
     const el=$('pjWallet'),pool=$('pjPool').value,rel=pool&&releasedPool(pool);
     if(!pool){el.innerHTML='';return;}
     if(!rel){el.innerHTML='<div class="msg2">这个池子不在页面内置的发布清单里，不能从网页操作。只读显示仍可用。</div>';return;}
-    if(!W.acct){el.innerHTML='<button id="pjConnect">CONNECT WALLET</button>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId}).then(renderPerpWallet);return;}
-    const dis=perpForm.busy?'disabled':'',mine=myIds(rel.address);
+    if(!W.acct){el.innerHTML='<button id="pjConnect">CONNECT WALLET</button><div class="msg2">'+esc(W.msg||perpForm.msg||'Sepolia 测试网 · 仅使用测试 WETH')+'</div>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId}).then(renderPerpWallet);return;}
+    $('pjPool').disabled=!!(perpForm.busy||perpForm.flowBusy);
+    const dis=perpForm.busy||perpForm.flowBusy?'disabled':'',mine=myIds(rel.address);
     el.innerHTML=`<div class="row2"><span style="color:var(--dim)">方向</span>
       <button id="pjYang" class="${perpForm.side==='yang'?'pri':''}" ${dis}>阳</button><button id="pjYin" class="${perpForm.side==='yin'?'pri':''}" ${dis}>阴</button>
       <input id="pjAmt" type="text" inputmode="decimal" placeholder="数量 ${esc(rel.symbol||'')}" value="${esc(perpForm.amount)}"><button class="pri" id="pjEnter" ${dis}>进场</button></div>
       <div class="row2"><button id="pjExit" ${dis}>申请退出（按上方编号）</button><button id="pjClaim" ${dis}>领取（按上方编号）</button></div>
       ${mine.length?`<div class="msg2">本浏览器记下的账户：${mine.map(i=>'#'+i).join(' ')}</div>`:''}
-      <div class="msg2">${esc(perpForm.msg)||'进场费 '+(rel.feeBps/100)+'%。申请后约 1–4 小时按未来比特币高度定价，不能撤销。'}</div>`;
+      <div class="msg2">${esc(perpForm.msg)||'进场费 '+(rel.feeBps/100)+'%。按未来比特币高度定价，还需等待确认和链上处理；具体时间不保证，申请不能撤销。'}</div>`;
     $('pjYang').onclick=()=>{perpForm.side='yang';perpForm.amount=$('pjAmt').value;renderPerpWallet();};
     $('pjYin').onclick=()=>{perpForm.side='yin';perpForm.amount=$('pjAmt').value;renderPerpWallet();};
     $('pjEnter').onclick=perpEnter;$('pjExit').onclick=()=>perpAction('exit');$('pjClaim').onclick=()=>perpAction('claim');
@@ -1201,7 +1231,7 @@ function exitActionAllowed(state, action) {
     if(n>=2n**256n)throw Error('数量过大');return n;
   }
   // ---------------------------------------------------------------- ZK index (T12): direct reads
-  const ZK_RELEASE={chainId:11155111,index:'0x2d61Dd88F9c0F8069fFd3DaaeD76B4aE404AB9f7',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
+  const ZK_RELEASE={chainId:11155111,index:'0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a',rpc:'https://ethereum-sepolia-rpc.publicnode.com',explorer:'https://sepolia.etherscan.io'};
   const ZK_SEL={tip:'0x2755cd2d',S:'0x4be1c796',firstPending:'0x6faf954b',nextBatch:'0xe7c51f1b',batch:'0x0eaa75fe',window:'0xd62aad29',bond:'0x4c68ae63',seenHeight:'0x42fc5369',seenTime:'0xaebd3c19',frozen:'0x054f7d9c',conf:'0x0438b0a4'};
   let ZK=null,zkError=null,zkBusy=false;
   async function readZk(){
