@@ -1,0 +1,1950 @@
+Compiling 40 files with Solc 0.8.28
+Solc 0.8.28 finished in 1.98s
+Compiler run successful!
+
+╭----------------------------+------------------+-------------------+--------------------+---------------------╮
+| Contract                   | Runtime Size (B) | Initcode Size (B) | Runtime Margin (B) | Initcode Margin (B) |
++==============================================================================================================+
+| BitcoinRelay               | 6,932            | 11,551            | 17,644             | 37,601              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| BitcoinRelayBaseline       | 5,047            | 7,458             | 19,529             | 41,694              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| BitcoinRelayPackedBaseline | 5,942            | 9,171             | 18,634             | 39,981              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| FeeRouter                  | 1,115            | 1,396             | 23,461             | 47,756              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| FrozenExitRelayMock        | 1,008            | 1,138             | 23,568             | 48,014              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| LegacyIndexMock            | 1,069            | 1,235             | 23,507             | 47,917              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| MockBitcoinRelay           | 1,280            | 1,335             | 23,296             | 47,817              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| MockHistory                | 559              | 587               | 24,017             | 48,565              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| MockUSDT                   | 1,862            | 2,328             | 22,714             | 46,824              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| MockWBNB                   | 1,862            | 2,330             | 22,714             | 46,822              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| MockWstETH                 | 2,118            | 2,600             | 22,458             | 46,552              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| RelayerRewards             | 4,660            | 5,092             | 19,916             | 44,060              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| SP1Verifier                | 6,728            | 6,756             | 17,848             | 42,396              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| SeriesToken                | 2,230            | 2,972             | 22,346             | 46,180              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| SeriesTokenDeployer        | 3,515            | 3,543             | 21,061             | 45,609              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| Verifier                   | 5,254            | 5,282             | 19,322             | 43,870              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiAccounts               | 23,646           | 25,309            | 930                | 23,843              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiAccountsCode           | 62               | 238               | 24,514             | 48,914              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiAccountsFactory        | 2,425            | 28,927            | 22,151             | 20,225              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiHeaderIndex            | 12,234           | 15,526            | 12,342             | 33,626              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiIndex                  | 6,779            | 8,180             | 17,797             | 40,972              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiVault                  | 10,860           | 15,216            | 13,716             | 33,936              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| WujiVaultFactory           | 16,668           | 17,138            | 7,908              | 32,014              |
+|----------------------------+------------------+-------------------+--------------------+---------------------|
+| ZkWujiIndex                | 22,074           | 25,975            | 2,502              | 23,177              |
+╰----------------------------+------------------+-------------------+--------------------+---------------------╯
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/vendor/sp1/SP1VerifierGroth16.sol:57:35
+   │
+57 │         bytes4 expectedSelector = bytes4(VERIFIER_HASH());
+   │                                   ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'bytes4' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[missing-zero-check]: address parameter is used in a state write or value transfer without a zero-address check
+   ╭▸ src/SeriesToken.sol:10:61
+   │
+10 │     constructor(string memory name_, string memory symbol_, address vault_) ERC20(name_, symbol_) {
+   │                                                             ━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/missing-zero-check
+
+warning[uninitialized-local]: local variable is read before being initialized
+   ╭▸ src/BitcoinRelay.sol:49:39
+   │
+49 │             if(i>0) require(parent == previous, "checkpoint history linkage");
+   │                                       ━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+   ╭▸ src/RelayerRewards.sol:37:17
+   │
+37 │         require(IERC20(token).balanceOf(address(this)) == beforeBalance + amount, "unsupported collateral");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+   ╭▸ src/WujiVaultFactory.sol:42:9
+   │
+42 │         emit VaultCreated(vaults.length - 1, address(asset), notional, address(vault), vault.collateralSymbol());
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/BitcoinRelay.sol:57:17
+   │
+57 │         require(uint256(time) <= block.timestamp + MAX_FUTURE_BLOCK_TIME, "time-too-new");
+   │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiAccounts.sol:185:37
+    │
+185 │         return uint64(uint8(MARGINS[2 * b])) << 8 | uint64(uint8(MARGINS[2 * b + 1]));
+    │                                     ━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiVault.sol:238:9
+    │
+238 │         emit SeriesOpened(id, address(yang), address(yin), s0, settlementHeight);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiAccounts.sol:185:74
+    │
+185 │         return uint64(uint8(MARGINS[2 * b])) << 8 | uint64(uint8(MARGINS[2 * b + 1]));
+    │                                                                          ━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ src/BitcoinRelay.sol:49:21
+   │
+49 │             if(i>0) require(parent == previous, "checkpoint history linkage");
+   │                     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unused-return]: return value of an external call is not used
+   ╭▸ src/WujiVault.sol:73:9
+   │
+73 │         index_.fold(256);
+   │         ━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/unused-return
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/WujiAccounts.sol:182:23
+    │
+182 │         uint256 age = block.timestamp > t ? block.timestamp - t : 0;
+    │                       ━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/WujiAccounts.sol:184:17
+    │
+184 │         require(b <= 24, "index stale");
+    │                 ━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:58:23
+   │
+58 │         _checkVersion(int32(read32(header,0)),height);
+   │                       ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'int32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:60:38
+   │
+60 │         epochs[++epochCount] = Epoch(uint128(work),uint32(height),epochTime,bits,uint128(workOf(target)));
+   │                                      ━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint128' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:60:52
+   │
+60 │         epochs[++epochCount] = Epoch(uint128(work),uint32(height),epochTime,bits,uint128(workOf(target)));
+   │                                                    ━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:60:82
+   │
+60 │         epochs[++epochCount] = Epoch(uint128(work),uint32(height),epochTime,bits,uint128(workOf(target)));
+   │                                                                                  ━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint128' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiAccounts.sol:189:16
+    │
+189 │         return ((h + EPOCH - 1) / EPOCH) * EPOCH;
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:61:38
+   │
+61 │         _insert(hash,bytes32(0),Info(uint32(height),time,epochCount,0));
+   │                                      ━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiVault.sol:108:26
+    │
+108 │             uint256 ys = s.yang.totalSupply();
+    │                          ━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiVault.sol:109:26
+    │
+109 │             uint256 ns = s.yin.totalSupply();
+    │                          ━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/WujiAccounts.sol:200:20
+    │
+200 │             return f <= block.timestamp + 2 hours && block.timestamp <= f + MAX_SEEN_AGE;
+    │                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/WujiAccounts.sol:200:54
+    │
+200 │             return f <= block.timestamp + 2 hours && block.timestamp <= f + MAX_SEEN_AGE;
+    │                                                      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/WujiAccounts.sol:203:16
+    │
+203 │         return block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours;
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/WujiAccounts.sol:203:54
+    │
+203 │         return block.timestamp <= t + MAX_TIP_AGE && t <= block.timestamp + 2 hours;
+    │                                                      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:65:21
+   │
+65 │         uint32 id = uint32(links[hash] >> 224);
+   │                     ━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:68:18
+   │
+68 │         n = Info(uint32(v),uint32(v>>32),uint32(v>>64),uint32(v>>96));
+   │                  ━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:68:28
+   │
+68 │         n = Info(uint32(v),uint32(v>>32),uint32(v>>64),uint32(v>>96));
+   │                            ━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:68:42
+   │
+68 │         n = Info(uint32(v),uint32(v>>32),uint32(v>>64),uint32(v>>96));
+   │                                          ━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+   ╭▸ src/BitcoinRelay.sol:68:56
+   │
+68 │         n = Info(uint32(v),uint32(v>>32),uint32(v>>64),uint32(v>>96));
+   │                                                        ━━━━━━━━━━━━━
+   │
+   ├ note: consider disabling this lint if you're certain the cast is safe
+   │       
+   │       // casting to 'uint32' is safe because [explain why]
+   │       // forge-lint: disable-next-line(unsafe-typecast)
+   │       
+   │       
+   ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+   ╭▸ src/RelayerRewards.sol:74:29
+   │
+74 │             require(token > previous, "tokens not sorted unique"); previous = token;
+   │                             ━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiVault.sol:138:9
+    │
+138 │         emit Minted(id, msg.sender, pairs, collateral, fee);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ src/RelayerRewards.sol:74:13
+   │
+74 │             require(token > previous, "tokens not sorted unique"); previous = token;
+   │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ src/WujiVault.sol:134:17
+    │
+134 │         require(asset.balanceOf(address(this)) - beforeBalance == collateral, "unsupported collateral");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiVault.sol:148:23
+    │
+148 │         uint256 fee = collateral * FEE_BPS / 10_000;
+    │                       ━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ src/RelayerRewards.sol:100:17
+    │
+100 │         require(IERC20(token).balanceOf(address(this)) == beforeBalance - amount, "unsupported collateral");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiVault.sol:151:9
+    │
+151 │         emit RedeemedPair(id, msg.sender, pairs, collateral, fee);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiVault.sol:173:9
+    │
+173 │         emit SeriesSettled(settledId, s1, s.yangShare);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[unused-return]: return value of an external call is not used
+    ╭▸ src/WujiVault.sol:167:13
+    │
+167 │             index.fold();
+    │             ━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/unused-return
+
+warning[missing-zero-check]: address parameter is used in a state write or value transfer without a zero-address check
+   ╭▸ src/WujiAccountsFactory.sol:38:35
+   │
+38 │     constructor(WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps, uint256 bufferBps)…
+   │                                   ━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/missing-zero-check
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiAccounts.sol:257:16
+    │
+257 │         return uint128((uint256(amount) * FEE_BPS + 9_999) / 10_000);
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiHeaderIndex.sol:217:9
+    │
+217 │         emit Fold(w.from, w.committed.height, int256(w.committed.u) * UNIT);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+   ╭▸ src/WujiAccountsFactory.sol:77:9
+   │
+77 │         emit Created(address(asset), tier, kOf(tier), address(created));
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[incorrect-strict-equality]: dangerous strict equality check on an externally-influenced value
+    ╭▸ src/WujiAccounts.sol:266:17
+    │
+266 │         require(asset.balanceOf(address(this)) - before == amount, "short transfer");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/incorrect-strict-equality
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiVault.sol:210:9
+    │
+210 │         emit RedeemedSettled(id, msg.sender, yangAmt, yinAmt, collateral, fee);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:383:47
+    │
+383 │         if (bytes32(raw[4:36]) != state.hash) revert Linkage();
+    │                                               ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+   ╭▸ src/FeeRouter.sol:20:9
+   │
+20 │         emit Routed(token, balance);
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:447:9
+    │
+447 │         require(word != 0 && bits & 0x00800000 == 0, "target sign/zero");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:448:9
+    │
+448 │         require(size <= 34 && !(word > 0xff && size > 33) && !(word > 0xffff && size > 32), "target overflow");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:450:9
+    │
+450 │         require(target > 0 && target <= POW_LIMIT, "target range");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:386:31
+    │
+386 │         if (bits != expected) revert Difficulty();
+    │                               ━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:387:37
+    │
+387 │         if (time <= _median(times)) revert MedianTimePast();
+    │                                     ━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:388:29
+    │
+388 │         if (time > maxTime) revert FutureTime();
+    │                             ━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:392:46
+    │
+392 │         if (uint256(reverse(hash)) > target) revert BadWork();
+    │                                              ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:233:41
+    │
+233 │         w.foldTarget = w.state.height + uint64(w.count) - CONFIRMATIONS;
+    │                                         ━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:234:21
+    │
+234 │         w.maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+    │                     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiVault.sol:243:21
+    │
+243 │         int256 sh = int256(WAD / 2) + (s1 - s0) / 2;
+    │                     ━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiVault.sol:245:19
+    │
+245 │         if (sh >= int256(WAD)) return WAD;
+    │                   ━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiVault.sol:246:16
+    │
+246 │         return uint256(sh);
+    │                ━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/WujiIndex.sol:58:16
+   │
+58 │         return block.timestamp <= time + MAX_RELAY_AGE && time <= block.timestamp + 2 hours;
+   │                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+   ╭▸ src/WujiIndex.sol:58:59
+   │
+58 │         return block.timestamp <= time + MAX_RELAY_AGE && time <= block.timestamp + 2 hours;
+   │                                                           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiVault.sol:282:29
+    │
+282 │             b[--d] = bytes1(uint8(48 + v % 10));
+    │                             ━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint8' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:334:28
+    │
+334 │             bytes32 hash = index.relay().headerAt(h);
+    │                            ━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:334:28
+    │
+334 │             bytes32 hash = index.relay().headerAt(h);
+    │                            ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:335:13
+    │
+335 │             require(hash != bytes32(0), "header unavailable");
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiAccounts.sol:351:35
+    │
+351 │         require(headers.length == n * 80 && n > 0 && n <= MAX_WALK && to == height + n, "headers");
+    │                                   ━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiAccounts.sol:357:55
+    │
+357 │             bytes calldata raw = headers[(i - 1) * 80:i * 80];
+    │                                                       ━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:359:13
+    │
+359 │             require(hash == expect, "linkage");
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiAccounts.sol:380:77
+    │
+380 │     function _increment(bytes32 R) internal pure returns (int256) { return (int256(_byteSum(R)) - 4080) * 1.2e13; }
+    │                                                                             ━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiIndex.sol:121:65
+    │
+121 │                 checkpointS[h] = value; checkpointed[h] = true; emit Checkpoint(h, value);
+    │                                                                 ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiIndex.sol:127:97
+    │
+127 │ …     if (address(rewards) != address(0)) rewards.credit(msg.sender, from, to, rewardTokens); emit Fold(from, to, value); return uint…
+    │                                                                                               ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/ZkWujiIndex.sol:337:9
+    │
+337 │         emit Fold(w.from, w.committed.height, int256(w.committed.u) * UNIT, false);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:713:47
+    │
+713 │         if (bytes32(raw[4:36]) != state.hash) revert Linkage();
+    │                                               ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:768:9
+    │
+768 │         require(word != 0 && bits & 0x00800000 == 0, "target sign/zero");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:769:9
+    │
+769 │         require(size <= 34 && !(word > 0xff && size > 33) && !(word > 0xffff && size > 32), "target overflow");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:771:9
+    │
+771 │         require(target > 0 && target <= POW_LIMIT, "target range");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:716:31
+    │
+716 │         if (bits != expected) revert Difficulty();
+    │                               ━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:717:37
+    │
+717 │         if (time <= _median(times)) revert MedianTimePast();
+    │                                     ━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:718:29
+    │
+718 │         if (time > maxTime) revert FutureTime();
+    │                             ━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:722:46
+    │
+722 │         if (uint256(reverse(hash)) > target) revert BadWork();
+    │                                              ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:353:41
+    │
+353 │         w.foldTarget = w.state.height + uint64(w.count) - CONFIRMATIONS;
+    │                                         ━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:354:21
+    │
+354 │         w.maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+    │                     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:296:69
+    │
+296 │             if (state.height == tipHeight && state.hash == tipHash) revert NoReorg();
+    │                                                                     ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:292:26
+    │
+292 │         uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+    │                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiIndex.sol:118:28
+    │
+118 │             bytes32 hash = relay.headerAt(h); require(hash != bytes32(0), "header unavailable");
+    │                            ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiIndex.sol:118:47
+    │
+118 │             bytes32 hash = relay.headerAt(h); require(hash != bytes32(0), "header unavailable");
+    │                                               ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiIndex.sol:115:64
+    │
+115 │         uint64 from = lastHeight + 1; uint64 to = lastHeight + uint64(count);
+    │                                                                ━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ZkWujiIndex.sol:433:13
+    │
+433 │         if (j.maxTime > block.timestamp + MAX_FUTURE_BLOCK_TIME) revert FutureTime();
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiIndex.sol:127:132
+    │
+127 │ …rom, to, rewardTokens); emit Fold(from, to, value); return uint64(count);
+    │                                                             ━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:444:45
+    │
+444 │             if (j.prevTimes[i] != times[i]) revert Discontinuous();
+    │                                             ━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiIndex.sol:143:74
+    │
+143 │     function increment(bytes32 R) public pure returns (int256) { return (int256(byteSum(R)) - MEAN) * UNIT; }
+    │                                                                          ━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:467:21
+    │
+467 │         b.finalAt = uint64(block.timestamp) + CHALLENGE_WINDOW;
+    │                     ━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[reentrancy-no-eth]: external call can be reentered before `batches` is updated
+    ╭▸ src/ZkWujiIndex.sol:497:49
+    │
+497 │             if (address(rewards) != address(0)) rewards.credit(b.prover, from, b.to.height, b.proverTokens);
+    │                                                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-no-eth
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ZkWujiIndex.sol:482:59
+    │
+482 │             if (!b.backed && (b.disputer != address(0) || block.timestamp < b.finalAt)) break;
+    │                                                           ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/ZkWujiIndex.sol:497:49
+    │
+497 │             if (address(rewards) != address(0)) rewards.credit(b.prover, from, b.to.height, b.proverTokens);
+    │                                                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/ZkWujiIndex.sol:498:13
+    │
+498 │             emit Fold(from, b.to.height, int256(b.to.u) * UNIT, true);
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ZkWujiIndex.sol:511:13
+    │
+511 │         if (block.timestamp >= b.finalAt) revert WindowClosed();
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:515:23
+    │
+515 │         b.respondBy = uint64(block.timestamp) + RESPONSE_WINDOW;
+    │                       ━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/BitcoinRelay.sol:103:41
+    │
+103 │             if(o > 0) require(parent == previous, "batch linkage");
+    │                                         ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/BitcoinRelay.sol:106:16
+    │
+106 │             if(worker == 0) worker = _worker();
+    │                ━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/BitcoinRelay.sol:100:24
+    │
+100 │         for(uint256 o; o < headers.length; o += 80) {
+    │                        ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/BitcoinRelay.sol:108:13
+    │
+108 │             emit Header(hash,height,work);
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:103:23
+    │
+103 │             if(o > 0) require(parent == previous, "batch linkage");
+    │                       ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ src/BitcoinRelay.sol:89:13
+   │
+89 │             require(workerCount < type(uint32).max, "worker capacity");
+   │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:126:9
+    │
+126 │         require(links[parent] != 0, "unknown parent");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:130:9
+    │
+130 │         require(height <= type(uint32).max, "height overflow");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:197:9
+    │
+197 │         require(word != 0 && bits & 0x00800000 == 0,"target sign/zero");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:198:9
+    │
+198 │         require(size <= 34 && !(word > 0xff && size > 33) && !(word > 0xffff && size > 32),"target overflow");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:200:9
+    │
+200 │         require(target > 0 && target <= POW_LIMIT,"target range");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:133:9
+    │
+133 │         require(bits == (boundary ? retarget(e.bits,e.firstTime,p.time) : e.bits), "difficulty");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:162:9
+    │
+162 │         require(links[hash] != 0, "unknown header");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:134:9
+    │
+134 │         require(time > medianTimePast(parent), "time-too-old");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:135:9
+    │
+135 │         require(uint256(time) <= block.timestamp + MAX_FUTURE_BLOCK_TIME, "time-too-new");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:158:9
+    │
+158 │         require(!((height>=227931 && version<2) || (height>=363725 && version<3) || (height>=388381 && version<4)),"bad-version");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:138:9
+    │
+138 │         require(uint256(reverse(hash)) <= target, "PoW");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:141:9
+    │
+141 │         require(work <= type(uint128).max, "work overflow");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/BitcoinRelay.sol:144:13
+    │
+144 │             require(epochCount < type(uint32).max, "epoch capacity");
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ src/BitcoinRelay.sol:74:9
+   │
+74 │         require(nodeCount < type(uint32).max, "node capacity");
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+   ╭▸ src/BitcoinRelay.sol:82:9
+   │
+82 │         require(numeric <= POW_LIMIT, "parent hash range");
+   │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   │
+   ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/BitcoinRelay.sol:135:17
+    │
+135 │         require(uint256(time) <= block.timestamp + MAX_FUTURE_BLOCK_TIME, "time-too-new");
+    │                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:136:23
+    │
+136 │         _checkVersion(int32(read32(h,0)),height);
+    │                       ━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:146:35
+    │
+146 │             epochs[epoch] = Epoch(uint128(work),uint32(height),time,bits,uint128(blockWork));
+    │                                   ━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:146:49
+    │
+146 │             epochs[epoch] = Epoch(uint128(work),uint32(height),time,bits,uint128(blockWork));
+    │                                                 ━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:146:74
+    │
+146 │             epochs[epoch] = Epoch(uint128(work),uint32(height),time,bits,uint128(blockWork));
+    │                                                                          ━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint128' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:148:34
+    │
+148 │         _insert(hash,parent,Info(uint32(height),time,epoch,worker));
+    │                                  ━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiAccounts.sol:410:37
+    │
+410 │                 uint64 mid = from - uint64(MAX_WALK);
+    │                                     ━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/BitcoinRelay.sol:165:15
+    │
+165 │         while(count<11) {
+    │               ━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/BitcoinRelay.sol:203:56
+    │
+203 │         uint256 size; uint256 t=target; while(t>0) { ++size; t>>=8; }
+    │                                                        ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:206:16
+    │
+206 │         return uint32(word | size<<24);
+    │                ━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:211:34
+    │
+211 │         uint256 t=targetOf(bits)*uint256(elapsed)/1209600;
+    │                                  ━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/WujiHeaderIndex.sol:352:25
+    │
+352 │         for (uint256 i; i < headers.length; i += 80) {
+    │                         ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/BitcoinRelay.sol:221:16
+    │
+221 │         return uint32(at);
+    │                ━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ZkWujiIndex.sol:526:13
+    │
+526 │         if (block.timestamp > b.respondBy) revert WindowClosed();
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiHeaderIndex.sol:354:85
+    │
+354 │             if (p.branch.height == p.targetHeight && p.branch.hash == p.targetHash) revert NoReorg();
+    │                                                                                     ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:351:26
+    │
+351 │         uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+    │                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[block-timestamp]: usage of `block.timestamp` in a comparison may be manipulated by validators
+    ╭▸ src/ZkWujiIndex.sol:546:13
+    │
+546 │         if (block.timestamp <= b.respondBy) revert WindowOpen();
+    │             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/block-timestamp
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:394:20
+    │
+394 │         state.u += int64(int256(byteSum(sha256(abi.encodePacked(hash)))) - MEAN);
+    │                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:394:26
+    │
+394 │         state.u += int64(int256(byteSum(sha256(abi.encodePacked(hash)))) - MEAN);
+    │                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/WujiHeaderIndex.sol:457:15
+    │
+457 │             ++size;
+    │               ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:465:16
+    │
+465 │         return uint32(word | size << 24);
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:470:23
+    │
+470 │         if (elapsed < int32(TARGET_TIMESPAN) / 4) elapsed = int32(TARGET_TIMESPAN) / 4;
+    │                       ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:470:61
+    │
+470 │         if (elapsed < int32(TARGET_TIMESPAN) / 4) elapsed = int32(TARGET_TIMESPAN) / 4;
+    │                                                             ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:471:23
+    │
+471 │         if (elapsed > int32(TARGET_TIMESPAN) * 4) elapsed = int32(TARGET_TIMESPAN) * 4;
+    │                       ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:471:61
+    │
+471 │         if (elapsed > int32(TARGET_TIMESPAN) * 4) elapsed = int32(TARGET_TIMESPAN) * 4;
+    │                                                             ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiHeaderIndex.sol:472:41
+    │
+472 │         uint256 next = targetOf(bits) * uint256(elapsed) / TARGET_TIMESPAN;
+    │                                         ━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/WujiHeaderIndex.sol:497:18
+    │
+497 │             r = (r << 8) | (v & 255);
+    │                  ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/ZkWujiIndex.sol:741:9
+    │
+741 │         emit Checkpoint(height, s);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/ZkWujiIndex.sol:595:9
+    │
+595 │         emit Rejected(id, removed, disputer);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:638:92
+    │
+638 │             if (heights[i] != GENESIS_HEIGHT - 1 + (before + 1 + i) * CHECKPOINT_INTERVAL) revert BadCheckpoints();
+    │                                                                                            ━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/ZkWujiIndex.sol:647:30
+    │
+647 │             if (tokens[i] <= previous) revert BadTokens();
+    │                              ━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:647:40
+    │
+647 │             if (tokens[i] <= previous) revert BadTokens();
+    │                                        ━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:311:36
+    │
+311 │         return INDEX_CAN_FREEZE && index.frozen();
+    │                                    ━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:318:21
+    │
+318 │         bytes32 h = index.lastHash();
+    │                     ━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:319:35
+    │
+319 │         return h == bytes32(0) || index.relay().headerAt(index.lastHeight()) == h;
+    │                                   ━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:319:58
+    │
+319 │         return h == bytes32(0) || index.relay().headerAt(index.lastHeight()) == h;
+    │                                                          ━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:319:35
+    │
+319 │         return h == bytes32(0) || index.relay().headerAt(index.lastHeight()) == h;
+    │                                   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:485:29
+    │
+485 │         uint256 available = asset.balanceOf(address(this)) - pendingPrincipal - refundReserve - reservedClaims;
+    │                             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:397:27
+    │
+397 │             uint64 last = index.lastHeight();
+    │                           ━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:403:26
+    │
+403 │                 sAt[e] = index.S(); marked[e] = true; hashAt[e] = index.lastHash();
+    │                          ━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:403:67
+    │
+403 │                 sAt[e] = index.S(); marked[e] = true; hashAt[e] = index.lastHash();
+    │                                                                   ━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:327:28
+    │
+327 │         uint64 tipHeight = index.lastHeight();
+    │                            ━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:330:40
+    │
+330 │         if (from == tipHeight) value = index.S();
+    │                                        ━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:340:48
+    │
+340 │         hashAt[height] = height == tipHeight ? index.lastHash() : index.relay().headerAt(height);
+    │                                                ━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:340:67
+    │
+340 │         hashAt[height] = height == tipHeight ? index.lastHash() : index.relay().headerAt(height);
+    │                                                                   ━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[calls-loop]: external call inside a loop
+    ╭▸ src/WujiAccounts.sol:340:67
+    │
+340 │         hashAt[height] = height == tipHeight ? index.lastHash() : index.relay().headerAt(height);
+    │                                                                   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/calls-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:392:9
+    │
+392 │         require(_historyConsistent(), "deep Bitcoin reorg");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:454:9
+    │
+454 │         require(w.epoch == e && w.s == s, "settlement mismatch");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:530:9
+    │
+530 │         require(ep.processed, "entry pending");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:326:9
+    │
+326 │         require(_historyConsistent(), "deep Bitcoin reorg");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:328:9
+    │
+328 │         require(RELAY_TIP || (height == tipHeight && from == tipHeight), "headers required");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:331:16
+    │
+331 │         else { require(marked[from], "unknown base"); value = sAt[from]; }
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:332:9
+    │
+332 │         require(height <= from && from - height <= MAX_WALK, "walk");
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/WujiAccounts.sol:338:29
+    │
+338 │         if (marked[height]) require(sAt[height] == value, "price mismatch");
+    │                             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[require-revert-in-loop]: `require` or `revert` inside a loop
+    ╭▸ src/ZkWujiIndex.sol:688:69
+    │
+688 │             if (state.height == tipHeight && state.hash == tipHash) revert NoReorg();
+    │                                                                     ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/require-revert-in-loop
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:684:26
+    │
+684 │         uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+    │                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[divide-before-multiply]: division before multiplication may lose precision
+    ╭▸ src/WujiAccounts.sol:450:39
+    │
+450 │                 w.acc[1] += _floorDiv(move * int256(m), int256(uint256(principalOf[1])));
+    │                                       ━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/divide-before-multiply
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:724:20
+    │
+724 │         state.u += int64(int256(byteSum(sha256(abi.encodePacked(hash)))) - MEAN);
+    │                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int64' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:724:26
+    │
+724 │         state.u += int64(int256(byteSum(sha256(abi.encodePacked(hash)))) - MEAN);
+    │                          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/WujiAccounts.sol:458:51
+    │
+458 │             while (w.cursor < activeIds.length && work < budget) {
+    │                                                   ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/ZkWujiIndex.sol:778:15
+    │
+778 │             ++size;
+    │               ━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:786:16
+    │
+786 │         return uint32(word | size << 24);
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiAccounts.sol:450:46
+    │
+450 │                 w.acc[1] += _floorDiv(move * int256(m), int256(uint256(principalOf[1])));
+    │                                              ━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:791:23
+    │
+791 │         if (elapsed < int32(TARGET_TIMESPAN) / 4) elapsed = int32(TARGET_TIMESPAN) / 4;
+    │                       ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:791:61
+    │
+791 │         if (elapsed < int32(TARGET_TIMESPAN) / 4) elapsed = int32(TARGET_TIMESPAN) / 4;
+    │                                                             ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:792:23
+    │
+792 │         if (elapsed > int32(TARGET_TIMESPAN) * 4) elapsed = int32(TARGET_TIMESPAN) * 4;
+    │                       ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:792:61
+    │
+792 │         if (elapsed > int32(TARGET_TIMESPAN) * 4) elapsed = int32(TARGET_TIMESPAN) * 4;
+    │                                                             ━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int32' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/ZkWujiIndex.sol:793:41
+    │
+793 │         uint256 next = targetOf(bits) * uint256(elapsed) / TARGET_TIMESPAN;
+    │                                         ━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiAccounts.sol:451:47
+    │
+451 │                 w.acc[0] += _floorDiv(-move * int256(m), int256(uint256(principalOf[0])));
+    │                                               ━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'int256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/ZkWujiIndex.sol:818:18
+    │
+818 │             r = (r << 8) | (v & 255);
+    │                  ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+
+warning[unsafe-typecast]: typecast can truncate values
+    ╭▸ src/WujiAccounts.sol:525:16
+    │
+525 │         return uint256(v > cap ? cap : v);
+    │                ━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ├ note: consider disabling this lint if you're certain the cast is safe
+    │       
+    │       // casting to 'uint256' is safe because [explain why]
+    │       // forge-lint: disable-next-line(unsafe-typecast)
+    │       
+    │       
+    ╰ help: https://getfoundry.sh/forge/linting/unsafe-typecast
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiAccounts.sol:619:9
+    │
+619 │         emit Claimed(id, msg.sender, amount);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiAccounts.sol:633:9
+    │
+633 │         emit Retired(id);
+    │         ━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[reentrancy-events]: event emitted after an external call; reentrancy can reorder or fabricate logs that off-chain consumers rely on
+    ╭▸ src/WujiAccounts.sol:544:9
+    │
+544 │         emit Bounty(to, amount);
+    │         ━━━━━━━━━━━━━━━━━━━━━━━━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/reentrancy-events
+
+warning[uninitialized-local]: local variable is read before being initialized
+    ╭▸ src/WujiAccounts.sol:649:39
+    │
+649 │         while (head < queue.length && n < max && accountBudget > 0) {
+    │                                       ━
+    │
+    ╰ help: https://getfoundry.sh/forge/linting/uninitialized-local
+

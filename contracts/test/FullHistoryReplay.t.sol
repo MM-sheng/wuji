@@ -69,6 +69,7 @@ contract FullHistoryReplayTest is Test {
             idx.foldHeaders(buf, none);
             uint64 next = idx.lastHeight();
             assertGt(next, at, "no progress");
+            _assertWindow(idx, bin, anchorHeight, next);
             at = next;
         }
 
@@ -77,6 +78,18 @@ contract FullHistoryReplayTest is Test {
         assertEq(idx.chainWork(), uint256(vm.parseJsonBytes32(j, ".expectedWork")), "work");
         assertEq(idx.lastHash(), vm.parseJsonBytes32(j, ".endHash"), "tip hash");
         assertEq(idx.seenHeight(), end + k, "seen height");
+    }
+
+    /// S/work/hash alone miss corruption of the rolling timestamp window. Check chronological order
+    /// against the original headers after every batch, including headers whose timestamps move backwards.
+    function _assertWindow(WujiHeaderIndex idx, bytes memory bin, uint64 anchorHeight, uint64 height) internal view {
+        (, uint32[11] memory actualTimes,) = idx.continuity();
+        for (uint256 j; j < 11; ++j) {
+            uint256 p = (uint256(height) - anchorHeight - 10 + j) * 80 + 68;
+            uint32 expectedTime = uint32(uint8(bin[p])) | uint32(uint8(bin[p + 1])) << 8 | uint32(uint8(bin[p + 2]))
+                << 16 | uint32(uint8(bin[p + 3])) << 24;
+            assertEq(actualTimes[j], expectedTime, "chronological MTP window");
+        }
     }
 
     function test_segment00() public {

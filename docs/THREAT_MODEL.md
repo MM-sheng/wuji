@@ -236,14 +236,23 @@ requester chooses where the supplied chain stops and could pick a recent block s
 (WUJI-14). A requester can only show *more* real work than exists by mining. The pool cannot detect a deep reorg on such an index (`_historyConsistent` is vacuous there): it
 relies on the index's own confirmation depth, as the index does.
 
-**Floor overshoot.** A loser can cross 0 between two priced epochs; the winner is still credited the full
-move. The shortfall is charged to the pool's fee buffer first and only then recorded as `badDebt`, which is
-public. After every payout the buffer is clamped to the pool's real balance, so a winner paid out of a
-floored loser's overshoot can never leave bounties or `sweep` counting tokens that are gone (a self-review
-finding that bricked the pool in a stateful test). Keeping it at zero depends on anyone retiring accounts at their floor (paid a bounty from the buffer)
-and on epoch moves being small (≤ ≈2.6% of principal per 6-height epoch at the 10% tier). A pool with a large
-`badDebt` pays exits in order until its balance runs out: late exits bear the shortfall. At high tiers or
-with absent keepers this is a real, not theoretical, loss path.
+**Floor overshoot (rule revised 2026-10-12; deployed on Sepolia v3).** A loser can cross 0 between priced
+epochs while a winner retains nominal gains. The pool scans all live accounts before publishing each epoch,
+with at most 64 account visits per transaction. Pending entry principal, frozen refunds and already priced
+net exit claims have separate cash reserves. Net overshoot consumes actual buffer backing first. If the
+remaining cash cannot cover live nominal values, the pool closes permanently and fixes one pro-rata ratio
+for all remaining live claims; protected reserves are paid in full. `badDebt` records that snapshot's
+nominal shortfall. Claim order cannot allocate the shortfall to later claimants or new entrants. This removes
+the first-claimant advantage, not the economic loss caused by floor overshoot. Large pools need multiple
+permissionless maintenance transactions; fees do not guarantee that a keeper finds this work profitable.
+Historical deployed pools still use the old claim-order-dependent rule.
+
+**Frozen history and long reorgs (2026-10-12 source).** Header-only pools require each folded epoch's own
+hash-authenticated history before closing. The keeper archives headers by hash before submitting them,
+can fetch old headers by hash, and can import successful public raw-fold calldata. If all such data is
+unavailable, closure waits for recovery; it never substitutes new-branch headers or another price. A reorg
+proof can progress in segments of at most 256 headers; final sealing still compares against the current tip
+and the unchanged K+144 work threshold. Segment size is a transaction bound, not a bound on fork depth.
 
 **Buffer accounting.** On BSC testnet the keeper's routine `sweep()` sent every entry fee to the treasury
 before the entries were priced, because the buffer target counted only live principal. Fixed by counting

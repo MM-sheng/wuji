@@ -12,7 +12,9 @@ import {MockUSDT} from "./mocks/MockUSDT.sol";
 /// inside a test (as T9 does with a low-difficulty relay). Every other rule is the production code.
 contract EasyHeaderIndex is WujiHeaderIndex {
     constructor(bytes memory anchor, uint64 anchorHeight, uint32[11] memory times, uint64 confirmations)
-        WujiHeaderIndex(RelayerRewards(address(0)), anchor, anchorHeight, 0, times, 0, anchorHeight + 1, 4320, confirmations)
+        WujiHeaderIndex(
+            RelayerRewards(address(0)), anchor, anchorHeight, 0, times, 0, anchorHeight + 1, 4320, confirmations
+        )
     {}
 
     function targetOf(uint32 bits) public pure override returns (uint256 target) {
@@ -36,7 +38,9 @@ contract WujiHeaderIndexReorgTest is Test {
 
     function setUp() public {
         anchorHeader = _mine(bytes32(0), T0, 0);
-        for (uint256 i = 0; i < 11; i++) anchorTimes[i] = T0 - uint32(10 - i) * 600;
+        for (uint256 i = 0; i < 11; i++) {
+            anchorTimes[i] = T0 - uint32(10 - i) * 600;
+        }
         idx = new EasyHeaderIndex(anchorHeader, ANCHOR, anchorTimes, K);
         vm.warp(T0 + 400 days); // every mined timestamp is in the past
     }
@@ -60,7 +64,9 @@ contract WujiHeaderIndexReorgTest is Test {
         }
         uint256 target = _target();
         for (uint32 nonce = 0;; nonce++) {
-            for (uint256 i = 0; i < 4; i++) h[76 + i] = bytes1(uint8(nonce >> (8 * i)));
+            for (uint256 i = 0; i < 4; i++) {
+                h[76 + i] = bytes1(uint8(nonce >> (8 * i)));
+            }
             if (uint256(_reverse(_hash(h))) <= target) return h;
         }
     }
@@ -70,28 +76,40 @@ contract WujiHeaderIndexReorgTest is Test {
     }
 
     function _reverse(bytes32 v) internal pure returns (bytes32 r) {
-        for (uint256 i; i < 32; i++) r |= bytes32(uint256(uint8(v[i])) << (8 * i));
+        for (uint256 i; i < 32; i++) {
+            r |= bytes32(uint256(uint8(v[i])) << (8 * i));
+        }
     }
 
     /// `n` headers on top of `parent` (raw header) at heights starting `startHeight`, as one byte string.
-    function _chain(bytes memory parent, uint64 startHeight, uint256 n, uint256 salt) internal view returns (bytes memory out) {
+    function _chain(bytes memory parent, uint64 startHeight, uint256 n, uint256 salt)
+        internal
+        view
+        returns (bytes memory out)
+    {
         out = new bytes(n * 80);
         bytes memory p = parent;
         for (uint256 k = 0; k < n; k++) {
             bytes memory h = _mine(_hash(p), T0 + uint32(startHeight - ANCHOR + k) * 600, salt + k);
-            for (uint256 i = 0; i < 80; i++) out[k * 80 + i] = h[i];
+            for (uint256 i = 0; i < 80; i++) {
+                out[k * 80 + i] = h[i];
+            }
             p = h;
         }
     }
 
     function _last(bytes memory chain) internal pure returns (bytes memory h) {
         h = new bytes(80);
-        for (uint256 i = 0; i < 80; i++) h[i] = chain[chain.length - 80 + i];
+        for (uint256 i = 0; i < 80; i++) {
+            h[i] = chain[chain.length - 80 + i];
+        }
     }
 
     function _at(bytes memory chain, uint256 k) internal pure returns (bytes memory h) {
         h = new bytes(80);
-        for (uint256 i = 0; i < 80; i++) h[i] = chain[k * 80 + i];
+        for (uint256 i = 0; i < 80; i++) {
+            h[i] = chain[k * 80 + i];
+        }
     }
 
     function _base() internal view returns (bytes memory) {
@@ -127,7 +145,9 @@ contract WujiHeaderIndexReorgTest is Test {
         bytes memory branch = _chain(anchorHeader, ANCHOR + 1, needed, 7_000_000);
 
         bytes memory short_ = new bytes((needed - 1) * 80);
-        for (uint256 i = 0; i < short_.length; i++) short_[i] = branch[i];
+        for (uint256 i = 0; i < short_.length; i++) {
+            short_[i] = branch[i];
+        }
         vm.expectRevert(WujiHeaderIndex.NoReorg.selector);
         idx.freezeOnReorg(anchorBase, short_);
         assertFalse(idx.frozen());
@@ -171,7 +191,9 @@ contract WujiHeaderIndexReorgTest is Test {
         bytes memory mid = _at(first, 23); // the header at ANCHOR + 24
         bytes memory rest = _chain(_last(first), ANCHOR + 31, 30, 1_500_000);
         bytes memory overlap = new bytes(6 * 80); // the last K headers of the first fold start the second
-        for (uint256 i = 0; i < overlap.length; i++) overlap[i] = first[first.length - overlap.length + i];
+        for (uint256 i = 0; i < overlap.length; i++) {
+            overlap[i] = first[first.length - overlap.length + i];
+        }
         idx.foldHeaders(bytes.concat(overlap, rest), new address[](0)); // finalized ANCHOR + 54
 
         uint256 needed = (54 - 24) + K + idx.REORG_MARGIN();
@@ -212,8 +234,9 @@ contract WujiHeaderIndexReorgTest is Test {
         bytes memory anchorBase = _base();
         _foldMain();
         MockUSDT asset = new MockUSDT();
-        WujiAccounts pool = new WujiAccounts(WujiAccounts.Config(
-            asset, WujiIndex(address(idx)), 11.5e18, 6, 2, 30 minutes, address(0xFEE), 0, 0, 1_000));
+        WujiAccounts pool = new WujiAccounts(
+            WujiAccounts.Config(asset, WujiIndex(address(idx)), 11.5e18, 6, 2, 30 minutes, address(0xFEE), 0, 0, 1_000)
+        );
         assertTrue(pool.INDEX_CAN_FREEZE());
         address alice = address(0xA11CE);
         asset.mint(alice, 100e18);
@@ -230,5 +253,70 @@ contract WujiHeaderIndexReorgTest is Test {
         vm.prank(alice);
         pool.claim(id);
         assertEq(asset.balanceOf(alice), 100e18, "refunded in full: the entry was never priced");
+    }
+
+    /// Bitcoin timestamps can move backwards while remaining above the previous eleven blocks' median.
+    /// Sorting the live window would evict its smallest timestamp instead of its oldest block.
+    function _nonMonotoneIndex() internal returns (EasyHeaderIndex local, bytes memory a) {
+        uint32[11] memory times;
+        times[0] = T0 + 11;
+        for (uint256 i = 1; i < 11; ++i) {
+            times[i] = T0 + uint32(i);
+        }
+        a = _mine(bytes32(0), T0 + 10, 90);
+        local = new EasyHeaderIndex(a, ANCHOR, times, 1);
+    }
+
+    function test_mtpPreservesChronologyAndAcceptsValidBackwardTime() public {
+        (EasyHeaderIndex local, bytes memory a) = _nonMonotoneIndex();
+        bytes memory b = _mine(_hash(a), T0 + 12, 91);
+        bytes memory c = _mine(_hash(b), T0 + 7, 92);
+        // After b the canonical window is [1,...,10,12] and its median is 6 (plus T0).
+        local.foldHeaders(bytes.concat(b, c), new address[](0));
+        (, uint32[11] memory actual,) = local.continuity();
+        for (uint256 i; i < 10; ++i) {
+            assertEq(actual[i], T0 + uint32(i + 1));
+        }
+        assertEq(actual[10], T0 + 12);
+        assertEq(local.medianTimePast(), T0 + 6);
+        // Continue in a second transaction: the stored window must also retain chronological order.
+        bytes memory d = _mine(_hash(c), T0 + 13, 93);
+        local.foldHeaders(bytes.concat(c, d), new address[](0));
+        (, actual,) = local.continuity();
+        for (uint256 i; i < 9; ++i) {
+            assertEq(actual[i], T0 + uint32(i + 2));
+        }
+        assertEq(actual[9], T0 + 12);
+        assertEq(actual[10], T0 + 7);
+    }
+
+    function test_mtpRejectsTimestampEqualToCanonicalMedian() public {
+        (EasyHeaderIndex local, bytes memory a) = _nonMonotoneIndex();
+        bytes memory b = _mine(_hash(a), T0 + 12, 91);
+        bytes memory c = _mine(_hash(b), T0 + 6, 92);
+        vm.expectRevert(bytes4(keccak256("MedianTimePast()")));
+        local.foldHeaders(bytes.concat(b, c), new address[](0));
+    }
+
+    function test_mtpPreservesChronologyDuringReorgReplay() public {
+        (EasyHeaderIndex local, bytes memory a) = _nonMonotoneIndex();
+        (WujiHeaderIndex.Continuity memory state, uint32[11] memory times, uint256 work) = local.continuity();
+        bytes memory base = abi.encode(state, times, work);
+        bytes memory main = _mine(_hash(a), T0 + 20, 101);
+        local.foldHeaders(bytes.concat(main, _mine(_hash(main), T0 + 21, 102)), new address[](0));
+        // One finalized block plus K=1 plus the 144-block reorg margin, all at equal difficulty.
+        uint256 count = 146;
+        bytes memory branch = new bytes(count * 80);
+        bytes32 parent = _hash(a);
+        for (uint256 i; i < count; ++i) {
+            uint32 t = i == 0 ? T0 + 12 : i == 1 ? T0 + 7 : T0 + 13 + uint32(i);
+            bytes memory h = _mine(parent, t, 1000 + i);
+            for (uint256 j; j < 80; ++j) {
+                branch[i * 80 + j] = h[j];
+            }
+            parent = _hash(h);
+        }
+        local.freezeOnReorg(base, branch);
+        assertTrue(local.frozen());
     }
 }

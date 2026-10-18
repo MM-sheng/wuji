@@ -30,6 +30,8 @@ contract WujiHeaderIndex {
     uint256 public constant MAX_HEADERS = 512;
     /// @notice Cap on headers in one `freezeOnReorg` (≈ 15M gas, inside the 2^24 per-transaction cap).
     uint256 public constant MAX_REORG_HEADERS = 800;
+    /// @notice Per-call limit for an arbitrarily long, incrementally authenticated reorg branch.
+    uint256 public constant MAX_REORG_SEGMENT_HEADERS = 256;
 
     RelayerRewards public immutable rewards;
     uint64 public immutable GENESIS_HEIGHT;
@@ -58,6 +60,17 @@ contract WujiHeaderIndex {
     /// @notice Commitment to the finalized state after every fold (and the anchor), by height: the only places a
     ///         branch may fork from in `freezeOnReorg`. Written once per height, never changed.
     mapping(uint64 => bytes32) public committedAt;
+    /// @notice Authenticated reorg continuations. Only hashes are stored; complete proofs are public in events.
+    ///         Candidates do not reserve a global slot, earn rewards or change the consumer-visible index.
+    mapping(bytes32 => bool) public reorgProofs;
+    struct ReorgProof {
+        uint64 forkBase;
+        uint64 targetHeight;
+        bytes32 targetHash;
+        Continuity branch;
+        uint32[11] times;
+        uint256 work;
+    }
     /// @notice The highest header ever validated here, folded or not. A lower bound on the Bitcoin tip for
     ///         consumers that must schedule at a height that cannot exist yet. Never counted in S.
     uint64 public seenHeight;
@@ -68,6 +81,7 @@ contract WujiHeaderIndex {
     event Fold(uint64 indexed fromHeight, uint64 indexed toHeight, int256 S);
     event Checkpoint(uint64 indexed height, int256 S);
     event Frozen(uint64 indexed lastHeight, bytes32 lastHash, int256 S, uint64 forkBase, uint64 branchHeight);
+    event ReorgProgress(bytes32 indexed commitment, bytes proof);
 
     error BadLength();
     error Linkage();
@@ -288,6 +302,68 @@ contract WujiHeaderIndex {
         emit Frozen(tipHeight, tipHash, S(), forkBase, state.height);
     }
 
+    /// @notice Authenticate the first bounded segment from a recorded finalized state below the current tip.
+    ///         Anyone can extend the returned proof; the caller owns no exclusive continuation or seal right.
+    function beginReorg(bytes calldata base, bytes calldata headers) external returns (bytes memory proof) {
+        if (frozen) revert IndexFrozen();
+        ReorgProof memory p;
+        (p.branch, p.times, p.work) = abi.decode(base, (Continuity, uint32[11], uint256));
+        if (p.branch.height >= tip.height) revert NoReorg();
+        if (committedAt[p.branch.height] != keccak256(base)) revert Discontinuous();
+        p.forkBase = p.branch.height;
+        p.targetHeight = tip.height;
+        p.targetHash = tip.hash;
+        _extendReorg(p, headers);
+        return _recordReorg(p);
+    }
+
+    /// @notice Authenticate another bounded segment without resubmitting earlier headers.
+    function extendReorg(bytes calldata proof, bytes calldata headers) external returns (bytes memory next) {
+        if (frozen) revert IndexFrozen();
+        if (!reorgProofs[keccak256(proof)]) revert Discontinuous();
+        ReorgProof memory p = abi.decode(proof, (ReorgProof));
+        _extendReorg(p, headers);
+        return _recordReorg(p);
+    }
+
+    function isReorgProof(bytes calldata proof) external view returns (bool) {
+        return reorgProofs[keccak256(proof)];
+    }
+
+    /// @notice Seal from an authenticated continuation, using the CURRENT finalized tip and difficulty.
+    /// @dev Every candidate rejects the tip it was started against. Normal folds only extend that tip, so a
+    ///      branch that differs there cannot pass through a later tip without breaking hash linkage. Keeping
+    ///      this witness lets candidates survive concurrent folds; the work threshold is never snapshotted.
+    ///      A candidate that followed its original target must be restarted to prove a later fork instead.
+    function freezeReorg(bytes calldata proof) external {
+        if (frozen) revert IndexFrozen();
+        if (!reorgProofs[keccak256(proof)]) revert Discontinuous();
+        ReorgProof memory p = abi.decode(proof, (ReorgProof));
+        if (p.branch.height <= tip.height) revert NoReorg();
+        if (p.work < chainWork + uint256(CONFIRMATIONS + REORG_MARGIN) * workOf(targetOf(tip.bits))) revert NoReorg();
+        frozen = true;
+        emit Frozen(tip.height, tip.hash, S(), p.forkBase, p.branch.height);
+    }
+
+    function _extendReorg(ReorgProof memory p, bytes calldata headers) internal view {
+        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
+        if (headers.length / 80 > MAX_REORG_SEGMENT_HEADERS) revert TooManyHeaders();
+        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        for (uint256 i; i < headers.length; i += 80) {
+            p.work = _apply(p.branch, p.times, p.work, headers[i:i + 80], maxTime);
+            if (p.branch.height == p.targetHeight && p.branch.hash == p.targetHash) revert NoReorg();
+        }
+    }
+
+    function _recordReorg(ReorgProof memory p) internal returns (bytes memory proof) {
+        proof = abi.encode(p);
+        bytes32 commitment = keccak256(proof);
+        // Old proofs remain usable: front-running and another candidate cannot invalidate a continuation.
+        // Each successful call writes at most one slot; no operation iterates over accumulated candidates.
+        reorgProofs[commitment] = true;
+        emit ReorgProgress(commitment, proof);
+    }
+
     function _commitment(Continuity memory c, uint32[11] memory times, uint256 work) internal pure returns (bytes32) {
         return keccak256(abi.encode(c, times, work));
     }
@@ -295,13 +371,11 @@ contract WujiHeaderIndex {
     // ------------------------------------------------------------------ header rules (identical to the guest)
 
     /// @dev Mutates `state` and `times` in place (they are memory references) and returns the new work.
-    function _apply(
-        Continuity memory state,
-        uint32[11] memory times,
-        uint256 work,
-        bytes calldata raw,
-        uint32 maxTime
-    ) internal pure returns (uint256) {
+    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint32 maxTime)
+        internal
+        pure
+        returns (uint256)
+    {
         uint64 height = state.height + 1;
         uint32 bits = _read32c(raw, 72);
         uint32 time = _read32c(raw, 68);
@@ -338,7 +412,12 @@ contract WujiHeaderIndex {
     }
 
     function _median(uint32[11] memory input) internal pure returns (uint32) {
-        uint32[11] memory t = input;
+        // Memory-to-memory assignment aliases the array. Sort a copy so the caller can still evict
+        // the oldest block, rather than the smallest timestamp, when advancing its MTP window.
+        uint32[11] memory t;
+        for (uint256 i; i < 11; ++i) {
+            t[i] = input[i];
+        }
         for (uint256 i = 1; i < 11; ++i) {
             uint32 key = t[i];
             uint256 j = i;

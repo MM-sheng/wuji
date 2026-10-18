@@ -1,0 +1,115 @@
+{
+  "checkedAt": "2026-10-18T04:00:13.321Z",
+  "status": "PASS",
+  "chainId": 11155111,
+  "evmBlock": "0xb62b05",
+  "evmBlockHash": "0xd6a4ec5462c82507e4aab3ffc241284e19d71623134d0ea175fc10ae43ca3c8b",
+  "integratedBranch": "codex/fix-mtp-window",
+  "integratedCommit": "bd81100",
+  "priorMain": "6706203",
+  "sourceFiles": [
+    {
+      "path": "contracts/src/WujiHeaderIndex.sol",
+      "sha256": "acf9d37ead2a17fd16b0edb7ce1818b8fd1fcd55ab92157da0244dc334190bc3",
+      "identicalTo": "03f6256"
+    },
+    {
+      "path": "contracts/src/ZkWujiIndex.sol",
+      "sha256": "00d75641af4b30602f6b62efdc52b5b31bf807bb2b999f266ddf0b517ec2b8ee",
+      "identicalTo": "03f6256"
+    },
+    {
+      "path": "contracts/src/WujiAccounts.sol",
+      "sha256": "d49b916dcf6386628b5a9e39143bab65cab107c6030b627b51e471f52130e4f4",
+      "identicalTo": "03f6256"
+    },
+    {
+      "path": "contracts/src/WujiAccountsFactory.sol",
+      "sha256": "4677bf782aeb099b3c0f64ca6ef9a2c5674b939edbd8f681b3eb29acf91f8039",
+      "identicalTo": "03f6256"
+    }
+  ],
+  "remappingsSha256": "f0a49093f0f94d5c887c8b7ee0b3c7d4de2978a081faadaae710250ca4616f47",
+  "runtimeFrozenSource": "193269d3ce4eadcecc8519303d104d377c73df3b",
+  "runtimeFilesUnchanged": 24,
+  "verified": [
+    {
+      "name": "WujiHeaderIndex",
+      "address": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "status": "PASS",
+      "bytes": 12234,
+      "immutableSlots": 16,
+      "actualSha256": "ea424d4928c54dc45684938ec78d67359635650bd927546d82d857096bfe008c",
+      "maskedSha256": "e3819c2d806a7eaa694f267e73486940d4969c0f9576e945c61c5f6835732b1f"
+    },
+    {
+      "name": "RelayerRewards",
+      "address": "0xe6933fB941861b6Ef3888Eb11e2Dfb476B3aAB35",
+      "status": "PASS",
+      "bytes": 4660,
+      "immutableSlots": 4,
+      "actualSha256": "518f0a10545bb550082f4e7a6671b44a9d6c04c6bd071e12c0b2e767e72cc3cc",
+      "maskedSha256": "a14d2371a7c5bbf4c4170379cc5d13deb754a06d481de9f657e8e4a09a73ec68"
+    },
+    {
+      "name": "FeeRouter",
+      "address": "0xcc32633A49eDf61400cBc48a0eE082a8866946b4",
+      "status": "PASS",
+      "bytes": 1115,
+      "immutableSlots": 4,
+      "actualSha256": "19f90077d5539146459249756d145a3407d5a3ff64b298e4308b330647b0bac5",
+      "maskedSha256": "678a522ab11a967be70eafa845c044e2c15c61ca689880499111257fcb748a73"
+    },
+    {
+      "name": "WujiAccountsFactory",
+      "address": "0xF2C7BAa3Cdd8a69c2ED2576478140d13c29c48a9",
+      "status": "PASS",
+      "bytes": 2425,
+      "immutableSlots": 18,
+      "actualSha256": "87ffdbbcb68a82d0e13ffa1186899cdfe614185da3b1a64e20a3d62ef45c4d44",
+      "maskedSha256": "63b72691b7602ff6759de8b724bc052abe49ed858a0af556d98a632657f8a300"
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68",
+      "status": "PASS",
+      "bytes": 23646,
+      "immutableSlots": 65,
+      "actualSha256": "0e5baa860df1f27a760f39e00e3865578ef149da7519007a0d79d3ec6890248c",
+      "maskedSha256": "7e9c1a84da87d3e6faa8cd14e696d59947dda800e932a51b3d46d06b994b5118"
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+      "status": "PASS",
+      "bytes": 23646,
+      "immutableSlots": 65,
+      "actualSha256": "112a75cb131036bf525693730317162eeef6017010643559c732e79d371a8ada",
+      "maskedSha256": "7e9c1a84da87d3e6faa8cd14e696d59947dda800e932a51b3d46d06b994b5118"
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0xcd159a006aeb31535ead9514a9ea335466c9c137",
+      "status": "PASS",
+      "bytes": 23646,
+      "immutableSlots": 65,
+      "actualSha256": "682ca00f243710c68a0c33a8d94c1caafc3f590767433a265156db88ed69fd14",
+      "maskedSha256": "7e9c1a84da87d3e6faa8cd14e696d59947dda800e932a51b3d46d06b994b5118"
+    },
+    {
+      "name": "AccountCodeLeft",
+      "address": "0xef8c6ffe1dca672e75f273653c75d5fe6baa428f",
+      "status": "PASS",
+      "bytes": 12655,
+      "sha256": "dda8c5a34a64be1f613bbbcae3668f208ce0ac6a1a0d13331fdc24df2a0a3da8"
+    },
+    {
+      "name": "AccountCodeRight",
+      "address": "0x8247114377f490a22921e0ceec52e1443dbee826",
+      "status": "PASS",
+      "bytes": 12656,
+      "sha256": "0851b69160199a733ab147fcbd615ddf21131b9f66b397af1cfd005c921d6985"
+    }
+  ],
+  "scope": "Fresh solc 0.8.28 pinned Standard JSON build: runtime including metadata, only declared immutables masked; code-data blobs exactly reconstruct fresh creation code. Core files identical to deployment source. This does not constitute an independent audit or a runtime upgrade."
+}

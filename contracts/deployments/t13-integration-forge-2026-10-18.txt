@@ -1,0 +1,680 @@
+Compiling 91 files with Solc 0.8.28
+Solc 0.8.28 finished in 13.14s
+Compiler run successful with warnings:
+Warning (3149): The result type of the shift operation is equal to the type of the first operand (uint32) ignoring the (larger) type of the second operand (uint256) which might be unexpected. Silence this warning by either converting the first or the second operand to the type of the other.
+  --> test/BitcoinRelay.t.sol:39:40:
+   |
+39 |         for(uint256 i;i<4;++i) time |= uint32(uint8(h[68+i])) << (8*i);
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (3149): The result type of the shift operation is equal to the type of the first operand (uint32) ignoring the (larger) type of the second operand (uint256) which might be unexpected. Silence this warning by either converting the first or the second operand to the type of the other.
+  --> test/BitcoinRelay.t.sol:44:53:
+   |
+44 |             uint32 time;for(uint256 k;k<4;++k)time|=uint32(uint8(batch[i+68+k]))<<(8*k);
+   |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning (2018): Function state mutability can be restricted to view
+  --> test/BitcoinRelay.t.sol:94:5:
+   |
+94 |     function next(EasyRelay r,bytes32 parent,uint256 salt) internal returns(bytes memory h) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+  --> test/WujiHeaderIndex.reorg.t.sol:54:5:
+   |
+54 |     function _mine(bytes32 parent, uint32 time, uint256 salt) internal view returns (bytes memory h) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+Warning (2018): Function state mutability can be restricted to pure
+  --> test/ZkWujiReorg.t.sol:63:5:
+   |
+63 |     function _mine(bytes32 parent, uint32 time, uint256 salt) internal view returns (bytes memory h) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Ran 24 tests for test/FullHistoryReplay.t.sol:FullHistoryReplayTest
+[SKIP] test_segment00() (gas: 0)
+[SKIP] test_segment01() (gas: 0)
+[SKIP] test_segment02() (gas: 0)
+[SKIP] test_segment03() (gas: 0)
+[SKIP] test_segment04() (gas: 0)
+[SKIP] test_segment05() (gas: 0)
+[SKIP] test_segment06() (gas: 0)
+[SKIP] test_segment07() (gas: 0)
+[SKIP] test_segment08() (gas: 0)
+[SKIP] test_segment09() (gas: 0)
+[SKIP] test_segment10() (gas: 0)
+[SKIP] test_segment11() (gas: 0)
+[SKIP] test_segment12() (gas: 0)
+[SKIP] test_segment13() (gas: 0)
+[SKIP] test_segment14() (gas: 0)
+[SKIP] test_segment15() (gas: 0)
+[SKIP] test_segment16() (gas: 0)
+[SKIP] test_segment17() (gas: 0)
+[SKIP] test_segment18() (gas: 0)
+[SKIP] test_segment19() (gas: 0)
+[SKIP] test_segment20() (gas: 0)
+[SKIP] test_segment21() (gas: 0)
+[SKIP] test_segment22() (gas: 0)
+[SKIP] test_segment23() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 24 skipped; finished in 1.04ms (535.66µs CPU time)
+
+Ran 1 test for test/Review20261012.t.sol:Review20261012Accounting
+[PASS] test_reviewInsolvencyProtectsPendingDepositsInEitherClaimOrder() (gas: 2519591)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.22ms (1.04ms CPU time)
+
+Ran 1 test for test/WujiAccounts.gas.t.sol:WujiAccountsGas
+[PASS] test_gas() (gas: 72867774)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 43.45ms (42.09ms CPU time)
+
+Ran 3 tests for test/FrozenExitRelay.t.sol:FrozenExitRelayTest
+[PASS] test_realForkDelayClosureAndAtomicRollback() (gas: 45638576)
+[PASS] test_realLosingForkDoesNotResetNotice() (gas: 44091904)
+[PASS] test_realUnobservedRestorationAndReturnInvalidatesPriorNotice() (gas: 44333918)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 72.25ms (68.23ms CPU time)
+
+Ran 3 tests for test/ZkWujiChallenge.t.sol:ZkWujiChallengeRewardsTest
+[PASS] test_aRefutedBatchPaysItsBountyToTheDisputer() (gas: 21290588)
+[PASS] test_aRejectedBatchPaysNoBounty() (gas: 17122516)
+[PASS] test_theProverChoosesTokensAndIsPaidOnlyOnFinalize() (gas: 17132766)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 78.16ms (39.40ms CPU time)
+
+Ran 8 tests for test/WujiAccounts.headerIndex.t.sol:WujiAccountsHeaderIndexTest
+[PASS] test_aFoldRecordsTheNewestValidatedHeaderBeyondTheFinalizedTip() (gas: 33096280)
+[PASS] test_aLaterRequestCanPriceEarlierAndIsProcessedInHeightOrder() (gas: 32998254)
+[PASS] test_aPoolOnAnIndexWithoutARelayPricesFromItsNewestValidatedHeader() (gas: 10989)
+[PASS] test_anEpochAtTheFinalizedTipNeedsNoHeaders() (gas: 7916121)
+[PASS] test_anEpochBelowTheTipWaitsForHeaders() (gas: 10557690)
+[PASS] test_requestsArePricedPastTheNewestValidatedHeaderByTheMarginForItsAge() (gas: 369897)
+[PASS] test_requestsStopWhenTheNewestValidatedHeaderIsADayOld() (gas: 94215)
+[PASS] test_theMarginGrowsWithAgeAndExceedsTheExpectedBlocks() (gas: 530484)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 124.63ms (64.93ms CPU time)
+
+Ran 10 tests for test/Review20261012.t.sol:Review20261012RealHeaders
+[PASS] test_aFoldRecordsTheNewestValidatedHeaderBeyondTheFinalizedTip() (gas: 33096280)
+[PASS] test_aLaterRequestCanPriceEarlierAndIsProcessedInHeightOrder() (gas: 32998266)
+[PASS] test_aPoolOnAnIndexWithoutARelayPricesFromItsNewestValidatedHeader() (gas: 10989)
+[PASS] test_anEpochAtTheFinalizedTipNeedsNoHeaders() (gas: 7916121)
+[PASS] test_anEpochBelowTheTipWaitsForHeaders() (gas: 10557668)
+[PASS] test_requestsArePricedPastTheNewestValidatedHeaderByTheMarginForItsAge() (gas: 369897)
+[PASS] test_requestsStopWhenTheNewestValidatedHeaderIsADayOld() (gas: 94215)
+[PASS] test_reviewFreezeWaitsForTheSameAuthenticatedHistoricalPrice() (gas: 20042100)
+[PASS] test_reviewMarkedTipRemainsAUsableKeeperAnchor() (gas: 33691517)
+[PASS] test_theMarginGrowsWithAgeAndExceedsTheExpectedBlocks() (gas: 530484)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 283.94ms (227.62ms CPU time)
+
+Ran 14 tests for test/RelayerRewards.t.sol:RelayerRewardsTest
+[PASS] testFuzz_batchSplittingPaysExactlyTheSame(uint128,uint8) (runs: 256, μ: 4646419, ~: 2537607)
+[PASS] test_balanceReductionIsDetectedWithoutErasingClaims() (gas: 419677)
+[PASS] test_delayedClaimIsFixedAndCannotTakeLaterFunding() (gas: 671153)
+[PASS] test_independentTokensAndNoTokenCallsDuringCredit() (gas: 1602921)
+[PASS] test_oldWorkCannotClaimNewFees() (gas: 494629)
+[PASS] test_onlyIndexAndContiguousNewHeights() (gas: 154821)
+[PASS] test_permissionlessFundingDoesNotGiveRights() (gas: 402295)
+[PASS] test_reentrancyBlockedDuringFundingAndClaim() (gas: 1410985)
+[PASS] test_senderFeeCannotEatOtherWorkersReserveOnClaim() (gas: 1233226)
+[PASS] test_tinyReservePaysZeroAndPreservesEveryUnit() (gas: 681398)
+[PASS] test_tokenAndHeightBoundsAndDuplicatesRevertAtomically() (gas: 267241)
+[PASS] test_transferFeeFundingAndRoutingRevertWithoutBookingPhantomReserve() (gas: 1314387)
+[PASS] test_unselectedTokensCannotBeClaimedRetroactively() (gas: 419296)
+[PASS] test_unsynchronizedDonationOnlyFundsFutureWork() (gas: 404875)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 649.39ms (648.09ms CPU time)
+
+Ran 2 tests for test/FrozenExit.invariant.t.sol:FrozenExitInvariants
+[PASS]
+FrozenExitInvariants invariants:
+[PASS] invariant_openOrTerminalAndAlwaysPaired
+[PASS] invariant_solventAndConserved
+[PASS] invariant_terminalStateCannotAdvance
+ FrozenExitInvariants invariants (runs: 64, calls: 3840, reverts: 0)
+
+╭-------------------+--------------+-------+---------+----------╮
+| Contract          | Selector     | Calls | Reverts | Discards |
++===============================================================+
+| FrozenExitHandler | finishExit   | 470   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | mint         | 465   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | observe      | 501   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | progress     | 507   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | redeem       | 473   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | settle       | 476   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | switchBranch | 446   | 0       | 0        |
+|-------------------+--------------+-------+---------+----------|
+| FrozenExitHandler | transfer     | 502   | 0       | 0        |
+╰-------------------+--------------+-------+---------+----------╯
+
+[PASS] test_handlerTraversesTerminalStateWithUnmatchedExits() (gas: 1854277)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 808.01ms (805.47ms CPU time)
+
+Ran 8 tests for test/WujiVaultFactory.t.sol:WujiVaultFactoryTest
+[PASS] test_anyoneCanCreate() (gas: 3553068)
+[PASS] test_createFoldsSmallBacklogItself() (gas: 17155468)
+[PASS] test_createRefusesLargeIndexBacklog() (gas: 71533236)
+[PASS] test_createsIndependentVaultsOnOneIndex() (gas: 7176387)
+[PASS] test_duplicateMarketReverts() (gas: 7098449)
+[PASS] test_mintInWbnbVault() (gas: 3823036)
+[PASS] test_sameIndexSamePathDifferentNotional() (gas: 27533400)
+[PASS] test_symbolFallbackForOddTokens() (gas: 3657189)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 145.06ms (143.77ms CPU time)
+
+Ran 17 tests for test/FrozenExit.t.sol:FrozenExitTest
+[PASS] testFuzz_closedSolvencyRoundingAndConservation(uint256,uint256,bool) (runs: 256, μ: 1916586, ~: 1542937)
+[PASS] test_emptyHealthyAndStaleHistoryCannotArmExit() (gas: 673454)
+[PASS] test_evenShallowForkOnReplacementBranchRequiresNewObservation() (gas: 788327)
+[PASS] test_exitExecutionGas() (gas: 1081048)
+[PASS] test_freezeSealsIndexEvenIfOriginalBranchLaterReturns() (gas: 1066165)
+[PASS] test_halfExitPaysBothUnmatchedHoldersAndNeverOpensAnotherSeries() (gas: 1562897)
+[PASS] test_lateCreatedVaultIgnoresEarlierCheckpoint() (gas: 1995747)
+[PASS] test_mismatchBlocksMintAndNormalSettlementButPairsExit() (gas: 1924189)
+[PASS] test_noNoticeMeansNoExitAndRevertedFoldDoesNotRecordOne() (gas: 582818)
+[PASS] test_noticeAlsoBindsObservedTipAndFoldedState() (gas: 761430)
+[PASS] test_priorSettledPaymentsAndSharesDoNotChange() (gas: 4109274)
+[PASS] test_recordedOwnBoundaryWinsOverLaterCheckpoint() (gas: 3270987)
+[PASS] test_recoveryBeforeExitResumesAndInvalidatesNotice() (gas: 1043465)
+[PASS] test_repeatNoticeDoesNotResetAndClockDoesNotAdvanceDelay() (gas: 1006111)
+[PASS] test_shorterHeavierForkWaitsBeyondFoldedHeight() (gas: 1086387)
+[PASS] test_staleConflictingBranchMayExitAfterMeasuredProgress() (gas: 825063)
+[PASS] test_unobservedRecoveryThenSameForkCannotReuseTimer() (gas: 936241)
+Suite result: ok. 17 passed; 0 failed; 0 skipped; finished in 187.89ms (187.22ms CPU time)
+
+Ran 20 tests for test/RewardsIntegration.t.sol:RewardsIntegrationTest
+[PASS] test_alternatingWorkersKeepAttributionAndDuplicatesDoNotSteal() (gas: 9566400)
+[PASS] test_atomicFailureDoesNotCommitHeadersOrRewards() (gas: 4282503)
+[PASS] test_atomicGasSingleAndBatch() (gas: 18437332)
+[PASS] test_atomicSubmissionCreditsCallerAndCannotBeSplitByFrontRunning() (gas: 5082002)
+[PASS] test_constructorRejectsWrongBindingAndGenesis() (gas: 7207)
+[PASS] test_frozenPackingKeepsOriginal70kBudget() (gas: 18134940)
+[PASS] test_gasTableAndRealVaultSettlement() (gas: 22479692)
+[PASS] test_noRewardFoldConsumesOldWorkBeforeNewFees() (gas: 6445287)
+[PASS] test_onlyFinalizedFolderGetsOneOffBounty() (gas: 10102165)
+[PASS] test_realHeadersRewardGasAndVaultFeeRoute() (gas: 16098170)
+[PASS] test_realRetargetAndEveryJsVector() (gas: 427141641)
+[PASS] test_rejectsFlippedBit() (gas: 11091381)
+[PASS] test_rejectsMalformedUnknownParentAndDisjointBatch() (gas: 13289349)
+[PASS] test_rejectsWrongRetargetBits() (gas: 11077251)
+[PASS] test_rewardBatchGasBudget() (gas: 17701770)
+[PASS] test_rewardFailureRollsBackIndexAndCheckpoints() (gas: 13584336)
+[PASS] test_shorterButHigherWorkForkWinsAtRetarget() (gas: 3420834)
+[PASS] test_targetsAndClamp() (gas: 82221)
+[PASS] test_threeBlockForkAndDeepReorg() (gas: 10931855)
+[PASS] test_twoTokenFoldGas() (gas: 17090260)
+Suite result: ok. 20 passed; 0 failed; 0 skipped; finished in 1.11s (1.14s CPU time)
+
+Ran 8 tests for test/BitcoinRelay.t.sol:BitcoinRelayTest
+[PASS] test_gasTableAndRealVaultSettlement() (gas: 22479714)
+[PASS] test_realRetargetAndEveryJsVector() (gas: 427141663)
+[PASS] test_rejectsFlippedBit() (gas: 11091336)
+[PASS] test_rejectsMalformedUnknownParentAndDisjointBatch() (gas: 13289349)
+[PASS] test_rejectsWrongRetargetBits() (gas: 11077206)
+[PASS] test_shorterButHigherWorkForkWinsAtRetarget() (gas: 3420856)
+[PASS] test_targetsAndClamp() (gas: 82198)
+[PASS] test_threeBlockForkAndDeepReorg() (gas: 10931810)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 1.12s (1.11s CPU time)
+
+Ran 24 tests for test/ZkWujiChallenge.t.sol:ZkWujiChallengeTest
+[PASS] test_aBackedBatchWithCheckpointsMatches() (gas: 103986890)
+[PASS] test_aDisputedBatchNeverFinalizesOnTime() (gas: 16939626)
+[PASS] test_aForgedBatchCannotBeBacked() (gas: 30068576)
+[PASS] test_aForgedBatchIsRefutedAtOnceAndTheHeaderPathAdvances() (gas: 25187555)
+[PASS] test_aForgedBatchIsRejectedWithEverythingBuiltOnIt() (gas: 19840911)
+[PASS] test_aForgeryClaimingHonestWorkIsRefutedEvenThoughTheWorkIsEqual() (gas: 25199699)
+[PASS] test_aProofMovesNothingConsumersReadUntilTheWindowPasses() (gas: 19114843)
+[PASS] test_aProofPathNeedsAWindowAResponseAndABond() (gas: 14931480)
+[PASS] test_anHonestBatchIsBackedAndTheWrongDisputerPaysTheBacker() (gas: 25269490)
+[PASS] test_backingAfterTheResponseWindowIsTooLate() (gas: 20272077)
+[PASS] test_backingStartsFromThePreviousPendingBatch() (gas: 44203681)
+[PASS] test_batchSizeIsCappedSoBackingFitsOneTransaction() (gas: 88418497)
+[PASS] test_batchesChainAndFinalizeInOrder() (gas: 58660203)
+[PASS] test_checkpointHeightsAreTheContractsNotTheProvers() (gas: 45849702)
+[PASS] test_disputeRules() (gas: 37982584)
+[PASS] test_forgedProofsCannotHoldTheIndex() (gas: 74997942)
+[PASS] test_onlyDisputedBatchesCanBeBacked() (gas: 20205812)
+[PASS] test_queueIsBounded() (gas: 26508873)
+[PASS] test_refuteNeedsADispute() (gas: 23909959)
+[PASS] test_refutingALaterBatchRemovesItAndLeavesTheEarlierOnes() (gas: 42123392)
+[PASS] test_refutingAnHonestBatchFails() (gas: 25054797)
+[PASS] test_rejectNeedsAnUnansweredDispute() (gas: 21092913)
+[PASS] test_rewardTokenListsAreValidatedUpFront() (gas: 16948885)
+[PASS] test_theHeaderPathWaitsForPendingBatches() (gas: 24483765)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 1.04s (1.01s CPU time)
+
+Ran 2 tests for test/WujiAccounts.regression.t.sol:WujiAccountsRegression
+[PASS]
+WujiAccountsRegression invariants:
+[PASS] invariant_bounds
+[PASS] invariant_bufferBacked
+[PASS] invariant_callSummary
+[PASS] invariant_principalBooks
+[PASS] invariant_queue
+[PASS] invariant_solvent
+ WujiAccountsRegression invariants (runs: 64, calls: 3840, reverts: 0)
+
+╭-----------------+----------+-------+---------+----------╮
+| Contract        | Selector | Calls | Reverts | Discards |
++=========================================================+
+| AccountsHandler | claim    | 413   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | dropBest | 395   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | enter    | 375   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | exit     | 419   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | freeze   | 355   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | mine     | 390   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | process  | 342   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | retire   | 387   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | sweep    | 375   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | transfer | 389   | 0       | 0        |
+╰-----------------+----------+-------+---------+----------╯
+
+[PASS] test_regression_overshootDrainsBufferThenSweep() (gas: 3628734)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 1.18s (1.18s CPU time)
+
+Ran 5 tests for test/ZkWujiGroth16.t.sol:ZkWujiGroth16Test
+[PASS] test_realGroth16ProofAdvancesTheIndexLikeTheHeaderPath() (gas: 19703902)
+[PASS] test_tamperedJournalIsRejected() (gas: 8604144)
+[PASS] test_tamperedProofIsRejected() (gas: 1008729622)
+[PASS] test_verifierAloneGas() (gas: 360345)
+[PASS] test_wrongProgramKeyIsRejected() (gas: 8839153)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 81.02ms (71.48ms CPU time)
+
+Ran 1 test for test/RelayerRewards.invariant.t.sol:RelayerRewardsInvariants
+[PASS] invariant_reserveClaimsAndPaymentsConserveAllFunding() (runs: 64, calls: 3840, reverts: 0)
+
+╭---------------+----------+-------+---------+----------╮
+| Contract      | Selector | Calls | Reverts | Discards |
++=======================================================+
+| RewardHandler | claim    | 982   | 0       | 0        |
+|---------------+----------+-------+---------+----------|
+| RewardHandler | credit   | 932   | 0       | 0        |
+|---------------+----------+-------+---------+----------|
+| RewardHandler | donation | 968   | 0       | 0        |
+|---------------+----------+-------+---------+----------|
+| RewardHandler | fee      | 958   | 0       | 0        |
+╰---------------+----------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.24s (1.24s CPU time)
+
+Ran 1 test for test/WujiAccounts.invariant.t.sol:WujiAccountsFreezeInvariantTest
+[PASS]
+WujiAccountsFreezeInvariantTest invariants:
+[PASS] invariant_bounds
+[PASS] invariant_bufferBacked
+[PASS] invariant_callSummary
+[PASS] invariant_principalBooks
+[PASS] invariant_queue
+[PASS] invariant_solvent
+ WujiAccountsFreezeInvariantTest invariants (runs: 64, calls: 3840, reverts: 0)
+
+╭-----------------+----------+-------+---------+----------╮
+| Contract        | Selector | Calls | Reverts | Discards |
++=========================================================+
+| AccountsHandler | claim    | 413   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | dropBest | 395   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | enter    | 375   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | exit     | 419   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | freeze   | 355   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | mine     | 390   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | process  | 342   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | retire   | 387   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | sweep    | 375   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | transfer | 389   | 0       | 0        |
+╰-----------------+----------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.21s (1.21s CPU time)
+
+Ran 13 tests for test/ZkWujiIndex.t.sol:ZkWujiIndexTest
+[PASS] test_aCodelessVerifierCannotBeInstalledOrUsed() (gas: 40932253)
+[PASS] test_aFailingVerifierCannotAdvanceTheIndex() (gas: 39493081)
+[PASS] test_foldHeadersStopsAtTheConfirmationDepth() (gas: 11258964)
+[PASS] test_futureTimeBoundIsTheChainsNotTheSubmitters() (gas: 3377248)
+[PASS] test_gas() (gas: 70177140)
+[PASS] test_overlappingBatchesReachTheSameStateAsOneBigBatch() (gas: 114210969)
+[PASS] test_pathsInterleave() (gas: 82355652)
+[PASS] test_proofPathEqualsHeaderPath() (gas: 66504356)
+[PASS] test_recordsSeriesCheckpoints() (gas: 42109456)
+[PASS] test_rejectsDiscontinuousOrMisconfiguredJournals() (gas: 29761684)
+[PASS] test_rejectsTamperedHeaders() (gas: 10269861)
+[PASS] test_rustEncodedJournalCarriesCheckpoints() (gas: 45962722)
+[PASS] test_rustEncodedJournalDecodesAndAdvancesTheIndex() (gas: 35684600)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 923.92ms (895.14ms CPU time)
+
+Ran 16 tests for test/RelayPacking.t.sol:RelayPackingTest
+[PASS] testFuzz_parentEncodingIsLossless(uint224,uint32) (runs: 256, μ: 2477481, ~: 2477514)
+[PASS] testFuzz_reverseMatchesReference(bytes32) (runs: 256, μ: 17853, ~: 17853)
+[PASS] test_allRealHeadersMatchFrozenBaseline() (gas: 775447722)
+[PASS] test_gasTableAndRealVaultSettlement() (gas: 22479670)
+[PASS] test_heightAdditionRejectsOverflowAtomically() (gas: 13372066)
+[PASS] test_idCapacityRejectsInsteadOfAliasingRecords() (gas: 13801548)
+[PASS] test_parentEncodingRejectsDiscardedBits() (gas: 2456899)
+[PASS] test_realRetargetAndEveryJsVector() (gas: 427141619)
+[PASS] test_rejectsCheckpointNarrowing() (gas: 1164296)
+[PASS] test_rejectsFlippedBit() (gas: 11091359)
+[PASS] test_rejectsMalformedUnknownParentAndDisjointBatch() (gas: 13289327)
+[PASS] test_rejectsWrongRetargetBits() (gas: 11077295)
+[PASS] test_shorterButHigherWorkForkWinsAtRetarget() (gas: 3420959)
+[PASS] test_targetsAndClamp() (gas: 82344)
+[PASS] test_threeBlockForkAndDeepReorg() (gas: 10934849)
+[PASS] test_workAdditionRejectsOverflowAtomically() (gas: 13474944)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 2.67s (2.67s CPU time)
+
+Ran 1 test for test/WujiAccounts.invariant.t.sol:WujiAccountsInvariantTest
+[PASS]
+WujiAccountsInvariantTest invariants:
+[PASS] invariant_bounds
+[PASS] invariant_bufferBacked
+[PASS] invariant_callSummary
+[PASS] invariant_principalBooks
+[PASS] invariant_queue
+[PASS] invariant_solvent
+ WujiAccountsInvariantTest invariants (runs: 64, calls: 3840, reverts: 0)
+
+╭-----------------+----------+-------+---------+----------╮
+| Contract        | Selector | Calls | Reverts | Discards |
++=========================================================+
+| AccountsHandler | claim    | 413   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | dropBest | 395   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | enter    | 375   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | exit     | 419   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | freeze   | 355   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | mine     | 390   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | process  | 342   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | retire   | 387   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | sweep    | 375   | 0       | 0        |
+|-----------------+----------+-------+---------+----------|
+| AccountsHandler | transfer | 389   | 0       | 0        |
+╰-----------------+----------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 2.01s (2.00s CPU time)
+
+Ran 8 tests for test/WujiAccounts.zk.t.sol:WujiAccountsZkTest
+[PASS] test_aFoldRecordsTheNewestValidatedHeaderBeyondTheFinalizedTip() (gas: 33096391)
+[PASS] test_aLaterRequestCanPriceEarlierAndIsProcessedInHeightOrder() (gas: 33008033)
+[PASS] test_aPoolOnAnIndexWithoutARelayPricesFromItsNewestValidatedHeader() (gas: 10989)
+[PASS] test_anEpochAtTheFinalizedTipNeedsNoHeaders() (gas: 7921051)
+[PASS] test_anEpochBelowTheTipWaitsForHeaders() (gas: 10562599)
+[PASS] test_requestsArePricedPastTheNewestValidatedHeaderByTheMarginForItsAge() (gas: 370273)
+[PASS] test_requestsStopWhenTheNewestValidatedHeaderIsADayOld() (gas: 94391)
+[PASS] test_theMarginGrowsWithAgeAndExceedsTheExpectedBlocks() (gas: 531628)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 177.86ms (125.09ms CPU time)
+
+Ran 10 tests for test/WujiHeaderIndex.t.sol:WujiHeaderIndexTest
+[PASS] test_foldStopsAtTheConfirmationDepth() (gas: 11171747)
+[PASS] test_futureTimeBoundIsTheChainsNotTheSubmitters() (gas: 3377293)
+[PASS] test_gas() (gas: 42024738)
+[PASS] test_overlappingBatchesReachTheSameStateAsOneBigBatch() (gas: 108387432)
+[PASS] test_realHeaderMtpWindowsMatchCanonicalOrder() (gas: 248368372)
+[PASS] test_recordsSeriesCheckpoints() (gas: 36315488)
+[PASS] test_rejectsBadConfiguration() (gas: 6715396)
+[PASS] test_rejectsTamperedHeaders() (gas: 10218663)
+[PASS] test_sameStateAsZkWujiIndexHeaderPath() (gas: 208966990)
+[PASS] test_theConfirmationDepthIsTheDeploymentParameter() (gas: 34228216)
+Suite result: ok. 10 passed; 0 failed; 0 skipped; finished in 1.46s (1.45s CPU time)
+
+Ran 8 tests for test/WujiIndex.t.sol:WujiIndexTest
+[PASS] testFuzz_byteSumMatchesNaive(bytes32) (runs: 256, μ: 11356, ~: 11356)
+[PASS] test_boundedAndDelayedFoldIsSamePath() (gas: 24760869)
+[PASS] test_byteSumBounds() (gas: 23325)
+[PASS] test_constructorBounds() (gas: 6248)
+[PASS] test_deepReorgEvenOnNoopMustRevert() (gas: 925353)
+[PASS] test_futureGenesis() (gas: 50951)
+[PASS] test_shallowReorgOnlyChangesUnfoldedPath() (gas: 1194638)
+[PASS] test_sixConfirmationsAndNoDoubleFold() (gas: 1008294)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 28.55ms (28.33ms CPU time)
+
+Ran 17 tests for test/WujiVault.t.sol:WujiVaultTest
+[PASS] testFuzz_valuesAlwaysSumToNotional(uint64,uint256) (runs: 256, μ: 7964928, ~: 7935705)
+[PASS] test_fractionalPairsRoundAgainstUser() (gas: 543362)
+[PASS] test_lateSettlementCannotChooseLaterIndexValue() (gas: 151487617)
+[PASS] test_liabilitiesNeverExceedBalance() (gas: 138535238)
+[PASS] test_mintPullsNotionalPlusFee() (gas: 280948)
+[PASS] test_mintRejectsFeeOnTransferCollateral() (gas: 793305)
+[PASS] test_mintRevertsAtSettlementHeightUntilSettled() (gas: 137984517)
+[PASS] test_onlyVaultMintsSeriesTokens() (gas: 49631)
+[PASS] test_opensSeriesZeroAtDeploy() (gas: 55546)
+[PASS] test_redeemPairReturnsNotionalMinusFee() (gas: 3795683)
+[PASS] test_redeemSettledPaysFrozenValues() (gas: 138258789)
+[PASS] test_redeemSettledRevertsOnOpenSeries() (gas: 255113)
+[PASS] test_settleFreezesShareAndOpensNext() (gas: 144964102)
+[PASS] test_settleRequiresIndexCatchupToCheckpoint() (gas: 137463976)
+[PASS] test_settleRevertsBeforeSettlementHeight() (gas: 55701)
+[PASS] test_shareClampsAtBounds() (gas: 86619)
+[PASS] test_shareTracksIndex() (gas: 13629093)
+Suite result: ok. 17 passed; 0 failed; 0 skipped; finished in 1.52s (3.38s CPU time)
+
+Ran 11 tests for test/WujiHeaderIndex.segments.t.sol:WujiHeaderIndexRealSegmentsTest
+[PASS] test_foldStopsAtTheConfirmationDepth() (gas: 11171747)
+[PASS] test_futureTimeBoundIsTheChainsNotTheSubmitters() (gas: 3377293)
+[PASS] test_gas() (gas: 42024738)
+[PASS] test_overlappingBatchesReachTheSameStateAsOneBigBatch() (gas: 108387432)
+[PASS] test_realHeaderMtpWindowsMatchCanonicalOrder() (gas: 248368372)
+[PASS] test_recordsSeriesCheckpoints() (gas: 36315488)
+[PASS] test_rejectsBadConfiguration() (gas: 6715396)
+[PASS] test_rejectsTamperedHeaders() (gas: 10218641)
+[PASS] test_sameStateAsZkWujiIndexHeaderPath() (gas: 208966990)
+[PASS] test_segmentRealRetargetAndFullContinuationMatchNormalReplay() (gas: 168918458)
+[PASS] test_theConfirmationDepthIsTheDeploymentParameter() (gas: 34228327)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 2.54s (1.85s CPU time)
+
+Ran 25 tests for test/WujiAccounts.t.sol:WujiAccountsTest
+[PASS] testFuzz_solvency(uint256) (runs: 256, μ: 34656316, ~: 34664771)
+[PASS] test_excessSideMovesAtMatchedRate() (gas: 10740191)
+[PASS] test_exitLeavesOtherSideFullyBackedAndIdle() (gas: 38394985)
+[PASS] test_factoryFixesTheMenu() (gas: 14825367)
+[PASS] test_feesBufferBountiesAndSweep() (gas: 4922938)
+[PASS] test_floorRetireAndCeiling() (gas: 8212262)
+[PASS] test_freezeRefundsUnpricedEntriesAndPaysOpenAccounts() (gas: 9665900)
+[PASS] test_markRecomputesPastS() (gas: 21992882)
+[PASS] test_markWithHeadersNeedsOnlyTheTipHash() (gas: 5238591)
+[PASS] test_matchedPairIsZeroSumAndAdditive() (gas: 14860067)
+[PASS] test_noCancelAndOnlyOwner() (gas: 2807927)
+[PASS] test_offsettingFloorAndCeilingDoNotInventBadDebt() (gas: 8173713)
+[PASS] test_poolFreshnessIsTighterThanTheIndex() (gas: 1402038)
+[PASS] test_pricingHeightIsNotYetMined() (gas: 3043731)
+[PASS] test_processRecoversAfterLongAbsence() (gas: 175501940)
+[PASS] test_review_ceilingSurplusLeavesOnlyWhenPoolIsEmpty() (gas: 9971912)
+[PASS] test_review_dustFarmingIsBoundedToAShare() (gas: 93994140)
+[PASS] test_review_exitBeforeEntryPricedCannotBrickFreeze() (gas: 4754008)
+[PASS] test_review_feeOnTransferTokenRejected() (gas: 1802347)
+[PASS] test_review_relayHeightDropCannotDuplicateEpoch() (gas: 3237757)
+[PASS] test_staleRelayBlocksRequests() (gas: 1042107)
+[PASS] test_sweepKeepsBufferForPendingEntries() (gas: 3215417)
+[PASS] test_transferMovesOwnership() (gas: 4072206)
+[PASS] test_worksOnAnIndexWithoutFrozenExit() (gas: 3476223)
+[PASS] test_yieldTokenNavAccruesOutsideTheBet() (gas: 13366184)
+Suite result: ok. 25 passed; 0 failed; 0 skipped; finished in 5.01s (5.38s CPU time)
+
+Ran 8 tests for test/WujiAccounts.solvencyFix.t.sol:WujiAccountsSolvencyFixTest
+[PASS] testFuzz_multipleCreditorsReceiveTheSameAllocationInEitherOrder(uint96,uint96) (runs: 256, μ: 3091337, ~: 3091408)
+[PASS] test_accountBudgetIsSharedAcrossEpochsInOneTransaction() (gas: 18605513)
+[PASS] test_largeEpochIsBoundedAndAllExitsAreReservedBeforeClaims() (gas: 53902886)
+[PASS] test_netFloorOvershootConsumesBufferBeforeClosingThePool() (gas: 1934256)
+[PASS] test_previouslyPricedExitHasCashReservedBeforeLaterInsolvency() (gas: 2802251)
+[PASS] test_refundCanBeClaimedDuringBatchedFinalFreeze() (gas: 25640151)
+[PASS] test_reservedExitCanBeClaimedWhileAnotherEpochIsBeingScanned() (gas: 16926328)
+[PASS] test_reviewInsolvencyProtectsPendingDepositsInEitherClaimOrder() (gas: 2519714)
+Suite result: ok. 8 passed; 0 failed; 0 skipped; finished in 8.70s (8.78s CPU time)
+
+Ran 22 tests for test/WujiHeaderIndex.segments.t.sol:WujiHeaderIndexSegmentsTest
+[PASS] testFuzz_sealsIffTheBranchReachesTheThreshold(uint8,bool) (runs: 256, μ: 21383168, ~: 21365093)
+[PASS] testFuzz_segmentPartitionDoesNotChangeTheAuthenticatedState(uint8) (runs: 256, μ: 30967980, ~: 30969784)
+[PASS] test_aBranchFromALaterRecordedStateSealsToo() (gas: 20483214)
+[PASS] test_aBranchSealsExactlyAtTheWorkThreshold() (gas: 28087504)
+[PASS] test_aFoldRecordsItsFinalizedStateAndTheNewestValidatedHeader() (gas: 5057615)
+[PASS] test_aPoolOnTheIndexExitsAfterTheSeal() (gas: 28594540)
+[PASS] test_mtpPreservesChronologyAndAcceptsValidBackwardTime() (gas: 3328624)
+[PASS] test_mtpPreservesChronologyDuringReorgReplay() (gas: 14955544)
+[PASS] test_mtpRejectsTimestampEqualToCanonicalMedian() (gas: 3033993)
+[PASS] test_nothingAdvancesAfterTheSeal() (gas: 37727065)
+[PASS] test_onlyRecordedStatesBelowTheTipAreForkBases() (gas: 19585508)
+[PASS] test_segment801HeadersRecoverTheFormerUnsealableReorg() (gas: 215348533)
+[PASS] test_segmentAndOneShotSealPreserveIdenticalFinalState() (gas: 30993832)
+[PASS] test_segmentBoundsBaseValidationAndFrozenGuards() (gas: 35182826)
+[PASS] test_segmentCandidatesAndSubmittersCannotInvalidateEachOther() (gas: 52228145)
+[PASS] test_segmentEveryEncodedFieldIsAuthenticated() (gas: 29337539)
+[PASS] test_segmentMainChainNeverBecomesAReorgEvenAfterTipAdvance() (gas: 8901294)
+[PASS] test_segmentMtpChronologyIsCarriedAcrossCalls() (gas: 3451039)
+[PASS] test_segmentRejectsDifficultyFutureTimeAndInvalidPow() (gas: 5537819)
+[PASS] test_segmentSurvivesTipAdvanceButUsesTheNewWorkThreshold() (gas: 29814180)
+[PASS] test_theAnchorIsARecordedForkBase() (gas: 32632)
+[PASS] test_theFinalizedChainItselfNeverSeals() (gas: 16725184)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 8.65s (16.22s CPU time)
+
+Ran 1 test for test/ZkWujiChallenge.invariant.t.sol:ZkWujiChallengeInvariantTest
+[PASS]
+ZkWujiChallengeInvariantTest invariants:
+[PASS] invariant_bondsAreConserved
+[PASS] invariant_finalizedStateIsAlwaysReal
+[PASS] invariant_queueIsBounded
+ ZkWujiChallengeInvariantTest invariants (runs: 32, calls: 9600, reverts: 0)
+
+╭--------------------+---------------+-------+---------+----------╮
+| Contract           | Selector      | Calls | Reverts | Discards |
++=================================================================+
+| ZkChallengeHandler | back          | 1078  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | finalize      | 1038  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | grief         | 1053  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | proposeForged | 1109  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | proposeHonest | 1038  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | refute        | 1105  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | reject        | 1015  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | warp          | 1076  | 0       | 0        |
+|--------------------+---------------+-------+---------+----------|
+| ZkChallengeHandler | withdraw      | 1088  | 0       | 0        |
+╰--------------------+---------------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 9.65s (9.49s CPU time)
+
+Ran 19 tests for test/BitcoinTimestamps.t.sol:BitcoinTimestampsTest
+[PASS] test_authenticatedBootstrapAndCheckpointTime() (gas: 4589381)
+[PASS] test_bootstrapWindowMatchesActualElevenAncestors() (gas: 170299815)
+[PASS] test_branchWindowDoesNotUseCanonicalTipTimes() (gas: 4757243)
+[PASS] test_coreDerivedWindowsAndAcceptanceBoundaries() (gas: 372107040)
+[PASS] test_exactFreshnessBoundaryAndDeepReorgPrecedence() (gas: 10041496)
+[PASS] test_firstEpochMatchesReference() (gas: 682824085)
+[PASS] test_gasTableAndRealVaultSettlement() (gas: 22479714)
+[PASS] test_mainnetVersionActivationBoundariesAndSignedness() (gas: 13465748)
+[PASS] test_realRetargetAndEveryJsVector() (gas: 427141730)
+[PASS] test_rejectsFlippedBit() (gas: 11091336)
+[PASS] test_rejectsMalformedUnknownParentAndDisjointBatch() (gas: 13289327)
+[PASS] test_rejectsWrongRetargetBits() (gas: 11077273)
+[PASS] test_secondEpochMatchesReference() (gas: 682775533)
+[PASS] test_shallowForkRewireGas() (gas: 6058167)
+[PASS] test_shorterButHigherWorkForkWinsAtRetarget() (gas: 3420879)
+[PASS] test_staleGateIsAtomicAndPermissionlessCatchupRecovers() (gas: 9637690)
+[PASS] test_targetsAndClamp() (gas: 82243)
+[PASS] test_thirdEpochMatchesReference() (gas: 682774354)
+[PASS] test_threeBlockForkAndDeepReorg() (gas: 10931877)
+Suite result: ok. 19 passed; 0 failed; 0 skipped; finished in 10.56s (5.32s CPU time)
+
+Ran 12 tests for test/WujiHeaderIndex.reorg.t.sol:WujiHeaderIndexReorgTest
+[PASS] testFuzz_sealsIffTheBranchReachesTheThreshold(uint8,bool) (runs: 256, μ: 21391053, ~: 21365032)
+[PASS] test_aBranchFromALaterRecordedStateSealsToo() (gas: 20483166)
+[PASS] test_aBranchSealsExactlyAtTheWorkThreshold() (gas: 28087456)
+[PASS] test_aFoldRecordsItsFinalizedStateAndTheNewestValidatedHeader() (gas: 5057567)
+[PASS] test_aPoolOnTheIndexExitsAfterTheSeal() (gas: 28594580)
+[PASS] test_mtpPreservesChronologyAndAcceptsValidBackwardTime() (gas: 3328478)
+[PASS] test_mtpPreservesChronologyDuringReorgReplay() (gas: 14955497)
+[PASS] test_mtpRejectsTimestampEqualToCanonicalMedian() (gas: 3033994)
+[PASS] test_nothingAdvancesAfterTheSeal() (gas: 37726995)
+[PASS] test_onlyRecordedStatesBelowTheTipAreForkBases() (gas: 19585364)
+[PASS] test_theAnchorIsARecordedForkBase() (gas: 32562)
+[PASS] test_theFinalizedChainItselfNeverSeals() (gas: 16725069)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 9.68s (10.09s CPU time)
+
+Ran 12 tests for test/ZkWujiReorg.t.sol:ZkWujiReorgTest
+[PASS] testFuzz_sealsIffTheBranchReachesTheThreshold(uint8,bool) (runs: 256, μ: 21396974, ~: 21374374)
+[PASS] test_aBranchFromALaterRecordedStateSealsToo() (gas: 20497189)
+[PASS] test_aBranchSealsExactlyAtTheWorkThreshold() (gas: 28096878)
+[PASS] test_aFoldRecordsItsFinalizedStateAndTheNewestValidatedHeader() (gas: 5067075)
+[PASS] test_aPoolOnTheIndexExitsAfterTheSeal() (gas: 28604142)
+[PASS] test_mtpPreservesChronologyAndAcceptsValidBackwardTime() (gas: 5478053)
+[PASS] test_mtpPreservesChronologyDuringReorgReplay() (gas: 17093924)
+[PASS] test_mtpRejectsTimestampEqualToCanonicalMedian() (gas: 5169199)
+[PASS] test_nothingAdvancesAfterTheSeal() (gas: 37760954)
+[PASS] test_onlyRecordedStatesBelowTheTipAreForkBases() (gas: 19599339)
+[PASS] test_theAnchorIsARecordedForkBase() (gas: 37274)
+[PASS] test_theFinalizedChainItselfNeverSeals() (gas: 16734411)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 8.68s (9.05s CPU time)
+
+Ran 13 tests for test/Review20261012.t.sol:Review20261012ReorgLimit
+[PASS] testFuzz_sealsIffTheBranchReachesTheThreshold(uint8,bool) (runs: 256, μ: 21395145, ~: 21364988)
+[PASS] test_aBranchFromALaterRecordedStateSealsToo() (gas: 20483144)
+[PASS] test_aBranchSealsExactlyAtTheWorkThreshold() (gas: 28087456)
+[PASS] test_aFoldRecordsItsFinalizedStateAndTheNewestValidatedHeader() (gas: 5057567)
+[PASS] test_aPoolOnTheIndexExitsAfterTheSeal() (gas: 28594580)
+[PASS] test_mtpPreservesChronologyAndAcceptsValidBackwardTime() (gas: 3328477)
+[PASS] test_mtpPreservesChronologyDuringReorgReplay() (gas: 14955452)
+[PASS] test_mtpRejectsTimestampEqualToCanonicalMedian() (gas: 3033971)
+[PASS] test_nothingAdvancesAfterTheSeal() (gas: 37726973)
+[PASS] test_onlyRecordedStatesBelowTheTipAreForkBases() (gas: 19585364)
+[PASS] test_reviewValidDeepReorgCannotFitTheSealProofLimit() (gas: 227998227)
+[PASS] test_theAnchorIsARecordedForkBase() (gas: 32562)
+[PASS] test_theFinalizedChainItselfNeverSeals() (gas: 16725092)
+Suite result: ok. 13 passed; 0 failed; 0 skipped; finished in 10.52s (10.61s CPU time)
+
+Ran 1 test for test/WujiVault.invariant.t.sol:WujiVaultInvariants
+[PASS]
+WujiVaultInvariants invariants:
+[PASS] invariant_callSummary
+[PASS] invariant_feesOnlyGoToTreasury
+[PASS] invariant_oneOpenSeries
+[PASS] invariant_openSeriesIsPaired
+[PASS] invariant_pairIsWhole
+[PASS] invariant_solvent
+ WujiVaultInvariants invariants (runs: 64, calls: 3840, reverts: 0)
+
+╭----------+---------------+-------+---------+----------╮
+| Contract | Selector      | Calls | Reverts | Discards |
++=======================================================+
+| Handler  | mint          | 619   | 0       | 0        |
+|----------+---------------+-------+---------+----------|
+| Handler  | moveIndex     | 667   | 0       | 0        |
+|----------+---------------+-------+---------+----------|
+| Handler  | redeemPair    | 641   | 0       | 0        |
+|----------+---------------+-------+---------+----------|
+| Handler  | redeemSettled | 647   | 0       | 0        |
+|----------+---------------+-------+---------+----------|
+| Handler  | settle        | 650   | 0       | 0        |
+|----------+---------------+-------+---------+----------|
+| Handler  | transferHalf  | 616   | 0       | 0        |
+╰----------+---------------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 92.36s (92.36s CPU time)
+
+Ran 35 test suites in 92.37s (184.54s CPU time): 325 tests passed, 0 failed, 24 skipped (349 total tests)

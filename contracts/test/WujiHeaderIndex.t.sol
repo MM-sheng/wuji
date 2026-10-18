@@ -35,14 +35,23 @@ contract WujiHeaderIndexTest is Test {
 
     function _deploy(uint64 confirmations, uint64 interval) internal returns (WujiHeaderIndex) {
         return new WujiHeaderIndex(
-            RelayerRewards(address(0)), anchor, anchorHeight, uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0,
-            genesis, interval, confirmations
+            RelayerRewards(address(0)),
+            anchor,
+            anchorHeight,
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")),
+            times,
+            0,
+            genesis,
+            interval,
+            confirmations
         );
     }
 
     function _slice(uint256 start, uint256 count) internal view returns (bytes memory out) {
         out = new bytes(count * 80);
-        for (uint256 i = 0; i < count * 80; i++) out[i] = headers[start * 80 + i];
+        for (uint256 i = 0; i < count * 80; i++) {
+            out[i] = headers[start * 80 + i];
+        }
     }
 
     function _expectedU(uint256 count) internal view returns (int256 u) {
@@ -123,8 +132,15 @@ contract WujiHeaderIndexTest is Test {
     /// The rule code was carried over from ZkWujiIndex unchanged: both must reach identical state.
     function test_sameStateAsZkWujiIndexHeaderPath() public {
         ZkWujiIndex zk = new ZkWujiIndex(
-            ISP1Verifier(address(0)), bytes32(0), RelayerRewards(address(0)), anchor, anchorHeight,
-            uint32(vm.parseJsonUint(meta, ".epochStartTime")), times, 0, ZkWujiIndex.Schedule(genesis, 100, 6),
+            ISP1Verifier(address(0)),
+            bytes32(0),
+            RelayerRewards(address(0)),
+            anchor,
+            anchorHeight,
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")),
+            times,
+            0,
+            ZkWujiIndex.Schedule(genesis, 100, 6),
             ZkWujiIndex.Challenge(0, 0, 0)
         );
         WujiHeaderIndex h = _deploy(6, 100);
@@ -150,5 +166,37 @@ contract WujiHeaderIndexTest is Test {
         uint256 g = gasleft();
         deep.foldHeaders(raw, new address[](0));
         emit log_named_uint("foldHeaders 350 headers, K = 100 (250 folded), gas", g - gasleft());
+    }
+
+    /// Compare both implementations to raw Bitcoin timestamps, not only to each other: the two Solidity
+    /// implementations once shared an aliasing bug, so a mutual comparison alone missed the corruption.
+    function test_realHeaderMtpWindowsMatchCanonicalOrder() public {
+        WujiHeaderIndex h = _deploy(100, 4320);
+        ZkWujiIndex zk = new ZkWujiIndex(
+            ISP1Verifier(address(0)),
+            bytes32(0),
+            RelayerRewards(address(0)),
+            anchor,
+            anchorHeight,
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")),
+            times,
+            0,
+            ZkWujiIndex.Schedule(genesis, 4320, 100),
+            ZkWujiIndex.Challenge(0, 0, 0)
+        );
+        for (uint256 cursor; cursor < 1000; cursor += 100) {
+            bytes memory batch = _slice(cursor, 200);
+            h.foldHeaders(batch, new address[](0));
+            zk.foldHeaders(batch, new address[](0));
+            (, uint32[11] memory hTimes,) = h.continuity();
+            (, uint32[11] memory zkTimes,) = zk.continuity();
+            for (uint256 i; i < 11; ++i) {
+                uint256 at = (cursor + 89 + i) * 80 + 68;
+                uint32 expected = uint32(uint8(headers[at])) | uint32(uint8(headers[at + 1])) << 8
+                    | uint32(uint8(headers[at + 2])) << 16 | uint32(uint8(headers[at + 3])) << 24;
+                assertEq(hTimes[i], expected, "header index chronological MTP window");
+                assertEq(zkTimes[i], expected, "ZK header path chronological MTP window");
+            }
+        }
     }
 }

@@ -63,6 +63,27 @@ test('account view: status, value, multiple', async () => {
   assert.equal((await readAccount(fixture().read, pool, 9)).closed, true);
 });
 
+test('an insolvency refund is shown as claimable even though its entry never priced', async () => {
+  const f = fixture({ frozen: true, accounts: { 1: { yang: true, enter: 1100, exit: 0, principal: 997n * E / 10n, value: 0n, raw: 0n } } });
+  const read = async (to, data) => to === pool && data.startsWith('0x513bed12') ? word(997n * E / 10n) : f.read(to, data);
+  const a = await readAccount(read, pool, 1);
+  assert.equal(a.status, 'claimable');
+  assert.equal(a.value_wad, (997n * E / 10n).toString());
+  assert.equal(a.claimable_wad, a.value_wad);
+});
+
+test('a processed refund is shown as claimable while the final freeze is still being batched', async () => {
+  const f = fixture();
+  const read = async (to, data) => {
+    if (data.startsWith('0xf9f3de7e')) return word(1) + word(1).slice(2);
+    if (data.startsWith('0x513bed12')) return word(100n * E);
+    return f.read(to, data);
+  };
+  const a = await readAccount(read, pool, 1);
+  assert.equal(a.status, 'claimable');
+  assert.equal(a.value_wad, (100n * E).toString());
+});
+
 test('keeper processes ready epochs, retires floored accounts, sweeps surplus', async () => {
   const f = fixture({
     accounts: {
@@ -71,7 +92,7 @@ test('keeper processes ready epochs, retires floored accounts, sweeps surplus', 
     }, surplus: 1n,
   });
   const r = await maintainPool({ ...f, pool });
-  assert.deepEqual(f.sends.map(s => s.join(' ')), ['processMany(uint256) 8', 'retire(uint256) 1', 'sweep()']);
+  assert.deepEqual(f.sends.map(s => s.join(' ')), ['processMany(uint256) 1', 'retire(uint256) 1', 'sweep()']);
   assert.deepEqual(r.done, ['processMany', 'retire 1', 'sweep']);
 });
 
@@ -96,7 +117,7 @@ test('keeper does nothing when idle, and freezes after the index does', async ()
 
 test('relay-less pools: ready epochs are marked from headers, highest first, bridging gaps over 1024', async () => {
   const { markFromHeaders, maintainPool } = await import('./accounts.mjs');
-  const run = async ({ queue, head = 0, folded, marked = [] }) => {
+  const run = async ({ queue, head = 0, folded, marked = [], missingHash = [] }) => {
     const calls = [];
     const read = async (to, data) => {
       const sel = data.slice(0, 10), arg = data.length > 10 ? BigInt('0x' + data.slice(10, 74)) : 0n;
@@ -105,6 +126,7 @@ test('relay-less pools: ready epochs are marked from headers, highest first, bri
       if (sel === '0xab91c7b0') return word(queue.length);
       if (sel === '0xddf0b009') return word(queue[Number(arg)]);
       if (sel === '0x515f805e') return word(marked.includes(Number(arg)) ? 1 : 0);
+      if (sel === '0x7c4b99b8') return word(missingHash.includes(Number(arg)) ? 0 : 1);
       throw Error('unexpected ' + sel);
     };
     const headersFor = async (from, to) => '0x' + 'ab'.repeat(80 * (to - from + 1));
@@ -120,6 +142,9 @@ test('relay-less pools: ready epochs are marked from headers, highest first, bri
     [[1476, 2500, 1024], [452, 1476, 1024], [100, 452, 352]]);
   // Already marked heights are anchors, not work.
   assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990] }), [[1000, 1990, 990]]);
+  assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990], missingHash: [1990] }), [[1000, 2000, 1000]]);
+  assert.deepEqual(await run({ queue: [100], folded: 2500, marked: [1476], missingHash: [1476] }),
+    [[1477, 2500, 1023], [453, 1477, 1024], [100, 453, 353]]);
 
   // maintainPool asks for a header source rather than sending processMany that could not progress.
   const f = fixture({ queue: [1008], folded: 1010 });
@@ -128,6 +153,24 @@ test('relay-less pools: ready epochs are marked from headers, highest first, bri
   await maintainPool({ ...f, read, pool, log: (...a) => logs.push(a.join(' ')) });
   assert.deepEqual(f.sends, []);
   assert.match(logs.join('\n'), /no header source/);
+});
+
+test('frozen header-only pools authenticate historical prices before requesting closure', async () => {
+  const f = fixture({ indexFrozen: true });
+  const read = async (to, data) => {
+    if (to === pool && data === '0x59cfd7b0') return word(0);
+    if (to === pool && data.startsWith('0x515f805e')) return word(0);
+    return f.read(to, data);
+  };
+  await maintainPool({ ...f, read, pool, headersFor: async (from, to) => '0x' + 'ab'.repeat(80 * (to - from + 1)) });
+  assert.deepEqual(f.sends.map(s => s[0]), ['markWithHeaders(uint64,uint64,bytes)', 'freezePool(uint256)']);
+});
+
+test('keeper leaves a partial account settlement for the next processing batch', async () => {
+  const f = fixture({ accounts: { 1: { yang: true, enter: 1002, exit: 0, principal: E, value: 0n, raw: -E } }, surplus: 1n });
+  const read = async (to, data) => to === pool && data === '0x0832dce9' ? word(1) : f.read(to, data);
+  await maintainPool({ ...f, read, pool });
+  assert.deepEqual(f.sends.map(s => s[0]), ['processMany(uint256)']);
 });
 
 test('a pool whose pricing view reverts (index tip too old for A) is still read and maintained', async () => {

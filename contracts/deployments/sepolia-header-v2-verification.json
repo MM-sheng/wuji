@@ -1,0 +1,371 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-10-12T11:22:16.500Z",
+  "chainId": 11155111,
+  "evmBlock": 11898557,
+  "evmBlockHash": "0x764999aa8d6b99cef5bb2941798ddc8d32d9cc38a6ec50c00ab93f18b6340ab2",
+  "verified": [
+    {
+      "name": "RelayerRewards",
+      "address": "0xc1dCDEAA991cA1c6e96b5acd6eedE78cA2ac432e",
+      "status": "PASS",
+      "bytes": 4660,
+      "immutableSlots": 4,
+      "actualSha256": "2e09dc880f666366e8832b8cec8e12edd4d82f27bddc33af4aec4ba915e6a46b",
+      "maskedSha256": "a14d2371a7c5bbf4c4170379cc5d13deb754a06d481de9f657e8e4a09a73ec68"
+    },
+    {
+      "name": "WujiHeaderIndex",
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "status": "PASS",
+      "bytes": 10188,
+      "immutableSlots": 15,
+      "actualSha256": "64ae46f2dc8c1b5595954eba4258e56703f08686ab6da7a8ce873933b14b3be0",
+      "maskedSha256": "669cbec721348e1428a20f6743e74dad52446057b1ea90092bd593d948f28a54"
+    },
+    {
+      "name": "FeeRouter",
+      "address": "0x6f3f95A6f201901F9a233cf59e7B5310645685D1",
+      "status": "PASS",
+      "bytes": 1115,
+      "immutableSlots": 4,
+      "actualSha256": "0ded5afb8f78b8c4374ad7e89741539d3f2715b126d1bf2f37515fd56be761df",
+      "maskedSha256": "678a522ab11a967be70eafa845c044e2c15c61ca689880499111257fcb748a73"
+    },
+    {
+      "name": "WujiAccountsFactory",
+      "address": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+      "status": "PASS",
+      "bytes": 23105,
+      "immutableSlots": 14,
+      "actualSha256": "9d5c2edfabaa9da0073ca60871b6cd46c8ea1fee04c06e12343d40c778e8a866",
+      "maskedSha256": "fdb22d666a103ea99a9cc8192edf34e965f3c3bfa13127ba0f666d677cfa72b5"
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "status": "PASS",
+      "bytes": 19536,
+      "immutableSlots": 60,
+      "actualSha256": "2f325d4df3b394f812148b832af27372b65ad13d7e032a003fc2b3cf7f54b002",
+      "maskedSha256": "e2253a105685a0f0230714f3c550521882d9a6d164636d40aea846e8be1554b8"
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "status": "PASS",
+      "bytes": 19536,
+      "immutableSlots": 60,
+      "actualSha256": "6b923d95d80bec435b8ab2b1a9c1bd332da717143f52e249dcae6fe885c16a5b",
+      "maskedSha256": "e2253a105685a0f0230714f3c550521882d9a6d164636d40aea846e8be1554b8"
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "status": "PASS",
+      "bytes": 19536,
+      "immutableSlots": 60,
+      "actualSha256": "240dc326eaec0596f7d5e2b71225778c8af13fb6dd96fcec8591f1d67b9e446d",
+      "maskedSha256": "e2253a105685a0f0230714f3c550521882d9a6d164636d40aea846e8be1554b8"
+    }
+  ],
+  "checks": [
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "CHECKPOINT_INTERVAL()",
+      "value": "4320"
+    },
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "CONFIRMATIONS()",
+      "value": "100"
+    },
+    {
+      "address": "0xc1dCDEAA991cA1c6e96b5acd6eedE78cA2ac432e",
+      "view": "index()",
+      "value": "0xf44f0fe640436d188fe1292a65d75cc1697c1a51"
+    },
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "GENESIS_HEIGHT()",
+      "value": "969546"
+    },
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "rewards()",
+      "value": "0xc1dcdeaa991ca1c6e96b5acd6eede78ca2ac432e"
+    },
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "REORG_MARGIN()",
+      "value": "144"
+    },
+    {
+      "address": "0xc1dCDEAA991cA1c6e96b5acd6eedE78cA2ac432e",
+      "view": "GENESIS_HEIGHT()",
+      "value": "969546"
+    },
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "frozen()",
+      "value": "0"
+    },
+    {
+      "address": "0x6f3f95A6f201901F9a233cf59e7B5310645685D1",
+      "view": "rewards()",
+      "value": "0xc1dcdeaa991ca1c6e96b5acd6eede78ca2ac432e"
+    },
+    {
+      "address": "0xf44F0FE640436d188fE1292a65D75CC1697C1a51",
+      "view": "S()",
+      "value": "97116000000000000"
+    },
+    {
+      "address": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+      "view": "index()",
+      "value": "0xf44f0fe640436d188fe1292a65d75cc1697c1a51"
+    },
+    {
+      "address": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+      "view": "treasury()",
+      "value": "0x6f3f95a6f201901f9a233cf59e7b5310645685d1"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "index()",
+      "value": "0xf44f0fe640436d188fe1292a65d75cc1697c1a51"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "treasury()",
+      "value": "0x6f3f95a6f201901f9a233cf59e7b5310645685d1"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "INDEX_CAN_FREEZE()",
+      "value": "1"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "RELAY_TIP()",
+      "value": "0"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "asset()",
+      "value": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "acceptingRequests()",
+      "value": "1"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "K()",
+      "value": "23000000000000000000"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "nextId()",
+      "value": "1"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "DELAY()",
+      "value": "16"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "EPOCH()",
+      "value": "6"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "BUFFER_BPS()",
+      "value": "1000"
+    },
+    {
+      "address": "0xa275fc68586febd29cab8a57e65dad445eb184b8",
+      "view": "FEE_BPS()",
+      "value": "30"
+    },
+    {
+      "address": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+      "view": "pool(address,uint256)",
+      "value": "0xa275fc68586febd29cab8a57e65dad445eb184b8"
+    },
+    {
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "view": "balanceOf(address)",
+      "value": "0"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "asset()",
+      "value": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "index()",
+      "value": "0xf44f0fe640436d188fe1292a65d75cc1697c1a51"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "acceptingRequests()",
+      "value": "1"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "INDEX_CAN_FREEZE()",
+      "value": "1"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "DELAY()",
+      "value": "16"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "treasury()",
+      "value": "0x6f3f95a6f201901f9a233cf59e7b5310645685d1"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "RELAY_TIP()",
+      "value": "0"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "FEE_BPS()",
+      "value": "30"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "BUFFER_BPS()",
+      "value": "1000"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "nextId()",
+      "value": "1"
+    },
+    {
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "view": "balanceOf(address)",
+      "value": "0"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "EPOCH()",
+      "value": "6"
+    },
+    {
+      "address": "0xd1aeb70dc36a5f206b3494be3613cacae0795940",
+      "view": "K()",
+      "value": "11500000000000000000"
+    },
+    {
+      "address": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+      "view": "pool(address,uint256)",
+      "value": "0xd1aeb70dc36a5f206b3494be3613cacae0795940"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "index()",
+      "value": "0xf44f0fe640436d188fe1292a65d75cc1697c1a51"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "RELAY_TIP()",
+      "value": "0"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "asset()",
+      "value": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "EPOCH()",
+      "value": "6"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "DELAY()",
+      "value": "16"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "INDEX_CAN_FREEZE()",
+      "value": "1"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "FEE_BPS()",
+      "value": "30"
+    },
+    {
+      "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+      "view": "balanceOf(address)",
+      "value": "0"
+    },
+    {
+      "address": "0xDD0093d0f9BaD478Ce90DfA0C5be13f39A5Ae6eF",
+      "view": "pool(address,uint256)",
+      "value": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "acceptingRequests()",
+      "value": "1"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "nextId()",
+      "value": "1"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "K()",
+      "value": "4600000000000000000"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "BUFFER_BPS()",
+      "value": "1000"
+    },
+    {
+      "address": "0x22dcc0745db4fa54d0461ab8dfe3e090fb452de9",
+      "view": "treasury()",
+      "value": "0x6f3f95a6f201901f9a233cf59e7b5310645685d1"
+    }
+  ],
+  "state": {
+    "hash": "0x0bfd9e87aa11bc2b8ef9adc399c6a8f55356f31e656500000000000000000000",
+    "height": 970985,
+    "bits": 386014960,
+    "time": 1791754087,
+    "epochStart": 1791011796,
+    "u": "8093",
+    "recentTimes": [
+      1791748511,
+      1791748706,
+      1791748869,
+      1791749920,
+      1791750054,
+      1791750150,
+      1791752288,
+      1791753005,
+      1791753764,
+      1791753450,
+      1791754087
+    ],
+    "work": "0x000000000000000000000000000000000000000002a6febca0984f7cb7c8c334"
+  },
+  "seenHeight": 971085,
+  "seenTime": 1791803364,
+  "sourceTip": 971085,
+  "indexReplay": "Every header from the original anchor; full continuity including all 11 chronological timestamps and cumulative work matches",
+  "scope": "Runtime comparison includes compiler metadata and masks only compiler-declared immutable slots; constructor bindings checked separately. Empty pool request conditions checked; no real user deposits or exits executed."
+}

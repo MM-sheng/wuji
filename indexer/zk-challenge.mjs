@@ -8,6 +8,7 @@ import path from 'node:path';
 import { sha256, sha256d } from './bitcoin.mjs';
 import { rpcRequest } from './evm-rpc.mjs';
 import { assertChain } from './networks.mjs';
+import { estimateKeeperGas } from './keeper-gas.mjs';
 
 const word = (hex, i) => BigInt('0x' + hex.slice(2 + 64 * i, 66 + 64 * i));
 const signed = v => (v >= 1n << 255n ? v - (1n << 256n) : v);
@@ -138,10 +139,19 @@ export function contractClient({ rpc, chainId, to, env = process.env }) {
   if (unlocked && chainId !== 31337) throw Error('ZK_UNLOCKED_FROM is for anvil (chain 31337) only');
   // Reading needs no key: an alert-only watcher runs without one and fails only if it tries to send.
   const canSign = !!unlocked || (!!env.KEYSTORE_ACCOUNT && !!env.PASSWORD_FILE);
+  let sender = unlocked;
   const send = (sig, gas, args = [], value) => sendTo(to, sig, gas, args, value);
   async function sendTo(target, sig, gas, args = [], value) {
     if (!canSign) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE to send');
     assertChain(await rpcRequest(rpc, 'eth_chainId', []), chainId);
+    if (env.KEEPER_ESTIMATE_GAS === '1') {
+      sender ||= execFileSync(CAST, ['wallet', 'address', '--account', env.KEYSTORE_ACCOUNT,
+        '--password-file', env.PASSWORD_FILE], {encoding:'utf8'}).trim();
+      if (!/^0x[0-9a-f]{40}$/i.test(sender)) throw Error('invalid keeper sender');
+      const data = execFileSync(CAST, ['calldata', sig, ...args.map(String)], {encoding:'utf8', maxBuffer:64<<20}).trim();
+      gas = await estimateKeeperGas({rpc:(method,params)=>rpcRequest(rpc,method,params),from:sender,to:target,data,value,
+        fallbackGas:gas,maxGas:Number(env.KEEPER_MAX_GAS || 50_000_000)});
+    }
     const who = unlocked ? ['--unlocked', '--from', unlocked] : ['--account', env.KEYSTORE_ACCOUNT, '--password-file', env.PASSWORD_FILE];
     const price = env.KEEPER_GAS_PRICE ? ['--legacy', '--gas-price', env.KEEPER_GAS_PRICE] : [];
     const paid = value ? ['--value', String(value)] : [];
