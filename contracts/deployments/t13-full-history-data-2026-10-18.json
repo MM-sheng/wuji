@@ -1,0 +1,180 @@
+{
+  "checkedAt": "2026-10-18T04:05:34.642Z",
+  "status": "PASS",
+  "genesis": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+  "rawPrefixSha256": "a48b2099788d8d831728f55ad1eb2366d360361dd61e80601486458206ba9536",
+  "sourcePrefixLastHeight": 969792,
+  "fromHeight": 11,
+  "toHeight": 969692,
+  "segments": [
+    {
+      "segment": 0,
+      "anchorHeight": 10,
+      "endHeight": 40413,
+      "expectedU": "63837",
+      "binSha256": "16a28c9f78fa51c492f813b7b5ecdbd77bfa5b953a7fc17373ee857bba899f50"
+    },
+    {
+      "segment": 1,
+      "anchorHeight": 40413,
+      "endHeight": 80817,
+      "expectedU": "-14189",
+      "binSha256": "24b70e3c7464176cb9254ee9bdac3a46f617baa71b0c7a938617ace146a40360"
+    },
+    {
+      "segment": 2,
+      "anchorHeight": 80817,
+      "endHeight": 121220,
+      "expectedU": "95750",
+      "binSha256": "f5f8720c12749996afc00775b3ef146f9008ecee0fe233f0220d7871ca6e2f5a"
+    },
+    {
+      "segment": 3,
+      "anchorHeight": 121220,
+      "endHeight": 161624,
+      "expectedU": "-161596",
+      "binSha256": "41528fc933a81709caa83d82055e9b544f28fe5cea39489f2c3b577db6becab8"
+    },
+    {
+      "segment": 4,
+      "anchorHeight": 161624,
+      "endHeight": 202027,
+      "expectedU": "-7494",
+      "binSha256": "2bdbd0918e05a4136ceb3d523295cd716386d109e22e36479ee20c0d85b0360d"
+    },
+    {
+      "segment": 5,
+      "anchorHeight": 202027,
+      "endHeight": 242431,
+      "expectedU": "46941",
+      "binSha256": "9f7833879b78fe7baa40f0ca1cc7852992f94eeb8c0351ab2a2e909550977540"
+    },
+    {
+      "segment": 6,
+      "anchorHeight": 242431,
+      "endHeight": 282834,
+      "expectedU": "-134105",
+      "binSha256": "ed564979e8a6eef11ec41257fbf4a5a3d32de8103cd7ba692ee3a559852fb73e"
+    },
+    {
+      "segment": 7,
+      "anchorHeight": 282834,
+      "endHeight": 323237,
+      "expectedU": "-7974",
+      "binSha256": "2a6d59de32a9442c8a98b1342cb82bda86f717de896158ebee5d573f4011e8a7"
+    },
+    {
+      "segment": 8,
+      "anchorHeight": 323237,
+      "endHeight": 363641,
+      "expectedU": "-115108",
+      "binSha256": "8e75e3ed9a49ce6d1ac22fa5ec12237848fdc52be56b6da09330ef53cd0a106b"
+    },
+    {
+      "segment": 9,
+      "anchorHeight": 363641,
+      "endHeight": 404044,
+      "expectedU": "41259",
+      "binSha256": "2cd02f1571fc8bf969eda39587e44b5b3dcc1040c25ebe7ae5e97ece7808c646"
+    },
+    {
+      "segment": 10,
+      "anchorHeight": 404044,
+      "endHeight": 444448,
+      "expectedU": "29195",
+      "binSha256": "15a2fd89160d4104b822d6b6d7896cba89657f746adc126cb928ba21e8c29ab5"
+    },
+    {
+      "segment": 11,
+      "anchorHeight": 444448,
+      "endHeight": 484851,
+      "expectedU": "18838",
+      "binSha256": "9f962b3874c6598f82cec59a20bf1636b7076567ca9d90047c6246a2ac0ce838"
+    },
+    {
+      "segment": 12,
+      "anchorHeight": 484851,
+      "endHeight": 525254,
+      "expectedU": "30599",
+      "binSha256": "cbc262f82d16ba1b8fd76a8b0a9c9a29e8dede7f3eb3602e2ff1ee3c71b45744"
+    },
+    {
+      "segment": 13,
+      "anchorHeight": 525254,
+      "endHeight": 565658,
+      "expectedU": "5500",
+      "binSha256": "d7e88e58aa3eb09a82cb431252e28d3ee4a3a3e268db162bd336187432fbe5d6"
+    },
+    {
+      "segment": 14,
+      "anchorHeight": 565658,
+      "endHeight": 606061,
+      "expectedU": "-1772",
+      "binSha256": "42359e3cb463c8f1885d492e5741a204fe2862d1f64a2296171c70f6122da0b4"
+    },
+    {
+      "segment": 15,
+      "anchorHeight": 606061,
+      "endHeight": 646465,
+      "expectedU": "30578",
+      "binSha256": "14548383ce08b1f368aa4dac6cefa5648d1203252eb08fb2232e6609837c8695"
+    },
+    {
+      "segment": 16,
+      "anchorHeight": 646465,
+      "endHeight": 686868,
+      "expectedU": "-2075",
+      "binSha256": "892c2387f7ec69781c5ad0acdee295ae6b59aa2c9b5f2fc183601f9759ff2913"
+    },
+    {
+      "segment": 17,
+      "anchorHeight": 686868,
+      "endHeight": 727272,
+      "expectedU": "-55394",
+      "binSha256": "1ad038e841d8d576b88bd3d410ff81ead802fda6fc17a06fd361c88155e24f40"
+    },
+    {
+      "segment": 18,
+      "anchorHeight": 727272,
+      "endHeight": 767675,
+      "expectedU": "53929",
+      "binSha256": "9030d7387500218e4901d0a8b1ab2d730247cf763475e46ef9105f8d687e0451"
+    },
+    {
+      "segment": 19,
+      "anchorHeight": 767675,
+      "endHeight": 808078,
+      "expectedU": "-98937",
+      "binSha256": "c010e96204df3c42521f61c2cbecc3f8387faf405873fb0a0684638635dd4bea"
+    },
+    {
+      "segment": 20,
+      "anchorHeight": 808078,
+      "endHeight": 848482,
+      "expectedU": "164368",
+      "binSha256": "3e2665420c4f9c8664dbfa1ee2b6fbaab52207248e3af9016290ad7296f1d9a4"
+    },
+    {
+      "segment": 21,
+      "anchorHeight": 848482,
+      "endHeight": 888885,
+      "expectedU": "-71003",
+      "binSha256": "82c25460b84ea2d8c080062843e825f6812b431a66acc22ce9d7e2c9e050c6a4"
+    },
+    {
+      "segment": 22,
+      "anchorHeight": 888885,
+      "endHeight": 929289,
+      "expectedU": "64940",
+      "binSha256": "bbe89e7ab64087fc3b4cfd303c7eb74fe5bc437aa4f8e33e26539026625ef2c4"
+    },
+    {
+      "segment": 23,
+      "anchorHeight": 929289,
+      "endHeight": 969692,
+      "expectedU": "1643",
+      "binSha256": "3fae475c498dece4cf995c1e1a2920ed96a09eafe59c9b4c96cc4079f55efa66"
+    }
+  ],
+  "scope": "Cached segment bytes exactly match current raw P2P archive prefix. All prefix links and PoW checked from genesis; per-segment U, work and ancestor timestamps independently recomputed. Solidity segment replay separately checks consensus/retarget/MTP."
+}

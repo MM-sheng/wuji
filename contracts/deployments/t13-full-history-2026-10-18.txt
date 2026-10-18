@@ -1,0 +1,32 @@
+Compiling 60 files with Solc 0.8.28
+Solc 0.8.28 finished in 2.58s
+Compiler run successful!
+
+Ran 24 tests for test/FullHistoryReplay.t.sol:FullHistoryReplayTest
+[PASS] test_segment00() (gas: 1121009641)
+[PASS] test_segment01() (gas: 1123806614)
+[PASS] test_segment02() (gas: 1119215594)
+[PASS] test_segment03() (gas: 1120906301)
+[PASS] test_segment04() (gas: 1130657703)
+[PASS] test_segment05() (gas: 1126146636)
+[PASS] test_segment06() (gas: 1124233763)
+[PASS] test_segment07() (gas: 1135619587)
+[PASS] test_segment08() (gas: 1129474025)
+[PASS] test_segment09() (gas: 1123987005)
+[PASS] test_segment10() (gas: 1117218296)
+[PASS] test_segment11() (gas: 1116969145)
+[PASS] test_segment12() (gas: 1115385610)
+[PASS] test_segment13() (gas: 1115971043)
+[PASS] test_segment14() (gas: 1116113542)
+[PASS] test_segment15() (gas: 1116173560)
+[PASS] test_segment16() (gas: 1116274717)
+[PASS] test_segment17() (gas: 1116324112)
+[PASS] test_segment18() (gas: 1116157519)
+[PASS] test_segment19() (gas: 1116208781)
+[PASS] test_segment20() (gas: 1116412427)
+[PASS] test_segment21() (gas: 1116492620)
+[PASS] test_segment22() (gas: 1117531600)
+[PASS] test_segment23() (gas: 1121253608)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 13.39s (53.32s CPU time)
+
+Ran 1 test suite in 13.40s (13.39s CPU time): 24 tests passed, 0 failed, 0 skipped (24 total tests)
