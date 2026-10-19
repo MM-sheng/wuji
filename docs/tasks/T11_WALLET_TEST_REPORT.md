@@ -7,6 +7,27 @@ Sepolia header v3 的专用测试钱包完整协议往返已于 10 月 15 日完
 这不覆盖下文旧 BSC v4 的 MetaMask 真人界面验收；后者仍未完成。勿按下方旧清单启动历史 keeper。
 
 
+## Task C checkpoint — 2026-10-19, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 0.70 ETH.**
+Round 2 remains completed at 0.15 / 0.15 ETH on October 1; receipts are tracked separately from the remaining balance.
+
+Checked today's log before submitting. Browser connectivity was restored; no faucet tab remained, so a new Google
+Cloud Web3 faucet tab used the existing Google login session. No CAPTCHA challenge, new login, terms acceptance
+or payment was presented. Submitted one request only to the designated deployer; Google displayed
+`Transaction complete! Check your wallet address`.
+
+[Transaction](https://sepolia.etherscan.io/tx/0x100ea3130465e2a1a2ba27efd71b7ba70119ff44725807c475f1e66cb577986f) was checked via the public Sepolia RPC:
+chain ID 11155111, receipt status 0x1, recipient 0x85967858e2464535A12031103ABA38f2795Fe8Fd,
+value 50000000000000000 wei, canonical receipt block `0xb64dca`.
+Balance at that block: **0.618469518691317708 ETH**, observed `2026-10-19T10:05:05.331Z`.
+[Raw transaction, receipt and balance](../../contracts/deployments/t11-sepolia-fuel-2026-10-19.json);
+[completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-19.jpg).
+
+Today's collection is complete; do not submit another October 19 claim. No outgoing transfer, deployment,
+ineligible faucet retry or Task A MetaMask signature occurred. Use the latest success and the site's actual
+cooldown for future collection; do not reuse historical September cooldown dates.
+
 ## Task C checkpoint — 2026-10-18, browser unavailable; claim not submitted
 
 Checked today's log before attempting; no October 18 receipt was recorded. The existing Chrome tab inventory failed,
@@ -295,6 +316,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-10-16, initial attempt | Google daily limit; eligible after 17:38:06 | 0 ETH (attempt only) | None | No balance observation for this attempt |
 | 2026-10-16, after 17:38:06 retry | Google Cloud Web3 | 0.05 ETH | `0x24b5bb6827b9e148efc5de1ff2501d46b5eed0fd40b689922433c1a305c4f1ea` | 0.576540708591716708 ETH; post-round-2 upkeep receipts 0.65 ETH |
 | 2026-10-18, approximately 17:37 | Google browser connection unavailable after one recovery; claim not submitted | 0 ETH received by this attempt | None | 0.568469518691317708 ETH observed; recorded post-round-2 upkeep receipts remain 0.65 ETH |
+| 2026-10-19, approximately 18:05 | Google Cloud Web3 | 0.05 ETH | `0x100ea3130465e2a1a2ba27efd71b7ba70119ff44725807c475f1e66cb577986f` | 0.618469518691317708 ETH at block 0xb64dca; recorded post-round-2 upkeep receipts 0.70 ETH |
 
 ## Historical report — 2026-09-26, v3
 
