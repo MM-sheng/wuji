@@ -1,0 +1,136 @@
+{
+  "checkedAt": "2026-10-20T12:19:24.123153+00:00",
+  "action": "Restart existing keeper after confirming Sepolia and latest/pending nonce 43; no runtime edits",
+  "worker": "0x27b2474c8ca832d25c301ea43cf90c57c5a2dcd2",
+  "preRestartNonceLatest": 43,
+  "preRestartNoncePending": 43,
+  "runtimeCommit": "193269d3ce4eadcecc8519303d104d377c73df3b",
+  "unchangedRuntimeFiles": [
+    {
+      "path": "frozen-keeper.mjs",
+      "sha256": "4c303e2e8ad926bfbeae774617c716e6ddb04cda739a785a3a043450da865bba"
+    },
+    {
+      "path": "accounts.mjs",
+      "sha256": "3551e48978dac98f2537ca4ce73b8dd0dfda6ad1ee3d958d69e5f14bda71d6f6"
+    },
+    {
+      "path": "keeper-rpc.mjs",
+      "sha256": "158c0da473f63e69cf1b28716af65bb1ab97b16f6e64fbd9a048d9d5c45ead3d"
+    },
+    {
+      "path": "seal-segments.mjs",
+      "sha256": "a1c7acaecff02efe10c62be79f373f2d908b7edeea385fd4da552edb6c1b61d0"
+    },
+    {
+      "path": "networks.mjs",
+      "sha256": "98e38293d31e31df9561ba6a651072ea3e4e51a61098adb137723d8b15b66fae"
+    },
+    {
+      "path": "bitcoin-index.mjs",
+      "sha256": "d938ae77b85686089a66510a6617063cf39023f5f58be92839fa446401509684"
+    },
+    {
+      "path": "zk-watcher.mjs",
+      "sha256": "2029dace693304f9a2e8bcf7cc2dccfe6fb85d1ad9fb420998df12a4c0d1cbf1"
+    },
+    {
+      "path": "seal.mjs",
+      "sha256": "3b825a145af235f950b457fbece5c43fcafd189a4b61217b517c9f9957140593"
+    },
+    {
+      "path": "keeper.mjs",
+      "sha256": "884c5228a846575b2c5bd88ac77a14e77ad500b0dffb0855eba8071728b3f890"
+    },
+    {
+      "path": "zk-test-helpers.mjs",
+      "sha256": "fc5974bc3829f817e167ed3fc3c412322fd8dbcae765cecda84acd5bba505ab7"
+    },
+    {
+      "path": "keeper-gas.mjs",
+      "sha256": "4f3022596038f396da913037632f58c8f2457a6b7b72fe5598070a7b54233165"
+    },
+    {
+      "path": "bitcoin.mjs",
+      "sha256": "d40d36c181ec11e7317245e9275d5fce4145fdd2f5d95b73d914826a122ed7a1"
+    },
+    {
+      "path": "evm-rpc.mjs",
+      "sha256": "b7a3cdef7629de3c88975fcb249f83cfda912b2895b040d6e5135ab72b4bb89b"
+    },
+    {
+      "path": "bitcoin-source.mjs",
+      "sha256": "2fbde6a20ff4ec5c0a8c4c80ecebc2b5dc1fda0b546a218b138e2d88f6ab81b3"
+    },
+    {
+      "path": "bitcoin-p2p.mjs",
+      "sha256": "e1d75ba67aab91dd82a73877839143264b517b1176efdc9a1e422f897264b345"
+    },
+    {
+      "path": "bitcoin-keeper.mjs",
+      "sha256": "7e8900b2df6b221ac45b4795154a4890e7222d9114c7a334b8ff56b120072684"
+    },
+    {
+      "path": "index.mjs",
+      "sha256": "241f83835bd28c4a05412cf7cb65feb6dee78657e1639cd912e3ec1066a11a8c"
+    },
+    {
+      "path": "zk-keeper.mjs",
+      "sha256": "f0a638cc44cb121522a53b62bb89e0a4883fe9d637de77b62c3f8ff766570a53"
+    },
+    {
+      "path": "bsc-keeper.mjs",
+      "sha256": "29a245597a52cf36e4dab9a73652ec8996a44adaeceedf653096fbaff16ef857"
+    },
+    {
+      "path": "header-history.mjs",
+      "sha256": "7098939e05d2f8e0b340326eb6d01b1883b9588b5c5445b4c8840aef7b9feab0"
+    },
+    {
+      "path": "frozen-exit.mjs",
+      "sha256": "3cd6704edccf76dcb901819ddce3167b37281de1b37ad00f32ea7f6b2eac42eb"
+    },
+    {
+      "path": "gap-sync.mjs",
+      "sha256": "865cbcb173f4023bff60717887ea208edd28e4f83dc6575756d4da4755e91e19"
+    },
+    {
+      "path": "zk-challenge.mjs",
+      "sha256": "5d648a25dbb8cde3d686b8ea7f25c8ad395b7c2ba0b305e5ab5f265a195e5149"
+    },
+    {
+      "path": "bsc-index.mjs",
+      "sha256": "2b2640b46d5d27c1f9a0ce53825e83d4630a7755052bd4ece38427e81a2be45d"
+    }
+  ],
+  "observedLogs": [
+    "11:57:40 zk keeper on 0x4a70ebc03da98f04d88964e17df212ba1bb2705a (chain 11155111); batch 42..250, max wait 720 min, fallback true",
+    "12:07:48 headers: loaded 972317 from disk (tip 972316)",
+    "12:08:08 peer 198.18.0.123: no version from peer",
+    "12:08:21 headers: tip 972317 (+1) via 198.18.0.126",
+    "12:08:22 waiting: 132 headers past 972185",
+    "12:11:59 waiting: 132 headers past 972185",
+    "12:15:19 peer 198.18.0.121: no headers from peer",
+    "12:15:42 headers: tip 972319 (+2) via 198.18.0.122",
+    "12:15:43 waiting: 134 headers past 972185",
+    "12:19:17 peer 198.18.0.123: no headers from peer",
+    "12:19:21 headers: tip 972321 (+2) via 198.18.0.121"
+  ],
+  "rpcErrorsAfterRestart": [],
+  "readOnlyProbes": [
+    {
+      "kind": "three parallel readPool calls",
+      "rpcCalls": 61,
+      "transportErrors": 0,
+      "poolsPassed": 3
+    },
+    {
+      "kind": "three sequential maintainPool calls; signing disabled",
+      "rpcCalls": 86,
+      "transportErrors": 0,
+      "poolsPassed": 3,
+      "actions": []
+    }
+  ],
+  "scope": "Recovery observation only, not proof of permanent repair. Bitcoin peer failures remain separate. No MetaMask claim or new funding transaction."
+}

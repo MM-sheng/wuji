@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-20T12:11:46.319Z",
+  "status": "PASS",
+  "chainId": 11155111,
+  "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+  "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+  "evmBlock": "0xb66c09",
+  "evmBlockHash": "0x7761ba1043f4980d81a8bfce13f26d6215f6982666d9d9080874a1553944edec",
+  "indexHeight": 972185,
+  "confirmations": 100,
+  "accounts": [
+    {
+      "id": 3,
+      "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "side": "yang",
+      "principal_wad": "9970000000000",
+      "enterEpoch": 972012,
+      "exitEpoch": 972372,
+      "status": "exiting",
+      "claimable_wad": "0",
+      "value_wad": "9970000000000",
+      "pnl_wad": "0",
+      "atFloor": false,
+      "overshoot_wad": "0",
+      "multiple": 1,
+      "simulations": {
+        "requestExit(uint256)": {
+          "callable": false,
+          "reason": "RPC eth_call: execution reverted: exit pending"
+        },
+        "claim(uint256)": {
+          "callable": false,
+          "reason": "RPC eth_call: execution reverted: not claimable"
+        }
+      },
+      "nextAction": "wait for exit pricing"
+    },
+    {
+      "id": 4,
+      "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "side": "yin",
+      "principal_wad": "9970000000000",
+      "enterEpoch": 972012,
+      "exitEpoch": 972372,
+      "status": "exiting",
+      "claimable_wad": "0",
+      "value_wad": "9970000000000",
+      "pnl_wad": "0",
+      "atFloor": false,
+      "overshoot_wad": "0",
+      "multiple": 1,
+      "simulations": {
+        "requestExit(uint256)": {
+          "callable": false,
+          "reason": "RPC eth_call: execution reverted: exit pending"
+        },
+        "claim(uint256)": {
+          "callable": false,
+          "reason": "RPC eth_call: execution reverted: not claimable"
+        }
+      },
+      "nextAction": "wait for exit pricing"
+    }
+  ],
+  "accounting": {
+    "pendingPrincipal()": "0",
+    "refundReserve()": "0",
+    "reservedClaims()": "0",
+    "buffer()": "59994000000",
+    "badDebt()": "0",
+    "settling()": "0",
+    "insolvent()": "0"
+  },
+  "poolWethWei": "19999994000000",
+  "walletWethWei": "0",
+  "protectedCashWei": "59994000000",
+  "scope": "Pinned-block public reads and eth_call only. No signatures, transactions, auto exits or claims. Reserve floor is not a proof of all live claims or protocol solvency."
+}

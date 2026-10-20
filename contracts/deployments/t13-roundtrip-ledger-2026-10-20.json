@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-10-20T12:16:59.764Z",
+  "status": "PENDING_EXIT_PRICING",
+  "chainId": 11155111,
+  "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+  "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+  "collateral": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+  "accounts": [
+    {
+      "id": 3,
+      "side": "yang",
+      "depositWei": "10000000000000",
+      "entryFeeWei": "30000000000",
+      "principalWei": "9970000000000",
+      "entryTransaction": "0x51de27248e423130f3ca9d4bdd6502c6b8d5188f8639c8a57b5e70eaa84e5a33",
+      "exitTransaction": "0xeb53f347263d60e3bbb7fc436c79b86e809a2a2622d49264c1f255dda2af0a68",
+      "exitEpoch": 972372,
+      "claimTransaction": null,
+      "amountReturnedWei": null,
+      "exitFeeWei": null
+    },
+    {
+      "id": 4,
+      "side": "yin",
+      "depositWei": "10000000000000",
+      "entryFeeWei": "30000000000",
+      "principalWei": "9970000000000",
+      "entryTransaction": "0x4fd3295b0751c99a19fc29875cdce3542e9be4cee6f3e03e89fd7c61060e6819",
+      "exitTransaction": "0x9590dd75715dfce8966f7bc3fdf0d2445ff5039f79450fed40f9ee37458ed470",
+      "exitEpoch": 972372,
+      "claimTransaction": null,
+      "amountReturnedWei": null,
+      "exitFeeWei": null
+    }
+  ],
+  "totalDepositedWei": "20000000000000",
+  "totalEntryFeesWei": "60000000000",
+  "totalPrincipalWei": "19940000000000",
+  "snapshotFile": "t13-wallet-preclaim-2026-10-20.json",
+  "remainingChecks": [
+    "exit pricing completed",
+    "exit fee = floor(grossExitValueWei * 30 / 10000)",
+    "claim amount equals gross value minus exit fee",
+    "successful canonical claim receipt and matching Claimed / WETH Transfer events",
+    "both accounts closed and reservedClaims debited correctly"
+  ],
+  "scope": "Entry arithmetic is checked against stored canonical receipt evidence. Exit amounts remain unknown until pricing; no claim was sent. ETH gas and prior WETH funding are separate from position return."
+}
