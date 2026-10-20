@@ -57,3 +57,25 @@ claim 仍因 `not claimable` 拒绝。
 已尝试切换编号至 #4 并打开其退出确认，但浏览器再次超时；尚未取得 #4 的交易哈希或成功收据，
 不能标记它已退出。下一步检查现有 #4 页面确认，然后由用户签名；#3 不再重复申请。
 等待退出定价与最终领取仍未通过。此修复减少了原生模态框阻塞，不宣称解决全部浏览器连接问题。
+
+## 19:16 两侧退出申请均确认
+
+用户指出 #4 没有签名请求。重新读取 Chrome 后确认页面停在“确认申请退出 #4”，
+尚未点击第二步；本次点击该按钮，页面进入钱包确认阶段，随后出现真实退出事件。
+没有操作钱包扩展。
+
+#4 退出交易：`0x9590dd75715dfce8966f7bc3fdf0d2445ff5039f79450fed40f9ee37458ed470`。
+RPC 核对 status=1、from=0B95、to=10% 池、value=0、gasUsed=69490，
+规范块 `0xb66af4` 的哈希与收据一致，ExitRequested 的 id=4、epoch=972372。
+[完整交易及收据](../../contracts/deployments/t13-metamask-exit-4-2026-10-20.json)。
+
+第一次并发账户检查固定在 `0xb66af3`，早于 #4 成交块，故其中 #4 仍 open；
+保留为 [成交前快照](../../contracts/deployments/t13-wallet-exit4-before-confirmation-2026-10-20.json)，
+不能将其完成读取的时间当作取样块时间。随后固定在 `0xb66af9` 复验，
+#3/#4 均 exiting、exitEpoch=972372、claimable=0；重复退出均拒绝 exit pending，
+领取均拒绝 not claimable。
+[成交后同块复验](../../contracts/deployments/t13-wallet-postexit-2026-10-20.json)。
+
+两笔均等待 Bitcoin 972372、100 个确认和后续链上处理，尚未领取，真人完整往返仍 OPEN。
+本次 [网页请求截图](../../contracts/deployments/t13-exit-4-signature-wait-2026-10-20.png)
+记录的是发起阶段；最终状态以收据与成交后快照为准。签名后 Chrome 再次不可用，未取得新的结果截图。
