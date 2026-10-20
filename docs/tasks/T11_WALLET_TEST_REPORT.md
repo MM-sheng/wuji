@@ -7,6 +7,29 @@ Sepolia header v3 的专用测试钱包完整协议往返已于 10 月 15 日完
 这不覆盖下文旧 BSC v4 的 MetaMask 真人界面验收；后者仍未完成。勿按下方旧清单启动历史 keeper。
 
 
+## Task C checkpoint — 2026-10-20, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 0.75 ETH.**
+Both historical 0.15 ETH targets remain completed; receipts and remaining balance are separate measures.
+
+At the original 17:35 schedule, the latest October 19 successful receipt was still less than 24 hours old;
+no claim was submitted, and the automation was moved to 18:10. This follow-up checked today's log and
+submitted one free request using the existing Google login session. No CAPTCHA challenge, new login,
+terms acceptance, payment or ineligible faucet was encountered. Google displayed
+`Transaction complete! Check your wallet address`.
+
+[Transaction](https://sepolia.etherscan.io/tx/0x288a351424b603aa46d44d04f0aee58865f4bf5c127368fe2baef4ac5d12231d) was verified via public Sepolia RPC:
+chain ID 11155111, receipt status 0x1, recipient 0x85967858e2464535A12031103ABA38f2795Fe8Fd,
+value 50000000000000000 wei, canonical receipt block `0xb669b2`.
+Balance at that block: **0.668469518691317708 ETH**, observed `2026-10-20T10:11:33.073Z`.
+[Raw transaction, receipt and balance](../../contracts/deployments/t11-sepolia-fuel-2026-10-20.json);
+[completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-20.jpg).
+
+Today's collection is complete; do not submit another October 20 claim. The next run is moved to
+October 21 after 18:15 Asia/Shanghai, beyond this success's 24-hour cooldown with a small margin;
+future runs must keep using the newest receipt and site response. No outgoing transfer, deployment
+or Task A MetaMask signature was performed by this task.
+
 ## Task C checkpoint — 2026-10-19, upkeep collection complete
 
 **Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 0.70 ETH.**
@@ -317,6 +340,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-10-16, after 17:38:06 retry | Google Cloud Web3 | 0.05 ETH | `0x24b5bb6827b9e148efc5de1ff2501d46b5eed0fd40b689922433c1a305c4f1ea` | 0.576540708591716708 ETH; post-round-2 upkeep receipts 0.65 ETH |
 | 2026-10-18, approximately 17:37 | Google browser connection unavailable after one recovery; claim not submitted | 0 ETH received by this attempt | None | 0.568469518691317708 ETH observed; recorded post-round-2 upkeep receipts remain 0.65 ETH |
 | 2026-10-19, approximately 18:05 | Google Cloud Web3 | 0.05 ETH | `0x100ea3130465e2a1a2ba27efd71b7ba70119ff44725807c475f1e66cb577986f` | 0.618469518691317708 ETH at block 0xb64dca; recorded post-round-2 upkeep receipts 0.70 ETH |
+| 2026-10-20, approximately 18:11 | Google Cloud Web3 | 0.05 ETH | `0x288a351424b603aa46d44d04f0aee58865f4bf5c127368fe2baef4ac5d12231d` | 0.668469518691317708 ETH at block 0xb669b2; recorded post-round-2 upkeep receipts 0.75 ETH |
 
 ## Historical report — 2026-09-26, v3
 
