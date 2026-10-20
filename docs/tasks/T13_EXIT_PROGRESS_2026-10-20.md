@@ -35,3 +35,25 @@ launchd 同一 Node 二进制启动新进程，Sepolia 链号均读取成功；�
 19:04:34 固定规范块复验：#3/#4 仍 open、exitEpoch=null；没有已确认退出。
 [重试后的链上原始记录](../../contracts/deployments/t13-wallet-exit-retry-2026-10-20.json)。
 下一次先检查现有请求及链上状态，再决定是否重新发起；本次截图未取得，不用旧截图替代。
+
+## 页面内确认修复与 #3 成功退出
+
+用户确认没有钱包弹窗。重试仍在原生 `confirm()` 后发生浏览器超时；网页恢复为未提交状态。
+现替换为页面内“确认申请退出 #编号 / 取消本次确认”两步操作，保留不可撤销、未来高度定价提示，
+并将确认绑定到原账户编号、池地址、钱包地址与网络。取消、上下文变化、重复确认均不得发送交易。
+没有绕过 MetaMask 签名，也没有改合约。
+
+`node --test apps/terminal/*.test.mjs`：62 通过、0 失败、0 跳过。
+新增确认前零 provider 调用、取消后旧确认无效、四类上下文切换阻断及重复确认只发一次测试；
+原有退出模拟与完整 calldata 检查保留。`scripts/header-testnet.sh` 同步新版静态页面并核对冻结文件哈希。
+
+Chrome 中再次核对 Sepolia、10% 池、0B95，完成 #3 的两次页面点击；用户随后完成签名。
+真实退出交易：`0xeb53f347263d60e3bbb7fc436c79b86e809a2a2622d49264c1f255dda2af0a68`。
+RPC 核对 status=1、from=0B95、to=10% 池、value=0、规范块哈希一致，gasUsed=187014；
+ExitRequested 的 id=3、epoch=972372。账户已为 exiting，重复 requestExit 模拟拒绝 `exit pending`，
+claim 仍因 `not claimable` 拒绝。
+[完整交易与收据](../../contracts/deployments/t13-metamask-exit-3-2026-10-20.json)。
+
+已尝试切换编号至 #4 并打开其退出确认，但浏览器再次超时；尚未取得 #4 的交易哈希或成功收据，
+不能标记它已退出。下一步检查现有 #4 页面确认，然后由用户签名；#3 不再重复申请。
+等待退出定价与最终领取仍未通过。此修复减少了原生模态框阻塞，不宣称解决全部浏览器连接问题。

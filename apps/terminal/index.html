@@ -1095,6 +1095,7 @@ function exitActionAllowed(state, action) {
   }
   async function perpEnter(){
     const rel=releasedPool($('pjPool').value);if(!rel||perpForm.busy||perpForm.flowBusy)return;
+    perpForm.pendingExit=null;
     let amount;try{amount=exactAmount($('pjAmt').value.trim());if(amount===0n||amount>=2n**128n)throw Error('数量无效');}catch(e){perpForm.msg='✗ '+e.message;return renderPerpWallet();}
     perpForm.amount=$('pjAmt').value;
     perpForm.flowBusy=true;renderPerpWallet();
@@ -1115,10 +1116,17 @@ function exitActionAllowed(state, action) {
     if(log){const id=Number(BigInt(log.topics[1]));rememberId(rel.address,id);perpForm.msg+=' · 账户 #'+id+' · 等待未来比特币高度及确认后定价';$('pjId').value=id;renderPerpWallet();}
     }finally{perpForm.flowBusy=false;renderPerpWallet();}
   }
-  async function perpAction(kind){
+  function cancelPerpExit(){perpForm.pendingExit=null;renderPerpWallet();}
+  async function perpAction(kind,confirmation=null){
     const rel=releasedPool($('pjPool').value),id=+$('pjId').value;if(!rel||perpForm.busy||perpForm.flowBusy)return;
     if(!Number.isSafeInteger(id)||id<1){perpForm.msg='✗ 先在上面填账户编号';return renderPerpWallet();}
-    if(kind==='exit'&&!confirm('退出申请不能撤销。账户会按一个还没挖出的比特币高度定价，金额在定价前会继续变动。确定？'))return;
+    if(kind==='exit'){
+      if(!confirmation){perpForm.pendingExit={id,pool:rel.address,account:W.acct,chain:W.chainId};return renderPerpWallet();}
+      const pending=perpForm.pendingExit;perpForm.pendingExit=null;
+      if(confirmation!==pending||id!==pending.id||!same(rel.address,pending.pool)||!same(W.acct,pending.account)||W.chainId!==pending.chain){
+        perpForm.msg='账户编号、钱包、网络或池子已改变，请重新申请退出';return renderPerpWallet();
+      }
+    }else perpForm.pendingExit=null;
     await perpSend(rel,rel.address,(kind==='exit'?'0x721c6513':'0x379607f5')+pad(id.toString(16)),(kind==='exit'?'申请退出 #':'领取 #')+id);
     lookAccount();
   }
@@ -1129,15 +1137,18 @@ function exitActionAllowed(state, action) {
     if(!W.acct){el.innerHTML='<button id="pjConnect" '+(W.connecting?'disabled':'')+'>'+(W.connecting?'等待 MetaMask 授权…':'连接 MetaMask')+'</button><div class="msg2">'+esc(W.msg||perpForm.msg||'Sepolia 测试网 · 仅使用测试 WETH')+'</div>';$('pjConnect').onclick=()=>connect({address:rel.address,chainId:rel.chainId,wallet:'metamask'});return;}
     $('pjPool').disabled=!!(perpForm.busy||perpForm.flowBusy);
     const dis=perpForm.busy||perpForm.flowBusy?'disabled':'',mine=myIds(rel.address);
+    const pending=perpForm.pendingExit;
     el.innerHTML=`<div class="msg2">${esc(W.walletName||'钱包')} · ${esc(walletNetworks[W.chainId]?.chainName||'请核对钱包网络')}</div><div class="msg2" style="overflow-wrap:anywhere">本次账户：${esc(W.acct)}</div>${W.msg?'<div class="msg2">'+esc(W.msg)+'</div>':''}<div class="row2"><span style="color:var(--dim)">方向</span>
       <button id="pjYang" class="${perpForm.side==='yang'?'pri':''}" ${dis}>阳</button><button id="pjYin" class="${perpForm.side==='yin'?'pri':''}" ${dis}>阴</button>
       <input id="pjAmt" type="text" inputmode="decimal" placeholder="数量 ${esc(rel.symbol||'')}" value="${esc(perpForm.amount)}"><button class="pri" id="pjEnter" ${dis}>进场</button></div>
       <div class="row2"><button id="pjExit" ${dis}>申请退出（按上方编号）</button><button id="pjClaim" ${dis}>领取（按上方编号）</button></div>
+      ${pending?`<div class="msg2" role="alert">确认退出 #${pending.id} · 池子 ${esc(pending.pool)}。退出申请不能撤销；按尚未挖出的比特币高度定价，金额在定价前会继续变动。</div><div class="row2"><button id="pjExitConfirm" ${dis}>确认申请退出 #${pending.id}</button><button id="pjExitCancel" ${dis}>取消本次确认</button></div>`:''}
       ${mine.length?`<div class="msg2">本浏览器记下的账户：${mine.map(i=>'#'+i).join(' ')}</div>`:''}
       <div class="msg2">${esc(perpForm.msg)||'进场费 '+(rel.feeBps/100)+'%。按未来比特币高度定价，还需等待确认和链上处理；具体时间不保证，申请不能撤销。'}</div>`;
     $('pjYang').onclick=()=>{perpForm.side='yang';perpForm.amount=$('pjAmt').value;renderPerpWallet();};
     $('pjYin').onclick=()=>{perpForm.side='yin';perpForm.amount=$('pjAmt').value;renderPerpWallet();};
     $('pjEnter').onclick=perpEnter;$('pjExit').onclick=()=>perpAction('exit');$('pjClaim').onclick=()=>perpAction('claim');
+    if(pending){$('pjExitConfirm').onclick=()=>perpAction('exit',pending);$('pjExitCancel').onclick=cancelPerpExit;}
   }
   $('pjPool').onchange=renderPerpWallet;
   function renderTaiji(){

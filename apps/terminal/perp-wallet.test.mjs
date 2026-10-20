@@ -40,7 +40,7 @@ function fixture(options={}){
   WORD:/^0x[0-9a-f]{64}$/i,word:h=>{assert.match(h,/^0x[0-9a-f]{64}$/i);return BigInt(h);},addressWord:h=>'0x'+h.slice(-40),
   same:(a,b)=>String(a).toLowerCase()===String(b).toLowerCase(),$:get,short:x=>x,esc:x=>x,fmtW:x=>String(BigInt(x)/10n**18n),
   confirm:()=>true,lookAccount:()=>{},localStorage:{getItem:()=>null,setItem:()=>{}},renderWallet:()=>{}});
- vm.runInContext(prelude+amount+code+'\nrenderPerpWallet=()=>{}; W.acct="'+owner+'";this.api={W,perpForm,perpEnter,perpAction,perpSend,verifyPerpRelease,releasedPool,PERP_RELEASES};',ctx);
+ vm.runInContext(prelude+amount+code+'\nrenderPerpWallet=()=>{}; W.acct="'+owner+'";this.api={W,perpForm,perpEnter,perpAction,cancelPerpExit,perpSend,verifyPerpRelease,releasedPool,PERP_RELEASES};',ctx);
  const sha=createHash('sha256').update(Buffer.from('6001','hex')).digest('hex');
  ctx.api.PERP_RELEASES[0].indexCodeSha256=sha;for(const p of ctx.api.PERP_RELEASES[0].accountPools)p.codeSha256=sha;
  return {...ctx.api,get,calls,sent,rel:ctx.api.releasedPool(rel.address)};
@@ -66,14 +66,31 @@ for(const [options,error] of [[{balance:0n},/余额不足/],[{chain:97},/切换/
 test('signature rejection stops entry and clears busy state',async()=>{const f=fixture({reject:true});await f.perpEnter();assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/已在钱包中取消/);assert.equal(f.perpForm.busy,false);assert.equal(f.perpForm.flowBusy,false);});
 for(const change of ['changeAccount','changeChain'])test(change+' after approval prevents entry',async()=>{const f=fixture({[change]:true});await f.perpEnter();assert.equal(f.sent.length,1);assert.match(f.perpForm.msg,/改变|切换/);});
 for(const reason of ['not claimable','exit pending','not owner','settlement pending'])test(reason+' is simulated before any signature',async()=>{
- const f=fixture({revert:reason});await f.perpAction(reason==='exit pending'?'exit':'claim');assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/还不能领取|已经申请|不属于|分批结算/);assert.equal(f.perpForm.busy,false);
+ const f=fixture({revert:reason});await f.perpAction(reason==='exit pending'?'exit':'claim');if(reason==='exit pending')await f.perpAction('exit',f.perpForm.pendingExit);assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/还不能领取|已经申请|不属于|分批结算/);assert.equal(f.perpForm.busy,false);
 });
 test('exit and claim use the selected account id on the released pool',async()=>{
- const f=fixture();f.get('pjId').value='2';await f.perpAction('exit');await f.perpAction('claim');assert.equal(f.sent.length,2);
+ const f=fixture();f.get('pjId').value='2';await f.perpAction('exit');await f.perpAction('exit',f.perpForm.pendingExit);await f.perpAction('claim');assert.equal(f.sent.length,2);
  assert.equal(f.sent[0].data,'0x721c6513'+w(2).slice(2));assert.equal(f.sent[1].data,'0x379607f5'+w(2).slice(2));
  assert.ok(f.sent.every(t=>t.to===f.rel.address&&t.from===owner));
 });
 test('unpublished pool remains unable to enter',async()=>{const f=fixture();f.get('pjPool').value='0x'+'99'.repeat(20);await f.perpEnter();assert.equal(f.sent.length,0);});
+test('exit requires a separate confirmation; cancel never calls the provider',async()=>{
+ const f=fixture();await f.perpAction('exit');assert.equal(f.calls.length,0);assert.ok(f.perpForm.pendingExit);
+ const pending=f.perpForm.pendingExit;f.cancelPerpExit();assert.equal(f.perpForm.pendingExit,null);
+ await f.perpAction('exit',pending);assert.equal(f.calls.length,0);assert.equal(f.sent.length,0);
+});
+for(const change of ['id','pool','account','chain'])test('exit confirmation rejects changed '+change,async()=>{
+ const f=fixture();await f.perpAction('exit');const pending=f.perpForm.pendingExit;
+ if(change==='id')f.get('pjId').value='2';
+ if(change==='pool')f.get('pjPool').value=registry[0].accountPools[0].address;
+ if(change==='account')f.W.acct='0x'+'dd'.repeat(20);
+ if(change==='chain')f.W.chainId=97;
+ await f.perpAction('exit',pending);assert.equal(f.sent.length,0);assert.equal(f.calls.length,0);assert.match(f.perpForm.msg,/改变/);
+});
+test('duplicate confirmation clicks cannot submit two exits',async()=>{
+ const f=fixture();await f.perpAction('exit');const pending=f.perpForm.pendingExit;
+ await Promise.all([f.perpAction('exit',pending),f.perpAction('exit',pending)]);assert.equal(f.sent.length,1);
+});
 test('a second click during entry preflight cannot duplicate approvals or entries',async()=>{
  const f=fixture();await Promise.all([f.perpEnter(),f.perpEnter()]);assert.equal(f.sent.length,2);assert.equal(f.perpForm.flowBusy,false);
 });
