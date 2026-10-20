@@ -18,3 +18,20 @@
 
 [固定块账户与模拟原始记录](../../contracts/deployments/t13-wallet-preexit-2026-10-20.json)。
 准备金下界检查不构成所有存续债权的偿付证明。没有改合约、keeper 冻结运行文件或后台服务。
+
+## 19:04 重试更新
+
+用户要求再次尝试。Chrome 恢复后可以操作网页，但 `/head.chain` 报
+`eth_chainId ... fetch failed`，因此永续池和钱包控件未加载。分别用当前 Node 与
+launchd 同一 Node 二进制启动新进程，Sepolia 链号均读取成功；仅重启
+`com.wuji.sepolia-header-v3-indexer` 只读服务，未改代码、配置或 keeper。
+随后 `/head` 返回三个池、`reconciliation=matched`、链上高度 972185。
+
+已在 Chrome 选中 10% 池、连接 MetaMask，并从网页核对完整 owner 与 Ethereum Sepolia。
+输入 #3 后点击申请退出，网页弹出不可撤销确认。处理对话框时浏览器报告超时，
+随后该对话框已不活跃，但网页读取及截图仍失败；无法据此确认是否已到 MetaMask 签名阶段。
+已交用户查看现有提示或签名请求，明确先不要重复点击退出。未操作钱包扩展。
+
+19:04:34 固定规范块复验：#3/#4 仍 open、exitEpoch=null；没有已确认退出。
+[重试后的链上原始记录](../../contracts/deployments/t13-wallet-exit-retry-2026-10-20.json)。
+下一次先检查现有请求及链上状态，再决定是否重新发起；本次截图未取得，不用旧截图替代。
