@@ -16,6 +16,16 @@ test('continuity() decodes into the host input shape, including a negative U', (
   assert.throws(() => decodeContinuity('0x1234'));
 });
 
+test('real account-maintenance path reports transport failures for every pool',async()=>{
+ const {maintainAccounts}=await import('./zk-keeper.mjs');const original=globalThis.fetch;
+ globalThis.fetch=async()=>{throw Object.assign(Error('not logged'),{code:'ECONNRESET'});};
+ try{
+  const pools=['0x'+'33'.repeat(20),'0x'+'44'.repeat(20)];
+  const results=await maintainAccounts({},pools);
+  assert.deepEqual(results,pools.map(pool=>({pool,transportFailed:true})));
+ }finally{globalThis.fetch=original;}
+});
+
 test('a Bitcoin source that never answers fails the round instead of hanging the keeper', async () => {
   process.env.ZK_SOURCE_TIMEOUT_S = '0.2';
   const { round } = await import('./zk-keeper.mjs?timeout');

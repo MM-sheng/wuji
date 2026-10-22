@@ -182,3 +182,16 @@ test('a pool whose pricing view reverts (index tip too old for A) is still read 
   await maintainPool({ ...f, read, pool });
   assert.deepEqual(f.sends.map(s => s[0]), ['processMany(uint256)']);
 });
+
+test('optional pool views cannot turn transport failures into absent or safe state',async()=>{
+ for(const selector of ['0x7dd7307d','0x0832dce9','0x22dd3904']){
+  const f=fixture(),error=Object.assign(Error('RPC offline'),{rpcTransportError:true});
+  const read=(to,data)=>to===pool&&data===selector?Promise.reject(error):f.read(to,data);
+  await assert.rejects(maintainPool({...f,read,pool}),e=>e===error);assert.deepEqual(f.sends,[]);
+ }
+});
+test('transport failure reading index freeze status stops maintenance before a send',async()=>{
+ const f=fixture(),error=Object.assign(Error('RPC offline'),{rpcTransportError:true});
+ const read=(to,data)=>to===index&&data==='0x054f7d9c'?Promise.reject(error):f.read(to,data);
+ await assert.rejects(maintainPool({...f,read,pool}),e=>e===error);assert.deepEqual(f.sends,[]);
+});

@@ -25,6 +25,7 @@ import { maintainPool } from './accounts.mjs';
 import { loadStates, planSeal, saveState } from './seal.mjs';
 import { decodeReorgProof, planSegmentedSeal, submitReorgStep } from './seal-segments.mjs';
 import { HeaderHistory, recoverFoldTransaction } from './header-history.mjs';
+import { keeperHealth, keeperCycle } from './keeper-health.mjs';
 export { decodeContinuity };
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -231,7 +232,8 @@ const accountCursor = new Map();
 
 /// T11 pools on this index: same duties as the relay keeper, with epochs marked from this keeper's headers.
 export async function maintainAccounts(source, pools = ACCOUNTS) {
-  if (!pools.length) return;
+  if (!pools.length) return [];
+  const results = [];
   for (const transactionHash of HEADER_RECOVERY_TXS) {
     if (recoveredHeaderTransactions.has(transactionHash)) continue;
     try {
@@ -251,8 +253,13 @@ export async function maintainAccounts(source, pools = ACCOUNTS) {
         send: async (to, sig, gas, ...args) => { const tx = await chain.sendTo(to, sig, gas, args); log('accounts', sig.split('(')[0], pool.slice(0, 10), tx.hash); },
       });
       accountCursor.set(pool, r.cursor);
-    } catch (e) { log('accounts:', pool.slice(0, 10), e.message); }
+      results.push({pool,transportFailed:false});
+    } catch (e) {
+      log('accounts:', pool.slice(0, 10), e.message);
+      results.push({pool,transportFailed:e.rpcTransportError===true});
+    }
   }
+  return results;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -264,14 +271,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   // failed rounds in a row the keeper exits; a supervisor (scripts/supervise.sh, Docker's restart policy)
   // starts a fresh one.
   const MAX_FAILED = Number(env.ZK_MAX_FAILED_ROUNDS || 12);
-  let failed = 0;
+  const health = keeperHealth(MAX_FAILED);
   for (;;) {
-    try { const r = await round(source); failed = 0; if (r.action === 'wait') log(`waiting: ${r.available} headers past ${r.height}`); }
-    catch (e) {
-      log('error:', e.message);
-      if (++failed >= MAX_FAILED) { log(`${failed} rounds failed in a row; exiting for a restart`); process.exit(1); }
-    }
-    if (ACCOUNTS.length) await maintainAccounts(source);
+    const restart = await keeperCycle({round:()=>round(source),maintainAccounts:()=>maintainAccounts(source),health,log});
+    if(restart){log(`${restart}; exiting for a restart`);process.exit(1);}
     if (env.ZK_ONCE) break;
     await new Promise(r => setTimeout(r, INTERVAL * 1000));
   }

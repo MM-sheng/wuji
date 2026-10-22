@@ -18,6 +18,8 @@ const addr = a => a.slice(2).toLowerCase().padStart(64, '0');
 const uint = v => { if (!/^0x[0-9a-f]{64,}$/i.test(v)) throw Error('Invalid accounts ABI'); return BigInt(v.slice(0, 66)); };
 const int = v => { const x = uint(v); return x >= 1n << 255n ? x - (1n << 256n) : x; };
 const WAD = 10n ** 18n;
+// Older deployments may omit a view; a lost RPC connection is not evidence it is absent.
+const optional = fallback => error => { if(error.rpcTransportError)throw error;return fallback; };
 // Annual vol of S is ≈115%; a pool with sensitivity K moves ≈115%/K per year.
 export const annualVol = k => 1.15 / (Number(k) / 1e18);
 
@@ -29,13 +31,13 @@ export async function readPool(read, pool) {
       read(pool, SEL.buffer), read(pool, SEL.badDebt), read(pool, SEL.head), read(pool, SEL.queueLength),
       // Reverts on relay-less pools while their index's finalized tip is too old to price from (A); processing,
       // retiring and sweeping must not depend on it.
-      read(pool, SEL.nextPricingHeight).catch(() => null), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
+      read(pool, SEL.nextPricingHeight).catch(optional(null)), read(pool, SEL.frozen), read(pool, SEL.nextId), read(pool, SEL.lastS),
     ]);
   const assetAddr = '0x' + asset.slice(-40), indexAddr = '0x' + index.slice(-40);
   const [balance, folded, settling, insolvent] = await Promise.all([
     read(assetAddr, SEL.balanceOf + addr(pool)), read(indexAddr, SEL.lastHeight),
-    read(pool, SEL.settling).then(v => uint(v) === 1n).catch(() => false),
-    read(pool, SEL.insolvent).then(v => uint(v) === 1n).catch(() => false),
+    read(pool, SEL.settling).then(v => uint(v) === 1n).catch(optional(false)),
+    read(pool, SEL.insolvent).then(v => uint(v) === 1n).catch(optional(false)),
   ]);
   const P = [uint(yin), uint(yang)], matched = P[0] < P[1] ? P[0] : P[1];
   const h = uint(head), n = uint(qlen);
@@ -66,8 +68,8 @@ export async function readAccount(read, pool, id) {
   const [entered, exited, frozen, payable, refunded] = await Promise.all([
     read(pool, SEL.epochAcc + word(enterEpoch)), exitEpoch ? read(pool, SEL.epochAcc + word(exitEpoch)) : null,
     read(pool, SEL.frozen).then(v => uint(v) === 1n),
-    read(pool, SEL.claimableOf + word(id)).then(uint).catch(() => null),
-    read(pool, SEL.epochInfo + word(enterEpoch)).then(v => uint('0x' + v.slice(66, 130)) === 1n).catch(() => false),
+    read(pool, SEL.claimableOf + word(id)).then(uint).catch(optional(null)),
+    read(pool, SEL.epochInfo + word(enterEpoch)).then(v => uint('0x' + v.slice(66, 130)) === 1n).catch(optional(false)),
   ]);
   const processed = v => v !== null && uint('0x' + v.slice(130, 194)) === 1n;
   const claimable = frozen || (processed(entered) && refunded) || (exitEpoch !== 0n && processed(exited));
@@ -93,9 +95,9 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
   const done = [];
   if (state.frozen) return { state, done, cursor };
   // Older indexes have no frozen exit (the call reverts); for them the pool can never freeze.
-  const indexFrozen = await read(state.index, SEL.frozen).then(v => uint(v) === 1n, () => false);
+  const indexFrozen = await read(state.index, SEL.frozen).then(v => uint(v) === 1n, optional(false));
   if (indexFrozen) {
-    const relayTip = await read(pool, SEL.RELAY_TIP).then(v => uint(v) === 1n, () => true);
+    const relayTip = await read(pool, SEL.RELAY_TIP).then(v => uint(v) === 1n, optional(true));
     if (!relayTip && state.nextEpochReady) {
       if (!headersFor) { log('frozen pool needs historical headers', pool); return { state, done, cursor }; }
       done.push(...await markFromHeaders({ read, simulate, send, pool, index: state.index, headersFor, log }));
@@ -105,7 +107,7 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
   }
   if (state.nextEpochReady) {
     // Pools older than the A/B/C pricing modes have no RELAY_TIP and always use a relay.
-    const relayTip = await read(pool, SEL.RELAY_TIP).then(v => uint(v) === 1n, () => true);
+    const relayTip = await read(pool, SEL.RELAY_TIP).then(v => uint(v) === 1n, optional(true));
     if (!relayTip) {
       if (!headersFor) { log('pool', pool.slice(0, 10), 'has no relay to walk and this keeper has no header source'); return { state, done, cursor }; }
       done.push(...await markFromHeaders({ read, simulate, send, pool, index: state.index, headersFor, log }));
@@ -115,7 +117,7 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
     // A large epoch finishes over bounded account batches. Retiring or sweeping during the snapshot
     // would change the book; the contract rejects them. Also stop after an automatic insolvency close.
     const [settling, frozen] = await Promise.all([
-      read(pool, SEL.settling).then(v => uint(v) === 1n, () => false),
+      read(pool, SEL.settling).then(v => uint(v) === 1n, optional(false)),
       read(pool, SEL.frozen).then(v => uint(v) === 1n),
     ]);
     if (settling || frozen) return { state, done, cursor };
@@ -134,7 +136,7 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
   try {
     const surplus = BigInt(String(await simulate(pool, 'sweep()(uint256)')).split(' ')[0]);
     if (surplus > 0n) { await send(pool, 'sweep()', 200_000); done.push('sweep'); }
-  } catch { /* nothing to sweep */ }
+  } catch (e) { if(e.rpcTransportError)throw e; /* nothing to sweep */ }
   return { state, done, cursor: id };
 }
 
