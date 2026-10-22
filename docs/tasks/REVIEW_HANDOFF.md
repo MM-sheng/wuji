@@ -1,5 +1,9 @@
 # Independent review handoff: the mainnet path (T13) first, then T12 / T11-on-ZK
 
+> **Current entry point, 2026-10-22:** use [the header-v3 handoff](REVIEW_HANDOFF_2026-10-22.md).
+> The addresses, source versions and lifecycle status below describe historical deployments, including an
+> obsolete index; they are not the current review target. Preserve this document as historical context.
+
 Prepared 2026-10-02 by the authoring session, updated the same day for T13. Internal tests, invariants and the
 self-review findings below do not replace an independent review. Review the source, not these notes; treat every
 claim here as something to check.

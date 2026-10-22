@@ -1,10 +1,16 @@
 # Mainnet deployment checklist
 
+**Current acceptance, 2026-10-22:** the current Sepolia header-v3 real MetaMask pair has completed entry,
+exit and both claims, with exact token/fee reconciliation ([report](tasks/T13_WALLET_ROUNDTRIP_2026-10-22.md)).
+This clears that lifecycle only. Use the [current handoff](tasks/REVIEW_HANDOFF_2026-10-22.md) and
+[remaining gates](tasks/READINESS_2026-10-22.md); independent review, independent operation, full natural
+checkpoint observation and mainnet native-ETH/CREATE2 implementation are not complete.
+
 **2026-10-12 post-rescan revision:** reserve isolation, deterministic insolvency allocation,
 authenticated frozen prices, bounded account processing and segmented reorg proofs are deployed on
 [Sepolia v3](reviews/2026-10-12-sepolia-header-v3.md). Runtime and binding checks include the factory's
-two immutable creation-code data contracts. The live entry/exit lifecycle has started but has not finished;
-this is not mainnet acceptance. Complete it and the archive-recovery rehearsal before release.
+two immutable creation-code data contracts. The entry/exit lifecycle subsequently completed on October 22;
+this is not mainnet acceptance. Complete the remaining gates and archive-recovery rehearsal before release.
 See [the source repair report](reviews/2026-10-12-security-fixes.md).
 
 Every item is required unless it is explicitly marked informational. Record links, hashes, addresses,
@@ -16,8 +22,8 @@ headers; a height counts only `CONFIRMATIONS = 100` deep; a branch that out-work
 `FeeRouter`, and T11 pools priced from the index's newest validated header. No verifier, no challenge
 window, no watchers. Design: [T13](tasks/T13_ZK_REORG_EXIT.md); decisions:
 [header path first](decisions/2026-10-02-header-path-first.md), [economics](decisions/2026-10-02-submitter-economics.md).
-The corrected shape runs on Sepolia as the minimal `WujiHeaderIndex` ([v2 manifest](../contracts/deployments/sepolia-header-v2.json)). The current review entry
-point is [REVIEW_HANDOFF.md](tasks/REVIEW_HANDOFF.md) §0.
+The current corrected shape runs on Sepolia as `WujiHeaderIndex` ([v3 manifest](../contracts/deployments/sepolia-header-v3.json)). The current review entry
+point is [REVIEW_HANDOFF_2026-10-22.md](tasks/REVIEW_HANDOFF_2026-10-22.md).
 
 **Release blocker found 2026-10-12:** the old header path sorts its live MTP timestamp window in place.
 The source fix and regressions are in [the MTP report](reviews/2026-10-12-mtp-window.md); the historical Sepolia

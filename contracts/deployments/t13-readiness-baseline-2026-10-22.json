@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-10-22T11:59:15.053Z",
+  "status": "LOCAL_BASELINE_VERIFIED_NOT_RELEASE_APPROVAL",
+  "candidateCommit": "023e3c77881ee71e19611f25008daffaf0ca3610",
+  "chainId": 11155111,
+  "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "evmBlock": "0xb6a377",
+  "evmBlockHash": "0x77e0194f9fe5bac8252d74c150026e54f55ee75e3728cec64e15a6f92711603f",
+  "contractsSourceIdenticalTo": "03f6256c2821e5a67a8b98739ee9b199a32da27a",
+  "codeFingerprintBaseline": "t13-integration-verification-2026-10-18.json",
+  "codes": [
+    {
+      "name": "WujiHeaderIndex",
+      "address": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+      "sha256": "ea424d4928c54dc45684938ec78d67359635650bd927546d82d857096bfe008c",
+      "bytes": 12234
+    },
+    {
+      "name": "RelayerRewards",
+      "address": "0xe6933fB941861b6Ef3888Eb11e2Dfb476B3aAB35",
+      "sha256": "518f0a10545bb550082f4e7a6671b44a9d6c04c6bd071e12c0b2e767e72cc3cc",
+      "bytes": 4660
+    },
+    {
+      "name": "FeeRouter",
+      "address": "0xcc32633A49eDf61400cBc48a0eE082a8866946b4",
+      "sha256": "19f90077d5539146459249756d145a3407d5a3ff64b298e4308b330647b0bac5",
+      "bytes": 1115
+    },
+    {
+      "name": "WujiAccountsFactory",
+      "address": "0xF2C7BAa3Cdd8a69c2ED2576478140d13c29c48a9",
+      "sha256": "87ffdbbcb68a82d0e13ffa1186899cdfe614185da3b1a64e20a3d62ef45c4d44",
+      "bytes": 2425
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68",
+      "sha256": "0e5baa860df1f27a760f39e00e3865578ef149da7519007a0d79d3ec6890248c",
+      "bytes": 23646
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+      "sha256": "112a75cb131036bf525693730317162eeef6017010643559c732e79d371a8ada",
+      "bytes": 23646
+    },
+    {
+      "name": "WujiAccounts",
+      "address": "0xcd159a006aeb31535ead9514a9ea335466c9c137",
+      "sha256": "682ca00f243710c68a0c33a8d94c1caafc3f590767433a265156db88ed69fd14",
+      "bytes": 23646
+    },
+    {
+      "name": "AccountCodeLeft",
+      "address": "0xef8c6ffe1dca672e75f273653c75d5fe6baa428f",
+      "sha256": "dda8c5a34a64be1f613bbbcae3668f208ce0ac6a1a0d13331fdc24df2a0a3da8",
+      "bytes": 12655
+    },
+    {
+      "name": "AccountCodeRight",
+      "address": "0x8247114377f490a22921e0ceec52e1443dbee826",
+      "sha256": "0851b69160199a733ab147fcbd615ddf21131b9f66b397af1cfd005c921d6985",
+      "bytes": 12656
+    }
+  ],
+  "keeperSource": "662e35e5f07730f64caf3c553a29e00c1ef45a09",
+  "keeperRuntime": "/Users/m/Projects/wuji/operator/sepolia-header-v3/runtime-rpc-2026-10-22-r2",
+  "runtimeModulesVerified": 25,
+  "indexHeight": 972510,
+  "seenHeight": 972610,
+  "firstCheckpointHeight": 973865,
+  "firstCheckpointReached": false,
+  "workerBalanceWei": "3795954900000000",
+  "reserveWethBalanceWei": "0",
+  "terminal": {
+    "reconciliation": "matched",
+    "contractHeight": 972510,
+    "tip": 972614
+  },
+  "scope": "Fresh canonical Sepolia code fingerprints compared with historical fresh-build evidence; no new compilation or independent audit. Current source contracts unchanged. Local runtime hashes checked. A funded balance is not an operating runway or self-sufficiency proof."
+}
