@@ -1,0 +1,161 @@
+{
+  "verification": {
+    "status": "PASS",
+    "observedAt": "2026-10-22T13:09:23.833Z",
+    "chainId": 11155111,
+    "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+    "evmBlock": 11969645,
+    "evmBlockHash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+    "from": 969535,
+    "to": 972610,
+    "headers": 3076,
+    "p2pSha256": "52348deac3f4461fafcb5e75aed1a68c5449f3c6090e5fc4584ebebebfdeb921",
+    "httpSha256": "52348deac3f4461fafcb5e75aed1a68c5449f3c6090e5fc4584ebebebfdeb921",
+    "finalized": {
+      "hash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+      "height": 972510,
+      "bits": 386007187,
+      "time": 1792602665,
+      "epochStart": 1792154251,
+      "u": "293",
+      "times": [
+        1792597770,
+        1792598226,
+        1792598386,
+        1792599100,
+        1792600770,
+        1792600854,
+        1792600857,
+        1792601254,
+        1792601978,
+        1792601842,
+        1792602665
+      ],
+      "work": "1717113702291114818887492394",
+      "S_wad": "3516000000000000"
+    },
+    "retargets": [
+      969696,
+      971712
+    ],
+    "checkpoints": [],
+    "firstCheckpoint": 973865,
+    "sourceA": "local Bitcoin P2P header archive",
+    "sourceB": "https://mempool.space/api/v1/blocks/:height",
+    "scope": "Every byte of current v3 anchor context through 100 descendants. Two acquisition paths, same-machine author verification; not independent operator or full block validation."
+  },
+  "recovery": {
+    "status": "PASS",
+    "startedAt": "2026-10-22T13:09:23.910Z",
+    "finishedAt": "2026-10-22T13:10:48.210Z",
+    "archiveHeaders": 3076,
+    "archiveNewProcessRead": true,
+    "faults": [
+      "missing header fails closed without network",
+      "corrupt bytes fail closed",
+      "wrong-branch source cannot substitute same height"
+    ],
+    "indexerRows": 3059,
+    "indexerDisplayHeight": 972604,
+    "contractHeight": 972510,
+    "contractConfirmations": 100,
+    "indexerDisplayConfirmations": 6,
+    "S_wad": "3516000000000000",
+    "allRowsVerified": true,
+    "cacheSha256": "c4a8a27561040bef33b05015d274287e18f9ed69de317715985a4936e5ad41ea",
+    "restartCacheIdentical": true,
+    "pinnedEvmBlockHash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+    "sourceRequests": 24487,
+    "rpcRequests": 78,
+    "deniedWrites": 1,
+    "liveRuntimeFilesUnchanged": 84,
+    "servicesBefore": [
+      "30557\t0\tcom.wuji.sepolia-header-v3-keeper",
+      "-\t0\tcom.wuji.sepolia-header-v3-operations",
+      "1393\t0\tcom.wuji.sepolia-header-v3-indexer"
+    ],
+    "servicesAfter": [
+      "30557\t0\tcom.wuji.sepolia-header-v3-keeper",
+      "-\t0\tcom.wuji.sepolia-header-v3-operations",
+      "1393\t0\tcom.wuji.sepolia-header-v3-indexer"
+    ],
+    "liveArchivePrefixUnchanged": true,
+    "liveRpcRequests": 0,
+    "broadcasts": 0,
+    "signerEnvironment": false,
+    "scope": "Same-machine offline restoration from independent HTTP headers and saved canonical EVM responses, production HeaderHistory and indexer; no keeper signing or 48-hour external takeover."
+  },
+  "baselineCommit": "12b7e0a",
+  "scriptsSha256": {
+    "scripts/verify-v3-recovery.mjs": "1ebdcb4681d5e9414176d03968a2396f3beab248cbf4dcc1849a947211bbd912",
+    "scripts/drill-v3-recovery.mjs": "61d1fff20c5ffdd0d5c789c25f546db167864cc1ad23defd421566dec1a2a384",
+    "scripts/lib/header-verification.mjs": "2e849a0fe7f4bef3ccd514f041d52d66193acbcde41587b59b8417e41e0fa2d7",
+    "scripts/lib/header-verification.test.mjs": "1fb178c230a47ac5fee7559a95cbc98ac876713a5cf98407499d421cfaf3d019"
+  },
+  "validation": {
+    "node": {
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "command": "node --test scripts/lib/header-verification.test.mjs indexer/header-history.test.mjs indexer/bitcoin.test.mjs"
+    },
+    "forge": {
+      "passed": 325,
+      "failed": 0,
+      "skipped": 24,
+      "command": "forge test --summary",
+      "fullHistoryEnabled": false
+    },
+    "productionModulesChanged": false,
+    "contractsChanged": false,
+    "nodeVersion": "v26.8.1"
+  },
+  "finalSnapshotRecheck": {
+    "status": "PASS",
+    "observedAt": "2026-10-22T13:13:25.554Z",
+    "chainId": 11155111,
+    "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+    "evmBlock": 11969645,
+    "evmBlockHash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+    "anchorHeight": 969545,
+    "genesisHeight": 969546,
+    "from": 969535,
+    "to": 972610,
+    "headers": 3076,
+    "p2pSha256": "52348deac3f4461fafcb5e75aed1a68c5449f3c6090e5fc4584ebebebfdeb921",
+    "httpSha256": "52348deac3f4461fafcb5e75aed1a68c5449f3c6090e5fc4584ebebebfdeb921",
+    "onchainS_wad": "3516000000000000",
+    "finalized": {
+      "hash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+      "height": 972510,
+      "bits": 386007187,
+      "time": 1792602665,
+      "epochStart": 1792154251,
+      "u": "293",
+      "times": [
+        1792597770,
+        1792598226,
+        1792598386,
+        1792599100,
+        1792600770,
+        1792600854,
+        1792600857,
+        1792601254,
+        1792601978,
+        1792601842,
+        1792602665
+      ],
+      "work": "1717113702291114818887492394",
+      "S_wad": "3516000000000000"
+    },
+    "retargets": [
+      969696,
+      971712
+    ],
+    "checkpoints": [],
+    "firstCheckpoint": 973865,
+    "sourceA": "local Bitcoin P2P header archive",
+    "sourceB": "https://mempool.space/api/v1/blocks/:height",
+    "scope": "Every byte of current v3 anchor context through 100 descendants. Two acquisition paths, same-machine author verification; not independent operator or full block validation."
+  }
+}
