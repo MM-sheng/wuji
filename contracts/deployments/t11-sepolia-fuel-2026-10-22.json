@@ -1,0 +1,24 @@
+{
+  "observedAt": "2026-10-22T10:23:25.081047+00:00",
+  "dateAsiaShanghai": "2026-10-22",
+  "task": "C",
+  "status": "human_action_required",
+  "chainId": 11155111,
+  "address": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "faucet": "Google Cloud Web3",
+  "faucetURL": "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
+  "amountReceivedWei": "0",
+  "transactionHash": null,
+  "siteMessages": [
+    "Warning Something went wrong. Please try again later.",
+    "无法连接 reCAPTCHA 服务。请检查您的互联网连接，然后重新加载网页以获取 reCAPTCHA 验证任务。"
+  ],
+  "balanceObservation": {
+    "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+    "blockNumber": "0xb6a197",
+    "wei": "718469518691317708",
+    "eth": "0.718469518691317708"
+  },
+  "postRound2UpkeepReceiptsWei": "800000000000000000",
+  "scope": "One authorized free request attempted in existing Google session. No transaction hash provided; no receipt or new credit verified. Stopped at reCAPTCHA service failure and handed off to human. No outgoing transfer, deployment, Task A signature, payment or alternate ineligible faucet."
+}
