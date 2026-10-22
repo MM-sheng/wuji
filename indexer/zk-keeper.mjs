@@ -93,7 +93,10 @@ function saveReorgProof(proof) {
 export async function round(source) {
   assertChain(await rpc('eth_chainId', []), CHAIN_ID);
   // WujiHeaderIndex (the mainnet contract) has no proof path: its ZK-only views do not exist and read as absent.
-  const optional = async (sig, fallback) => { try { return BigInt(await call(sel(sig))); } catch { return fallback; } };
+  const optional = async (sig, fallback) => {
+    try { return BigInt(await call(sel(sig))); }
+    catch(e) { if(e.rpcReadError||e.rpcTransportError)throw e;return fallback; }
+  };
   immut ||= {
     genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
     interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),

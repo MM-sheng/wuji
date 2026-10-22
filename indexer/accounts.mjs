@@ -19,7 +19,7 @@ const uint = v => { if (!/^0x[0-9a-f]{64,}$/i.test(v)) throw Error('Invalid acco
 const int = v => { const x = uint(v); return x >= 1n << 255n ? x - (1n << 256n) : x; };
 const WAD = 10n ** 18n;
 // Older deployments may omit a view; a lost RPC connection is not evidence it is absent.
-const optional = fallback => error => { if(error.rpcTransportError)throw error;return fallback; };
+const optional = fallback => error => { if(error.rpcReadError||error.rpcTransportError)throw error;return fallback; };
 // Annual vol of S is ≈115%; a pool with sensitivity K moves ≈115%/K per year.
 export const annualVol = k => 1.15 / (Number(k) / 1e18);
 

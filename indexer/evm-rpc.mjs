@@ -26,7 +26,7 @@ export async function rpcRequest(url,method,params,{fetcher=fetch,attempts=3,tim
    if(e.retryable===false||attempt+1===limit){
     const detail=e.httpStatus?`HTTP ${e.httpStatus}`:`transport ${transportDetail(e)}`;
     const failure=Error(`RPC ${method} failed after ${attempt+1} attempt(s): ${detail}`);
-    failure.rpcTransportError=e.retryable!==false;failure.transportDetail=detail;throw failure;
+    failure.rpcReadError=true;failure.rpcTransportError=e.retryable!==false;failure.transportDetail=detail;throw failure;
    }
    await new Promise(r=>setTimeout(r,retryDelayMs*(attempt+1)));continue;
   }

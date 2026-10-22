@@ -195,3 +195,9 @@ test('transport failure reading index freeze status stops maintenance before a s
  const read=(to,data)=>to===index&&data==='0x054f7d9c'?Promise.reject(error):f.read(to,data);
  await assert.rejects(maintainPool({...f,read,pool}),e=>e===error);assert.deepEqual(f.sends,[]);
 });
+
+test('nonretryable HTTP read failure is not an absent optional field',async()=>{
+ const f=fixture(),error=Object.assign(Error('HTTP 401'),{rpcReadError:true,rpcTransportError:false});
+ const read=(to,data)=>to===pool&&data==='0x7dd7307d'?Promise.reject(error):f.read(to,data);
+ await assert.rejects(maintainPool({...f,read,pool}),e=>e===error);assert.deepEqual(f.sends,[]);
+});

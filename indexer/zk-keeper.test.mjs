@@ -26,6 +26,20 @@ test('real account-maintenance path reports transport failures for every pool',a
  }finally{globalThis.fetch=original;}
 });
 
+test('index capability reads propagate network failure rather than caching a default',async()=>{
+ const {round}=await import('./zk-keeper.mjs?optional-rpc');const {sel}=await import('./zk-challenge.mjs');
+ const original=globalThis.fetch;let sourceAccessed=false;
+ globalThis.fetch=async(_url,init)=>{
+  const {method,params,id}=JSON.parse(init.body);
+  if(method==='eth_call'&&params[0].data===sel('MAX_PROOF_HEADERS()'))throw Object.assign(Error('offline'),{code:'ECONNRESET'});
+  return new Response(JSON.stringify({jsonrpc:'2.0',id,result:method==='eth_chainId'?'0x7a69':'0x'+'0'.repeat(64)}));
+ };
+ try{
+  await assert.rejects(round({tip:async()=>{sourceAccessed=true;return 1;}}),e=>e.rpcTransportError&&/ECONNRESET/.test(e.message));
+  assert.equal(sourceAccessed,false);
+ }finally{globalThis.fetch=original;}
+});
+
 test('a Bitcoin source that never answers fails the round instead of hanging the keeper', async () => {
   process.env.ZK_SOURCE_TIMEOUT_S = '0.2';
   const { round } = await import('./zk-keeper.mjs?timeout');
