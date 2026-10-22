@@ -1,0 +1,159 @@
+{
+  "status": "PARTIAL_REAL_UI_PASS_TYPE4_OPEN",
+  "chainId": 11155111,
+  "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+  "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+  "rejection": {
+    "status": "PASS_REAL_USER_REJECTION",
+    "amountWei": "1",
+    "uiMessage": "已在钱包中取消",
+    "buttonsRestored": true,
+    "userConfirmedRejection": true,
+    "before": {
+      "at": "2026-10-22T13:25:36.825Z",
+      "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+      "asset": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "chainId": 11155111,
+      "block": "0xb6a51e",
+      "blockHash": "0x81a1a95264f405c94abb2823cc0879520998b34931a8f2ba387551956403ad4f",
+      "ethWei": "2182842410466875",
+      "code": "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b",
+      "nonce": "12",
+      "pendingNonce": "12",
+      "wethWei": "18880180000000",
+      "allowanceWei": "0",
+      "nextId": "6",
+      "scope": "Public reads only. An unchanged nonce/balance alone is not proof of a human rejection; pair with real UI and user action."
+    },
+    "after": {
+      "at": "2026-10-22T13:26:15.383Z",
+      "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+      "asset": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "chainId": 11155111,
+      "block": "0xb6a522",
+      "blockHash": "0x2c6a02d991fd458feb4f9a9b7ff44876fabb7e9f30177e15b30ec6f679fadde1",
+      "ethWei": "2182842410466875",
+      "code": "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b",
+      "nonce": "12",
+      "pendingNonce": "12",
+      "wethWei": "18880180000000",
+      "allowanceWei": "0",
+      "nextId": "6",
+      "scope": "Public reads only. An unchanged nonce/balance alone is not proof of a human rejection; pair with real UI and user action."
+    },
+    "unchangedFields": [
+      "owner",
+      "pool",
+      "ethWei",
+      "code",
+      "nonce",
+      "pendingNonce",
+      "wethWei",
+      "allowanceWei",
+      "nextId"
+    ]
+  },
+  "retry": {
+    "status": "PASS_REAL_RETRY_AND_REJECTION",
+    "reloadedPage": false,
+    "uiMessage": "已在钱包中取消",
+    "userConfirmedRejection": true,
+    "after": {
+      "at": "2026-10-22T13:27:50.616Z",
+      "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+      "asset": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+      "chainId": 11155111,
+      "block": "0xb6a52a",
+      "blockHash": "0x4406130c1455dc134566c51261c5fc7d71f39494e819cfffa014d8569649e5b1",
+      "ethWei": "2182842410466875",
+      "code": "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b",
+      "nonce": "12",
+      "pendingNonce": "12",
+      "wethWei": "18880180000000",
+      "allowanceWei": "0",
+      "nextId": "6",
+      "scope": "Public reads only. An unchanged nonce/balance alone is not proof of a human rejection; pair with real UI and user action."
+    },
+    "unchangedFields": [
+      "owner",
+      "pool",
+      "ethWei",
+      "code",
+      "nonce",
+      "pendingNonce",
+      "wethWei",
+      "allowanceWei",
+      "nextId"
+    ]
+  },
+  "exitPageCancel": {
+    "status": "PASS_BROWSER_CANCEL_REOPEN_CANCEL",
+    "accountId": 4,
+    "confirmationSubmitted": false,
+    "scope": "Web page dialog only; not another real transaction rejection."
+  },
+  "initialSnapshot": {
+    "at": "2026-10-22T13:16:29.464Z",
+    "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+    "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+    "asset": "0xfff9976782d46cc05630d1f6ebab18b2324d6b14",
+    "chainId": 11155111,
+    "block": "0xb6a4f2",
+    "blockHash": "0xd3d25be2040fdcd278a72ca81ad8b9ead38295fe1617347a19d92e0ccb1e078a",
+    "ethWei": "1634364434982095",
+    "code": "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    "nonce": "10",
+    "pendingNonce": "10",
+    "wethWei": "19880180000000",
+    "allowanceWei": "0",
+    "nextId": "5"
+  },
+  "unexpectedConfirmedActions": {
+    "approvalHash": "0x79ef0a6c20be261901f8988e8a8ccc32effdb2a9b04d7e14fcd50676a95f9b72",
+    "approvalWei": "1000000000000",
+    "entryHash": "0xb1bccb29517109a9e8dbc4827ee837cb1a0d18e2d08b67005652b842fcc65d4e",
+    "accountId": 5,
+    "enterEpoch": 972684,
+    "depositWei": "1000000000000",
+    "principalWei": "997000000000",
+    "entryFeeWei": "3000000000",
+    "type": "0x2",
+    "status": "entering",
+    "requiresExitAndClaim": true
+  },
+  "costs": {
+    "approvalGasFeeWei": "191904001919040",
+    "entryGasFeeWei": "2259618022596180",
+    "testGasTopupWei": "3000000000000000",
+    "walletEthEquationVerified": true,
+    "walletWethEquationVerified": true,
+    "rejectionAndRetryIncrementalGasWei": "0"
+  },
+  "firstType4": {
+    "status": "OPEN_NEEDS_NEW_HUMAN_WALLET",
+    "oldWalletAlreadyDelegated": true,
+    "delegationCode": "0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b",
+    "requiredEvidence": [
+      "fresh account code 0x before first upgrade",
+      "actual type 0x4 with authorizationList",
+      "canonical successful receipt and expected call effects",
+      "record whether first type-4 contains entry or only upgrade/approval; no substitution"
+    ]
+  },
+  "validation": {
+    "terminalTestsPassed": 62,
+    "failed": 0,
+    "productionChanges": false,
+    "forge": {
+      "passed": 325,
+      "failed": 0,
+      "skipped": 24,
+      "fullHistoryEnabled": false
+    },
+    "duplicateTopupGuardPassed": true
+  },
+  "scope": "Two real human rejections and retry only. Approval and entry were confirmed rather than rejected and do not count as rejection or first type-4. New account #5 remains pending; no mainnet action."
+}

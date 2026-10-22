@@ -1,0 +1,67 @@
+{
+  "startedAt": "2026-10-22T13:20:19.905Z",
+  "status": "confirmed",
+  "chainId": 11155111,
+  "source": "0x85967858e2464535a12031103aba38f2795fe8fd",
+  "target": "0x6657289562f870677325124f3acbdebb0ea80b95",
+  "valueWei": "3000000000000000",
+  "nonce": "0xa2",
+  "initialBlock": "0xb6a504",
+  "beforeWei": "1442460433063055",
+  "purpose": "Test-only gas to reach the actual MetaMask rejection prompt; no WETH or new position",
+  "receipt": {
+    "type": "0x0",
+    "status": "0x1",
+    "cumulativeGasUsed": "0x364ae90",
+    "logs": [
+      {
+        "address": "0xfffffffffffffffffffffffffffffffffffffffe",
+        "topics": [
+          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+          "0x00000000000000000000000085967858e2464535a12031103aba38f2795fe8fd",
+          "0x0000000000000000000000006657289562f870677325124f3acbdebb0ea80b95"
+        ],
+        "data": "0x000000000000000000000000000000000000000000000000000aa87bee538000",
+        "blockHash": "0x90a04825c663bc61d7eada35252fcc1f3006f20fa2b3d014450ee2106741a1b6",
+        "blockNumber": "0xb6a505",
+        "blockTimestamp": "0x6ada0d98",
+        "transactionHash": "0xf04ac4fc7478ecdf4f67bd4e026e8a6d12d85d645a2ed96e93623cac24bbca49",
+        "transactionIndex": "0x83",
+        "logIndex": "0xf9",
+        "removed": false
+      }
+    ],
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000010000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000002000000000008000000000200000000000000000000000000000000400000000000000000000000000000000000000000000000000400000010000000",
+    "transactionHash": "0xf04ac4fc7478ecdf4f67bd4e026e8a6d12d85d645a2ed96e93623cac24bbca49",
+    "transactionIndex": "0x83",
+    "blockHash": "0x90a04825c663bc61d7eada35252fcc1f3006f20fa2b3d014450ee2106741a1b6",
+    "blockNumber": "0xb6a505",
+    "gasUsed": "0x5df7",
+    "effectiveGasPrice": "0x5f5e100",
+    "from": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "to": "0x6657289562f870677325124f3acbdebb0ea80b95",
+    "contractAddress": null
+  },
+  "completedAt": "2026-10-22T13:20:30.263Z",
+  "transaction": {
+    "type": "0x0",
+    "chainId": "0xaa36a7",
+    "nonce": "0xa2",
+    "gasPrice": "0x5f5e100",
+    "gas": "0x7bdf",
+    "to": "0x6657289562f870677325124f3acbdebb0ea80b95",
+    "value": "0xaa87bee538000",
+    "input": "0x",
+    "r": "0xc9642df89e8ba4fb03e4950d0190c488d59891dfc62f7cd611b64608201e0058",
+    "s": "0x5e19d61de534481136931a6027ac3aaa0a6275b35f7327400f85842e828998d0",
+    "v": "0x1546d72",
+    "hash": "0xf04ac4fc7478ecdf4f67bd4e026e8a6d12d85d645a2ed96e93623cac24bbca49",
+    "blockHash": "0x90a04825c663bc61d7eada35252fcc1f3006f20fa2b3d014450ee2106741a1b6",
+    "blockNumber": "0xb6a505",
+    "transactionIndex": "0x83",
+    "from": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "blockTimestamp": "0x6ada0d98"
+  },
+  "afterWei": "4442460433063055",
+  "gasFeeWei": "2405500000000"
+}
