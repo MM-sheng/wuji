@@ -1,0 +1,21 @@
+{
+  "block": "0xb6a2bf",
+  "fees": [
+    {
+      "id": 3,
+      "grossWei": "10033180323478",
+      "exitFeeWei": "30099540970",
+      "netWei": "10003080782508"
+    },
+    {
+      "id": 4,
+      "grossWei": "9906819676521",
+      "exitFeeWei": "29720459029",
+      "netWei": "9877099217492"
+    }
+  ],
+  "blockHash": "0x5c51148d562722efc993938670b775dd9602742830f0416acdedf329a5fa3832",
+  "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+  "feeBps": 30,
+  "method": "valueOf(uint256) at pinned preclaim block; fee=floor(gross*30/10000)"
+}

@@ -1,0 +1,57 @@
+{
+  "checkedAt": "2026-10-22T11:26:36.835Z",
+  "status": "PASS",
+  "chainId": 11155111,
+  "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+  "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+  "evmBlock": "0xb6a2d4",
+  "evmBlockHash": "0x207b7da9c2ebe5d7b8d544d30d6f4cfa754722b2dfb6c441d1236376eca2f70a",
+  "indexHeight": 972510,
+  "confirmations": 100,
+  "accounts": [
+    {
+      "id": 3,
+      "closed": true,
+      "simulations": {},
+      "nextAction": "verify closure and payment receipts"
+    },
+    {
+      "id": 4,
+      "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+      "side": "yin",
+      "principal_wad": "9970000000000",
+      "enterEpoch": 972012,
+      "exitEpoch": 972372,
+      "status": "claimable",
+      "claimable_wad": "9877099217492",
+      "value_wad": "9877099217492",
+      "pnl_wad": "-92900782508",
+      "atFloor": false,
+      "overshoot_wad": "0",
+      "multiple": 0.9906,
+      "simulations": {
+        "requestExit(uint256)": {
+          "callable": false,
+          "reason": "RPC eth_call: execution reverted: exit pending"
+        },
+        "claim(uint256)": {
+          "callable": true
+        }
+      },
+      "nextAction": "claim with user signature"
+    }
+  ],
+  "accounting": {
+    "pendingPrincipal()": "0",
+    "refundReserve()": "0",
+    "reservedClaims()": "9877099217492",
+    "buffer()": "0",
+    "badDebt()": "0",
+    "settling()": "0",
+    "insolvent()": "0"
+  },
+  "poolWethWei": "9877099217493",
+  "walletWethWei": "10003080782508",
+  "protectedCashWei": "9877099217492",
+  "scope": "Pinned-block public reads and eth_call only. No signatures, transactions, auto exits or claims. Reserve floor is not a proof of all live claims or protocol solvency."
+}

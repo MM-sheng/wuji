@@ -42,7 +42,8 @@ operator 的冻结运行快照记录为 `193269d`。公开部署清单现同步�
 源码 `03f6256` 已部署为新指数 `0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a`，
 配套新工厂、三个 WETH 池和独立 keeper。9 个合约的代码与绑定、从原起点的完整状态重算已通过；
 专用测试账户的两笔各 0.00001 WETH 往返已于 10 月 15 日完成，10 月 18 日复验；
-真人 MetaMask 阳账户 #3 已进场，仍待未来 Bitcoin 定价与后续退出领取。
+真人 MetaMask 阳账户 #3 / 阴账户 #4 已于 10 月 22 日完成完整进出场与领取，
+合计回款 0.00001988018 WETH，账户关闭、准备金归零；见 [真人往返与费用核对](tasks/T13_WALLET_ROUNDTRIP_2026-10-22.md)。
 见 [v3 部署记录](../contracts/deployments/sepolia-header-v3.json) 和
 [部署验收](reviews/2026-10-12-sepolia-header-v3.md)。这不会修改 v2 或更早的不可变合约。
 

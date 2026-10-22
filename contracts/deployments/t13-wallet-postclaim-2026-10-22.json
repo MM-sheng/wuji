@@ -1,0 +1,25 @@
+{
+  "checkedAt": "2026-10-22T11:30:19.167Z",
+  "status": "PASS",
+  "chainId": 11155111,
+  "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+  "owner": "0x6657289562f870677325124f3acbdebb0ea80b95",
+  "evmBlock": "0xb6a2e7",
+  "evmBlockHash": "0x47d1357e6920b4e0eaabf9355de1320c1d288d7109bd5d57392dd18a45055912",
+  "walletWethWei": "19880180000000",
+  "poolWethWei": "0",
+  "accounting": {
+    "openAccounts()": "0",
+    "reservedClaims()": "0",
+    "pendingPrincipal()": "0",
+    "refundReserve()": "0",
+    "buffer()": "0",
+    "badDebt()": "0",
+    "settling()": "0",
+    "insolvent()": "0"
+  },
+  "closedAccounts": [
+    3,
+    4
+  ]
+}
