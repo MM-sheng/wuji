@@ -43,7 +43,7 @@ export async function metricsFor(config,manifest,{rpc,fetcher=fetch,now=Date.now
  const sourceResults=await Promise.allSettled((config.bitcoinSources||['https://mempool.space/api','https://blockstream.info/api']).map(async base=>{
   const response=await fetcher(base+'/blocks/tip/height',{signal:AbortSignal.timeout(15000),cache:'no-store'});
   assert.ok(response.ok);const raw=(await response.text()).trim();assert.match(raw,/^[0-9]{1,9}$/);const tip=Number(raw);
-  assert.ok(tip>=(manifest.genesisHeight||metrics.indexHeight||0),'Bitcoin source predates deployment');return tip;
+  assert.ok(tip>=Math.max(manifest.genesisHeight||0,metrics.indexHeight||0),'Bitcoin source predates verified history');return tip;
  }));
  const tips=sourceResults.filter(x=>x.status==='fulfilled').map(x=>x.value);
  metrics.sourceError=tips.length!==2||(tips.length===2&&Math.abs(tips[0]-tips[1])>2);

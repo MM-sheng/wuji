@@ -35,7 +35,7 @@ test('real metrics path keeps pinned reads and reports a keeper RPC failure inde
 });
 test('a syntactically valid Bitcoin height older than the deployment cannot clear source alerts',async()=>{
  const f=setup();f.manifest.genesisHeight=900;
- const fetcher=(url,options)=>url.endsWith('/height')?Promise.resolve(new Response('0')):f.fetcher(url,options);
+ const fetcher=(url,options)=>url.endsWith('/height')?Promise.resolve(new Response('950')):f.fetcher(url,options);
  try{const m=await metricsFor(f.config,f.manifest,{rpc:f.rpc,fetcher});assert.equal(m.sourceError,true);assert.equal(m.externalTip,undefined);}
  finally{fs.rmSync(f.dir,{recursive:true,force:true});}
 });
