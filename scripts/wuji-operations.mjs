@@ -42,7 +42,8 @@ export async function metricsFor(config,manifest,{rpc,fetcher=fetch,now=Date.now
  }catch{metrics.rpcError=true;}
  const sourceResults=await Promise.allSettled((config.bitcoinSources||['https://mempool.space/api','https://blockstream.info/api']).map(async base=>{
   const response=await fetcher(base+'/blocks/tip/height',{signal:AbortSignal.timeout(15000),cache:'no-store'});
-  assert.ok(response.ok);const raw=(await response.text()).trim();assert.match(raw,/^[0-9]{1,9}$/);return Number(raw);
+  assert.ok(response.ok);const raw=(await response.text()).trim();assert.match(raw,/^[0-9]{1,9}$/);const tip=Number(raw);
+  assert.ok(tip>=(manifest.genesisHeight||metrics.indexHeight||0),'Bitcoin source predates deployment');return tip;
  }));
  const tips=sourceResults.filter(x=>x.status==='fulfilled').map(x=>x.value);
  metrics.sourceError=tips.length!==2||(tips.length===2&&Math.abs(tips[0]-tips[1])>2);
@@ -55,6 +56,7 @@ export async function metricsFor(config,manifest,{rpc,fetcher=fetch,now=Date.now
   assert.ok(Number.isSafeInteger(observed)&&Math.abs(latest-observed)<=60,'indexer observation stale');
   metrics.indexerError=!!h.err||!!h.halted;
   if(h.chain.lastHeight===metrics.indexHeight){
+   metrics.indexerReconciliationPending=false;
    // Compare signed S without floating-point conversions.
    const onchain=BigInt(metrics.S),signed=onchain>=(1n<<255n)?onchain-(1n<<256n):onchain;
    metrics.divergence=BigInt(h.chain.indexer_S_wad)!==signed||h.chain.indexerHash.toLowerCase()!==metrics.lastHash.toLowerCase();

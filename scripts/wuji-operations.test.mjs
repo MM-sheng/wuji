@@ -33,6 +33,12 @@ test('real metrics path keeps pinned reads and reports a keeper RPC failure inde
  try{const m=await metricsFor(f.config,f.manifest,{rpc:f.rpc,fetcher:f.fetcher});assert.equal(m.rpcError,undefined);assert.equal(m.divergence,false);assert.equal(m.keeperRpcFailure,true);assert.equal(m.pools[0].pendingEpochs,0);assert.equal(m.externalTip,1135);}
  finally{fs.rmSync(f.dir,{recursive:true,force:true});}
 });
+test('a syntactically valid Bitcoin height older than the deployment cannot clear source alerts',async()=>{
+ const f=setup();f.manifest.genesisHeight=900;
+ const fetcher=(url,options)=>url.endsWith('/height')?Promise.resolve(new Response('0')):f.fetcher(url,options);
+ try{const m=await metricsFor(f.config,f.manifest,{rpc:f.rpc,fetcher});assert.equal(m.sourceError,true);assert.equal(m.externalTip,undefined);}
+ finally{fs.rmSync(f.dir,{recursive:true,force:true});}
+});
 test('CLI persistence deduplicates across restarts and emits one recovery; concurrent lock cannot be stolen',async()=>{
  const f=setup(),original=globalThis.fetch;globalThis.fetch=f.fetcher;
  fs.mkdirSync(f.config.output);fs.writeFileSync(path.join(f.config.output,'status.json'),JSON.stringify({seq:0,costAttemptAt:new Date().toISOString(),cost:{checkedAt:new Date().toISOString()},costError:false}));

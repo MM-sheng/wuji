@@ -90,6 +90,7 @@ export function assess(metrics,previous={},limits=DEFAULT_LIMITS,now=Date.now())
  }
  check('bitcoin-source',metrics.sourceError?'warning':null,'独立 Bitcoin 链头来源不可用或分歧');
  check('indexer',metrics.indexerError?'critical':null,'本地索引器不可用或观测过时');
+ if(metrics.indexerReconciliationPending!==undefined)check('indexer-reconciliation',metrics.indexerReconciliationPending?'warning':null,'索引器和合约观测高度不同，暂不可比较整数 S');
  if(metrics.divergence!==undefined)check('divergence',metrics.divergence?'critical':null,'同高度链上与索引器整数 S / 哈希不一致');
  const age=metrics.logAgeSeconds;
  check('keeper-log',age===null?'critical':level(age,limits.logWarnSeconds,limits.logCriticalSeconds),age===null?'keeper 日志缺失':`keeper 日志 ${Math.floor(age)} 秒未更新`);
