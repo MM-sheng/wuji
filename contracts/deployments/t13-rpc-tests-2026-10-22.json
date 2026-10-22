@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-10-22T11:42:57.220871+00:00",
+  "sourceCommit": "662e35e5f07730f64caf3c553a29e00c1ef45a09",
+  "results": {
+    "node": {
+      "sha256": "88ac2992f53b4f91943d1a8d72e98d0082354d0f62c93776b8fc23c656297f6f",
+      "tests": 53,
+      "pass": 53,
+      "fail": 0,
+      "skipped": 0
+    },
+    "forge": {
+      "sha256": "5d0724971ef572b27a9aef01e4cd055eaabd8d6502afa2ae8e5c4c3bfe0a2cc3",
+      "passed": 325,
+      "failed": 0,
+      "skipped": 24
+    },
+    "watchdog": {
+      "sha256": "df94a176b288e759a9ce6e8b341b037939d08133099f165f1d7c0dfc4396fcf7",
+      "tests": 5,
+      "pass": 5,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "nodeVersion": "v26.8.1",
+  "forgeScope": "325 passed,24 default skips at d0bd0bd; contracts unchanged by follow-up 662e35e"
+}

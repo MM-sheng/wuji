@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-10-22T11:40:13.931Z",
+  "status": "matched",
+  "chainId": 11155111,
+  "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "evmBlock": "0xb6a318",
+  "evmBlockHash": "0x9788bed3b4208da28ec82d933106d39e39b60b424dbd2f8e08cb4a60dc20d9b6",
+  "genesisHeight": 969546,
+  "bitcoinHeight": 972510,
+  "rawHash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+  "displayHash": "00000000000000000001157552f66a7a0cc51a4339924e67b4c5dc0fcb99f878",
+  "U": "293",
+  "onchainS_wad": "3516000000000000",
+  "recomputedS_wad": "3516000000000000",
+  "confirmations": 100,
+  "descendantLinksChecked": 100,
+  "sources": [
+    {
+      "base": "https://mempool.space/api",
+      "height": 972510,
+      "hash": "00000000000000000001157552f66a7a0cc51a4339924e67b4c5dc0fcb99f878"
+    },
+    {
+      "base": "https://blockstream.info/api",
+      "height": 972510,
+      "hash": "00000000000000000001157552f66a7a0cc51a4339924e67b4c5dc0fcb99f878"
+    }
+  ],
+  "scope": "Raw local P2P headers replayed from the deployment anchor; final hash cross-checked with two HTTP sources. Not a third-party audit."
+}

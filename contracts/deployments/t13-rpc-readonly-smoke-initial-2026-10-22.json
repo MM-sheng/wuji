@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-10-22T11:42:48.944Z",
+  "status": "PASS",
+  "rpcReads": 241,
+  "sendAttempts": 0,
+  "runtimeSource": "d0bd0bd",
+  "rounds": [
+    {
+      "evmBlock": "0xb6a324",
+      "evmBlockHash": "0x6a2d6ed97322ade960ffef3e4321ae6860f24182c3baa9aed33a63db9d44360f",
+      "pools": [
+        {
+          "pool": "0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        },
+        {
+          "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        },
+        {
+          "pool": "0xcd159a006aeb31535ead9514a9ea335466c9c137",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        }
+      ]
+    },
+    {
+      "evmBlock": "0xb6a324",
+      "evmBlockHash": "0x6a2d6ed97322ade960ffef3e4321ae6860f24182c3baa9aed33a63db9d44360f",
+      "pools": [
+        {
+          "pool": "0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        },
+        {
+          "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        },
+        {
+          "pool": "0xcd159a006aeb31535ead9514a9ea335466c9c137",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        }
+      ]
+    },
+    {
+      "evmBlock": "0xb6a325",
+      "evmBlockHash": "0x3f24622aebe08069f72c3cb429e1985d3b15fb3574fd3039db2dd20996cf5c59",
+      "pools": [
+        {
+          "pool": "0xbfdcebf9dd77ddfd12e9be020564ab4e16d4ae68",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        },
+        {
+          "pool": "0x8cdf42009548483f25fe4bcd6ac00bbb88e2bf14",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        },
+        {
+          "pool": "0xcd159a006aeb31535ead9514a9ea335466c9c137",
+          "done": [],
+          "settling": false,
+          "insolvent": false,
+          "badDebtWei": "0"
+        }
+      ]
+    }
+  ]
+}

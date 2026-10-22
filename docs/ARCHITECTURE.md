@@ -8,13 +8,16 @@ WUJI 是一个可验证的纯随机结算市场与公开基准，提供可由公
 数学边界与研究方法见 [WUJI_FOUNDATIONS.md](WUJI_FOUNDATIONS.md)。
 任务规范见 [BTC_SOURCE.md](tasks/BTC_SOURCE.md)。
 
-## 当前运行版本提示（2026-10-18）
+## 当前运行版本提示（2026-10-22）
 
 本 checkout 已整合 `codex/fix-mtp-window` 至 `bd81100` 的 v3 源码与修复，
 包含 MTP 窗口、退出款准备金、有界结算与分段重组封存。当前终端保留后续的钱包修复。
-运行中的 keeper/indexer 仍采用 operator 的冻结快照；合入源码不自动替换服务或改变不可变部署。
+indexer 仍采用 operator 的原冻结快照；keeper 于 2026-10-22 单独切换到 RPC 恢复修复快照
+`runtime-rpc-2026-10-22-r2`（源码 `662e35e`，含 `d0bd0bd`）。逐池网络失败现独立计数并触发原监督恢复，
+可选字段的网络失败不再当成缺失接口；原快照保留。见 [RPC 修复与运行切换](tasks/T13_RPC_FIX_2026-10-22.md)。
+合入源码不自动替换其他服务或改变不可变部署。
 当前不可变指数为 `0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a`，部署源码 `03f6256`，
-operator 的冻结运行快照记录为 `193269d`。公开部署清单现同步至
+operator 的原冻结运行快照记录为 `193269d`；上述 keeper 修复只替换三个模块并新增一个健康计数模块。公开部署清单现同步至
 [sepolia-header-v3.json](../contracts/deployments/sepolia-header-v3.json)。
 恢复和验收结果见 [运行报告](tasks/T13_RUNTIME_2026-10-18.md)。旧部署不随源码或文档升级。
 
