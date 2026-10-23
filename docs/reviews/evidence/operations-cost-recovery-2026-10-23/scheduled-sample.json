@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-23T13:23:01.300Z",
+  "monitorSource": "92c4fa77e837825baca5fd4a08bae465c54f7752",
+  "costAttemptAt": "2026-10-23T13:21:43.872Z",
+  "costError": false,
+  "active": [
+    "balance",
+    "reserve"
+  ],
+  "nextCostAttemptPolicy": "At least five minutes after a failed attempt; one hour after successful attempt."
+}

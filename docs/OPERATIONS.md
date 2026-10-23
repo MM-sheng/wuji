@@ -92,3 +92,5 @@ node scripts/check-operations-alerts.mjs operator/sepolia-header-v3/operations/s
 
 测试入口：`node --test indexer/operations.test.mjs scripts/wuji-operations.test.mjs scripts/check-operations-alerts.test.mjs`。
 详见 [部署、实测成本和验证报告](tasks/T13_OPERATIONS_2026-10-22.md)。
+
+2026-10-23 成本刷新失败后的五分钟恢复与实际切换验收见 [修复报告](tasks/T13_COST_RECOVERY_2026-10-23.md)。

@@ -1,0 +1,118 @@
+{
+  "commit": "92c4fa77e837825baca5fd4a08bae465c54f7752",
+  "baseCommit": "14089fd15ab442705ccdca4d209045d3c4f562f7",
+  "runtime": "/Users/m/Projects/wuji/operator/sepolia-header-v3/operations-runtime-2026-10-23-r4",
+  "changedFiles": [
+    "scripts/wuji-operations.mjs"
+  ],
+  "files": [
+    {
+      "path": "indexer/accounts.mjs",
+      "sha256": "0253b50f24d20d01a646be5c30fb19a4d093eea94e7f648813dc9503339fba39"
+    },
+    {
+      "path": "indexer/bitcoin-index.mjs",
+      "sha256": "d938ae77b85686089a66510a6617063cf39023f5f58be92839fa446401509684"
+    },
+    {
+      "path": "indexer/bitcoin-keeper.mjs",
+      "sha256": "7e8900b2df6b221ac45b4795154a4890e7222d9114c7a334b8ff56b120072684"
+    },
+    {
+      "path": "indexer/bitcoin-p2p.mjs",
+      "sha256": "e1d75ba67aab91dd82a73877839143264b517b1176efdc9a1e422f897264b345"
+    },
+    {
+      "path": "indexer/bitcoin-source.mjs",
+      "sha256": "2fbde6a20ff4ec5c0a8c4c80ecebc2b5dc1fda0b546a218b138e2d88f6ab81b3"
+    },
+    {
+      "path": "indexer/bitcoin.mjs",
+      "sha256": "d40d36c181ec11e7317245e9275d5fce4145fdd2f5d95b73d914826a122ed7a1"
+    },
+    {
+      "path": "indexer/bsc-index.mjs",
+      "sha256": "2b2640b46d5d27c1f9a0ce53825e83d4630a7755052bd4ece38427e81a2be45d"
+    },
+    {
+      "path": "indexer/bsc-keeper.mjs",
+      "sha256": "29a245597a52cf36e4dab9a73652ec8996a44adaeceedf653096fbaff16ef857"
+    },
+    {
+      "path": "indexer/evm-rpc.mjs",
+      "sha256": "18066b1d829b87f833815967b6d377c69f2e5de383a06256256a82d6b5625fa5"
+    },
+    {
+      "path": "indexer/frozen-exit.mjs",
+      "sha256": "3cd6704edccf76dcb901819ddce3167b37281de1b37ad00f32ea7f6b2eac42eb"
+    },
+    {
+      "path": "indexer/frozen-keeper.mjs",
+      "sha256": "4c303e2e8ad926bfbeae774617c716e6ddb04cda739a785a3a043450da865bba"
+    },
+    {
+      "path": "indexer/gap-sync.mjs",
+      "sha256": "865cbcb173f4023bff60717887ea208edd28e4f83dc6575756d4da4755e91e19"
+    },
+    {
+      "path": "indexer/header-history.mjs",
+      "sha256": "7098939e05d2f8e0b340326eb6d01b1883b9588b5c5445b4c8840aef7b9feab0"
+    },
+    {
+      "path": "indexer/index.mjs",
+      "sha256": "241f83835bd28c4a05412cf7cb65feb6dee78657e1639cd912e3ec1066a11a8c"
+    },
+    {
+      "path": "indexer/keeper-gas.mjs",
+      "sha256": "4f3022596038f396da913037632f58c8f2457a6b7b72fe5598070a7b54233165"
+    },
+    {
+      "path": "indexer/keeper-health.mjs",
+      "sha256": "88f467addb30f2b41ad302e3cd2190056143892903cac390359d1abae1643b47"
+    },
+    {
+      "path": "indexer/keeper-rpc.mjs",
+      "sha256": "158c0da473f63e69cf1b28716af65bb1ab97b16f6e64fbd9a048d9d5c45ead3d"
+    },
+    {
+      "path": "indexer/keeper.mjs",
+      "sha256": "884c5228a846575b2c5bd88ac77a14e77ad500b0dffb0855eba8071728b3f890"
+    },
+    {
+      "path": "indexer/networks.mjs",
+      "sha256": "98e38293d31e31df9561ba6a651072ea3e4e51a61098adb137723d8b15b66fae"
+    },
+    {
+      "path": "indexer/operations.mjs",
+      "sha256": "8715011cdb9c46e8c2099a56f4ac0ec17c0dec37d3cc082c2b800567847b54c9"
+    },
+    {
+      "path": "indexer/seal-segments.mjs",
+      "sha256": "a1c7acaecff02efe10c62be79f373f2d908b7edeea385fd4da552edb6c1b61d0"
+    },
+    {
+      "path": "indexer/seal.mjs",
+      "sha256": "3b825a145af235f950b457fbece5c43fcafd189a4b61217b517c9f9957140593"
+    },
+    {
+      "path": "indexer/zk-challenge.mjs",
+      "sha256": "5d648a25dbb8cde3d686b8ea7f25c8ad395b7c2ba0b305e5ab5f265a195e5149"
+    },
+    {
+      "path": "indexer/zk-keeper.mjs",
+      "sha256": "520bb62333f5c3910aceb13f990dc15afaf65739f96afd41ba647429dc4ad18d"
+    },
+    {
+      "path": "indexer/zk-test-helpers.mjs",
+      "sha256": "fc5974bc3829f817e167ed3fc3c412322fd8dbcae765cecda84acd5bba505ab7"
+    },
+    {
+      "path": "indexer/zk-watcher.mjs",
+      "sha256": "2029dace693304f9a2e8bcf7cc2dccfe6fb85d1ad9fb420998df12a4c0d1cbf1"
+    },
+    {
+      "path": "scripts/wuji-operations.mjs",
+      "sha256": "89cb306481f43688b58240a0a287f6b92aa7056e702cc6a60ffcc827137a0be5"
+    }
+  ]
+}

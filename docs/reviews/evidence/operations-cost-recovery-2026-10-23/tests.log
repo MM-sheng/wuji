@@ -1,0 +1,37 @@
+✔ complete nonce scan includes failed gas, excludes failed ETH value, and separates bounty allocations/claims (2.004458ms)
+✔ missing nonce transaction, missing receipt and incomplete log coverage cannot become a complete report (0.818375ms)
+✔ chain mismatch, reorganization, delegated worker, stale finality and excessive scan all fail closed (1.245ms)
+✔ 100 confirmations and batching do not cause a false lag alert (0.194125ms)
+✔ durable transitions notify once, escalate once and recover once, without per-value spam (0.237916ms)
+✔ unavailable RPC does not silently recover a low balance or an existing backlog (0.139458ms)
+✔ ready-epoch timer persists across polls, resets for a new epoch, and does not clear on read failure (0.10075ms)
+✔ missing logs, frozen index, reserve deficits and insolvent pools are visible (0.057042ms)
+✔ acknowledged transition stays quiet; new recovery notifies once (1.436584ms)
+✔ missing/stale monitor alerts once and notifies its recovery (0.389459ms)
+✔ truncated event history is visible, not silently acknowledged (0.078417ms)
+✔ persistent sequence corruption stays quiet after the first actionable alert (0.058083ms)
+{"seq":1,"at":"2026-10-23T13:20:57.657Z","key":"balance","type":"opened","severity":"critical","message":"keeper 余额 1 wei（Sepolia ETH）"}
+{"at":"2026-10-23T13:20:57.657Z","status":"observed","active":["balance"],"costComplete":true}
+{"at":"2026-10-23T13:20:57.659Z","status":"observed","active":["balance"],"costComplete":true}
+{"seq":2,"at":"2026-10-23T13:20:57.660Z","key":"balance","type":"recovered","severity":"critical","message":"keeper 余额 100000000000000000 wei（Sepolia ETH）"}
+{"at":"2026-10-23T13:20:57.660Z","status":"observed","active":[],"costComplete":true}
+{"seq":1,"at":"2026-10-23T13:20:57.662Z","key":"balance","type":"opened","severity":"critical","message":"keeper 余额 1 wei（Sepolia ETH）"}
+{"seq":2,"at":"2026-10-23T13:20:57.662Z","key":"cost-coverage","type":"opened","severity":"warning","message":"24 小时成本窗口不完整，禁止按零成本展示"}
+{"at":"2026-10-23T13:20:57.662Z","status":"observed","active":["balance","cost-coverage"],"costComplete":false}
+{"at":"2026-10-23T13:20:57.663Z","status":"observed","active":["balance","cost-coverage"],"costComplete":false}
+{"seq":3,"at":"2026-10-23T13:20:57.664Z","key":"cost-coverage","type":"recovered","severity":"warning","message":"24 小时成本窗口不完整，禁止按零成本展示"}
+{"at":"2026-10-23T13:20:57.664Z","status":"observed","active":["balance"],"costComplete":true}
+{"at":"2026-10-23T13:20:57.665Z","status":"observed","active":["balance"],"costComplete":true}
+✔ real metrics path keeps pinned reads and reports a keeper RPC failure independently of log activity (160.924542ms)
+✔ a syntactically valid Bitcoin height older than the deployment cannot clear source alerts (1.63725ms)
+✔ CLI persistence deduplicates across restarts and emits one recovery; concurrent lock cannot be stolen (6.605708ms)
+✔ failed cost refresh retries after five minutes, preserves historical cost and recovers once (4.333583ms)
+✔ cost retry schedule is bounded and error diagnostics never retain raw RPC messages (0.267708ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 217.357875
