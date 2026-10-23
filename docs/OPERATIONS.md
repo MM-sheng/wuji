@@ -1,6 +1,6 @@
 # WUJI 只读运营监控
 
-当前 Sepolia header-v3：每 5 分钟采样，滚动 24 小时成本每小时刷新。
+当前 Sepolia header-v3：每 5 分钟采样，滚动 24 小时成本成功后每小时刷新；失败后最早五分钟重试。
 监控不读取 keystore、不签名、不补给、不发送交易、不重启 keeper，也不更改合约参数。
 它与 keeper 自身的连续失败恢复机制分开运行。
 
@@ -16,6 +16,13 @@
 逐笔取得收据并核对规范块。找不到任一交易/收据、发生重组、超过 200 笔扫描预算、
 finalized 视图陈旧或日志不全时，当前统计标记不完整；不会以日志缺失推断零支出。
 窗口开始为请求截止时间前的最后一个块，计入其后、截止块之前的全部交易。
+
+失败不会把最近一次完整记录改为零，也不会把旧记录当作本次成功：`costError` 和
+`cost-coverage` 告警保持到新窗口真正完成。失败后下一次五分钟采样可重新扫描，
+不再因一次暂时读取失败等待整小时；成功后恢复原每小时频率。每次扫描仍受 210 秒预算和进程锁约束。
+`costFailure` 只记录失败类别、RPC 方法及白名单原因（历史状态不可用、限流、超时、预算耗尽），
+不保存服务端任意原文、URL 或凭据。无法分类时保留 null，不推断具体故障。
+
 
 - ETH gas = 收据 gasUsed × effectiveGasPrice，加上存在时的 blob fee，包含失败交易。
 - 指数操作、池维护、奖励领取和其他目标分别归类，不过滤未知目标交易。
@@ -62,7 +69,7 @@ ready epoch 的首次观察时间保存在状态文件；首次安装不能反�
 
 macOS launchd 作业 `com.wuji.sepolia-header-v3-operations` 每 300 秒启动一次只读采样。
 实际服务使用独立冻结快照，源文件哈希、路径和提交记录在
-`operator/sepolia-header-v3/operations-runtime-source-r3.json`；原 keeper/indexer 不切换。
+`operator/sepolia-header-v3/operations-runtime-source-r4.json`；原 keeper/indexer 不切换。
 运行输出为 `operator/sepolia-header-v3/operations.log`。
 
 Codex 线程心跳 **WUJI运营告警**（id `wuji`）每 30 分钟检查本地报告，

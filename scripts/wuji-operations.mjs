@@ -65,7 +65,20 @@ export async function metricsFor(config,manifest,{rpc,fetcher=fetch,now=Date.now
  return metrics;
 }
 
-export async function run(config,{refreshCost=false}={}){
+// Successful windows refresh hourly; a failed read is retried on the next five-minute sample.
+// The old complete window remains historical evidence, never a replacement for a failed refresh.
+export function costRefreshDue(previous,intervalSeconds,now=Date.now()){
+ const interval=previous.costError===true?Math.min(intervalSeconds,300):intervalSeconds;
+ return !previous.costAttemptAt||now-Date.parse(previous.costAttemptAt)>=interval*1000;
+}
+export function costFailureDetail(error,method){
+ const reason=/cost deadline exceeded/.test(error.message)?'deadline':
+  /missing trie node|historical state|state is not available|state unavailable|no state available/i.test(error.message)?'historical-state-unavailable':
+  /rate limit|too many requests|HTTP 429/i.test(error.message)?'rate-limited':
+  /timeout|timed out/i.test(error.message)?'timeout':null;
+ return {kind:error.rpcReadError?'transport':error.code==='ERR_ASSERTION'?'validation':'execution',rpcMethod:method,reason};
+}
+export async function run(config,{refreshCost=false,rpc:rpcOverride,fetcher=fetch,costReader=costWindow}={}){
  const manifest=JSON.parse(fs.readFileSync(config.manifest));assert.equal(manifest.chainId,11155111);
  assert.match(config.worker,/^0x[0-9a-f]{40}$/i);assert.ok(Number.isFinite(config.costEverySeconds)&&config.costEverySeconds>=300);
  const limits={...DEFAULT_LIMITS,...config.limits};
@@ -81,12 +94,12 @@ export async function run(config,{refreshCost=false}={}){
  try{
   const file=path.join(config.output,'status.json');const previous=fs.existsSync(file)?JSON.parse(fs.readFileSync(file)):{};
   if(previous.costAttemptAt)assert.ok(Number.isFinite(Date.parse(previous.costAttemptAt)),'invalid cost timestamp');
-  const rpc=(m,p)=>rpcRequest(manifest.rpc,m,p,{attempts:2});
-  const metrics=await metricsFor(config,manifest,{rpc});let cost=previous.cost,costError=previous.costError;
-  if(!metrics.rpcError&&(refreshCost||!previous.costAttemptAt||Date.now()-Date.parse(previous.costAttemptAt)>=config.costEverySeconds*1000)){
-   previous.costAttemptAt=new Date().toISOString();const deadline=Date.now()+210000;
-   try{cost=await costWindow({rpc:(m,p)=>{assert.ok(Date.now()<deadline,'cost deadline exceeded');return rpc(m,p);},worker:config.worker,index:manifest.WujiHeaderIndex,pools:manifest.accounts.pools.map(p=>p.address.toLowerCase()),rewards:manifest.RelayerRewards,token:manifest.accounts.collateral.address});costError=false;}
-  catch(error){costError=true;previous.costFailure={kind:error.rpcReadError?'transport':error.code==='ERR_ASSERTION'?'validation':'execution',rpcMethod:/^RPC ([a-zA-Z0-9_]+)/.exec(error.message)?.[1]||null};}
+  const rpc=rpcOverride||((m,p)=>rpcRequest(manifest.rpc,m,p,{attempts:2}));
+  const metrics=await metricsFor(config,manifest,{rpc,fetcher});let cost=previous.cost,costError=previous.costError;
+  if(!metrics.rpcError&&(refreshCost||costRefreshDue(previous,config.costEverySeconds))){
+   previous.costAttemptAt=new Date().toISOString();const deadline=Date.now()+210000;let costMethod=null;
+   try{cost=await costReader({rpc:(m,p)=>{costMethod=m;assert.ok(Date.now()<deadline,'cost deadline exceeded');return rpc(m,p);},worker:config.worker,index:manifest.WujiHeaderIndex,pools:manifest.accounts.pools.map(p=>p.address.toLowerCase()),rewards:manifest.RelayerRewards,token:manifest.accounts.collateral.address});costError=false;}
+  catch(error){costError=true;previous.costFailure=costFailureDetail(error,costMethod);}
   }
   metrics.costError=costError!==false||!cost||Date.now()-Date.parse(cost.checkedAt)>7200000;
   const result=transition(previous,assess(metrics,previous,limits));

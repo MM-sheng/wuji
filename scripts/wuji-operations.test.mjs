@@ -50,3 +50,50 @@ test('CLI persistence deduplicates across restarts and emits one recovery; concu
   assert.ok(fs.existsSync(path.join(f.config.output,'monitor.lock')),'another process lock must remain untouched');
  }finally{globalThis.fetch=original;fs.rmSync(f.dir,{recursive:true,force:true});}
 });
+
+test('failed cost refresh retries after five minutes, preserves historical cost and recovers once',async()=>{
+ const f=setup(),file=path.join(f.config.output,'status.json');
+ fs.mkdirSync(f.config.output);
+ const oldCost={status:'COMPLETE',checkedAt:new Date().toISOString(),gasFeeWei:'123'};
+ fs.writeFileSync(file,JSON.stringify({seq:0,cost:oldCost,costError:false}));
+ let attempts=0,broken=true;
+ const rpc=async(m,p)=>{
+  if(m==='eth_getTransactionCount'){
+   if(broken)throw Error('RPC eth_getTransactionCount: historical state unavailable https://private.invalid/token');
+   return '0x1';
+  }return f.rpc(m,p);
+ };
+ const options={rpc,fetcher:f.fetcher,costReader:async({rpc})=>{
+  attempts++;await rpc('eth_getTransactionCount',[worker,'0x20']);
+  return {status:'COMPLETE',checkedAt:new Date().toISOString(),gasFeeWei:'456'};
+ }};
+ try{
+  const failed=await run(f.config,options);
+  assert.equal(failed.costError,true);assert.deepEqual(failed.cost,oldCost);
+  assert.equal(failed.active['cost-coverage'].severity,'warning');
+  assert.deepEqual(failed.costFailure,{kind:'execution',rpcMethod:'eth_getTransactionCount',reason:'historical-state-unavailable'});
+  assert.ok(!JSON.stringify(failed).includes('private.invalid'));
+  await run(f.config,options);assert.equal(attempts,1,'no immediate repeated scan');
+  // Simulate the next scheduled sample, still far short of the hourly refresh interval.
+  const previous=JSON.parse(fs.readFileSync(file));previous.costAttemptAt=new Date(Date.now()-301000).toISOString();
+  fs.writeFileSync(file,JSON.stringify(previous));broken=false;
+  const recovered=await run(f.config,options);
+  assert.equal(attempts,2);assert.equal(recovered.costError,false);assert.equal(recovered.cost.gasFeeWei,'456');
+  assert.equal(recovered.costFailure,undefined);assert.equal(recovered.active['cost-coverage'],undefined);
+  assert.equal(recovered.events.filter(e=>e.key==='cost-coverage'&&e.type==='recovered').length,1);
+  await run(f.config,options);assert.equal(attempts,2,'success resumes normal hourly interval');
+ }finally{fs.rmSync(f.dir,{recursive:true,force:true});}
+});
+
+test('cost retry schedule is bounded and error diagnostics never retain raw RPC messages',async()=>{
+ const {costRefreshDue,costFailureDetail}=await import('./wuji-operations.mjs');
+ const now=10000000,previous={costAttemptAt:new Date(now-299000).toISOString(),costError:true};
+ assert.equal(costRefreshDue(previous,3600,now),false);
+ assert.equal(costRefreshDue(previous,3600,now+1000),true);
+ assert.equal(costRefreshDue({...previous,costError:false},3600,now+1000),false);
+ assert.equal(costRefreshDue({},3600,now),true);
+ const transport=Object.assign(Error('RPC eth_getBalance failed: HTTP 429 secret'),{rpcReadError:true});
+ assert.deepEqual(costFailureDetail(transport,'eth_getBalance'),{kind:'transport',rpcMethod:'eth_getBalance',reason:'rate-limited'});
+ assert.equal(costFailureDetail(Error('unknown secret'),'eth_getLogs').reason,null);
+ assert.equal(costFailureDetail(Error('cost deadline exceeded'),'eth_getLogs').reason,'deadline');
+});
