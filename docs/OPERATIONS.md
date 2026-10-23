@@ -94,3 +94,28 @@ node scripts/check-operations-alerts.mjs operator/sepolia-header-v3/operations/s
 详见 [部署、实测成本和验证报告](tasks/T13_OPERATIONS_2026-10-22.md)。
 
 2026-10-23 成本刷新失败后的五分钟恢复与实际切换验收见 [修复报告](tasks/T13_COST_RECOVERY_2026-10-23.md)。
+
+## 七个固定的 24 小时成本窗口
+
+`scripts/wuji-cost-week.mjs` 是单独的只读历史核算工具，不写线上 `operations/status.json`。
+例如以雅加达 2026-10-23 零点为结束，生成 10 月 16 日至 22 日的七个完整日：
+
+```sh
+node scripts/wuji-cost-week.mjs CONFIG.json OUTPUT 2026-10-23T00:00:00+07:00
+node scripts/wuji-cost-week.mjs --summarize OUTPUT
+```
+
+CONFIG 沿用 `manifest` / `worker`，可选 `costRpc` 指定支持历史状态的公共 RPC，
+可选 `historyRpc` 分开读取区块/收据/日志；默认均用 manifest 的 RPC。
+更换此离线工具的配置不改变线上监控、keeper 或 indexer。两类 RPC 分开时会核对链 ID；
+历史状态仍依赖 RPC 正确响应，不是状态证明或独立审计。
+
+每个区间固定为 `[start,end)`，恰好 86400 秒。二分状态边界是开始/结束前最后一个块，
+相邻窗口必须共享同一个边界块和哈希、nonce、余额与指数高度，交易哈希不可重复。
+工具保留 plan、逐日原始收据和失败尝试；完成的逐日文件不覆盖，续跑先复查规范块哈希。
+`--summarize` 无网络地重新核对收据费用、nonce 连续性、余额桥、相邻边界和奖励求和；
+缺一天、失败/损坏、重复交易或边界不连续就拒绝七天合计。
+
+这可以补算历史链上成本和指数推进，但不能补造历史 RPC 故障、外部链头积压、
+人工操作或服务器费用。缺少连续遥测的部分一律 UNKNOWN；七天历史成本不是七天稳定运行验收。
+默认滚动统计的口径保持不变；固定历史模式不会让实时监控接受陈旧 finalized 视图。

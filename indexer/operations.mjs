@@ -6,17 +6,32 @@ const hex=n=>'0x'+BigInt(n).toString(16),num=x=>Number(BigInt(x));
 const addr=a=>'0x'+a.toLowerCase().slice(2).padStart(64,'0');
 const word=(data,i)=>BigInt('0x'+data.slice(2+64*i,66+64*i));
 
-export async function costWindow({rpc,worker,index,pools,rewards,token,seconds=86400,maxTransactions=200,now=Date.now()}){
+export async function costWindow({rpc,worker,index,pools,rewards,token,seconds=86400,maxTransactions=200,now=Date.now(),windowEndTimestamp}){
  assert.ok(Number.isInteger(seconds)&&seconds>0&&seconds<=604800);
  assert.equal(BigInt(await rpc('eth_chainId',[])),11155111n);
- const end=await rpc('eth_getBlockByNumber',['finalized',false]);assert.ok(end?.hash,'finalized block unavailable');
- assert.ok(now/1000-num(end.timestamp)>=-120&&now/1000-num(end.timestamp)<3600,'finalized view stale');
- const last=num(end.number),cutoff=num(end.timestamp)-seconds,blocks=new Map([[last,end]]),nonces=new Map();
+ const finalized=await rpc('eth_getBlockByNumber',['finalized',false]);assert.ok(finalized?.hash,'finalized block unavailable');
+ assert.ok(now/1000-num(finalized.timestamp)>=-120&&now/1000-num(finalized.timestamp)<3600,'finalized view stale');
+ const blocks=new Map([[num(finalized.number),finalized]]),nonces=new Map();
  const block=async n=>{if(!blocks.has(n))blocks.set(n,await rpc('eth_getBlockByNumber',[hex(n),false]));const b=blocks.get(n);assert.ok(b?.hash,'missing canonical block');return b;};
- // Boundary is the last block strictly before cutoff: every included transaction is in the requested window.
- let lo=0,hi=last;
- while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(num((await block(mid)).timestamp)<cutoff)lo=mid;else hi=mid-1;}
- const start=await block(lo),first=lo;
+ const blockBefore=async(timestamp,upper)=>{
+  // Stay near the requested interval: public providers may prune unrelated ancient blocks.
+  if(num((await block(upper)).timestamp)<timestamp)return block(upper);
+  let span=8192,lo=Math.max(0,upper-span),hi=upper;
+  while(num((await block(lo)).timestamp)>=timestamp){
+   assert.ok(lo>0,'window predates chain history');span*=2;lo=Math.max(0,upper-span);
+  }
+  while(lo<hi){const mid=Math.ceil((lo+hi)/2);if(num((await block(mid)).timestamp)<timestamp)lo=mid;else hi=mid-1;}
+  return block(lo);
+ };
+ // Fixed historical windows are half-open [start,end), so adjacent windows share one state boundary.
+ let end=finalized;
+ if(windowEndTimestamp!==undefined){
+  assert.ok(Number.isSafeInteger(windowEndTimestamp)&&windowEndTimestamp>seconds,'invalid fixed window end');
+  assert.ok(windowEndTimestamp<=num(finalized.timestamp),'fixed window is not finalized');
+  end=await blockBefore(windowEndTimestamp,num(finalized.number));
+ }
+ const last=num(end.number),cutoff=(windowEndTimestamp??num(end.timestamp))-seconds;
+ const start=await blockBefore(cutoff,last),first=num(start.number);
  const nonce=async n=>{if(!nonces.has(n))nonces.set(n,num(await rpc('eth_getTransactionCount',[worker,hex(n)])));const value=nonces.get(n);assert.ok(Number.isSafeInteger(value)&&value>=0,'unsafe nonce');return value;};
  const firstNonce=await nonce(first),lastNonce=await nonce(last);assert.ok(lastNonce>=firstNonce&&lastNonce-firstNonce<=maxTransactions,'nonce coverage exceeds bounded scan');
  const transactions=[];const fullBlocks=new Map();
@@ -30,7 +45,8 @@ export async function costWindow({rpc,worker,index,pools,rewards,token,seconds=8
   assert.equal(receipt.blockHash,full.hash);assert.equal(receipt.blockNumber,full.number);
   assert.equal(tx.blockHash,full.hash);assert.equal(receipt.transactionHash,tx.hash);
   assert.ok(['0x0','0x1'].includes(receipt.status),'unknown receipt status');
-  const blob=receipt.blobGasUsed?BigInt(receipt.blobGasUsed)*BigInt(receipt.blobGasPrice):0n;
+  const blobUsed=BigInt(receipt.blobGasUsed??'0x0');
+  const blob=blobUsed===0n?0n:blobUsed*BigInt(receipt.blobGasPrice);
   const cost=BigInt(receipt.gasUsed)*BigInt(receipt.effectiveGasPrice)+blob;
   const to=tx.to?.toLowerCase();const category=to===index.toLowerCase()?'index':pools.includes(to)?'pool-maintenance':to===rewards.toLowerCase()?'reward-claim':'other';
   transactions.push({hash:tx.hash,nonce:n,blockNumber:full.number,blockHash:full.hash,timestamp:num(full.timestamp),to:tx.to,selector:tx.input.slice(0,10),category,status:receipt.status,gasUsed:String(BigInt(receipt.gasUsed)),effectiveGasPriceWei:String(BigInt(receipt.effectiveGasPrice)),blobFeeWei:String(blob),gasFeeWei:String(cost),valueWei:String(BigInt(tx.value)),executedValueWei:receipt.status==='0x1'?String(BigInt(tx.value)):'0',receipt});
@@ -57,7 +73,7 @@ export async function costWindow({rpc,worker,index,pools,rewards,token,seconds=8
  assert.equal((await rpc('eth_getBlockByNumber',[start.number,false])).hash,start.hash,'start reorganized');
  for(const [n,full] of fullBlocks)assert.equal((await rpc('eth_getBlockByNumber',[hex(n),false])).hash,full.hash,'transaction block reorganized');
  assert.equal((await rpc('eth_getBlockByNumber',[end.number,false])).hash,end.hash,'end reorganized');
- return {status:'COMPLETE',checkedAt:new Date().toISOString(),chainId:11155111,worker,requestedSeconds:seconds,cutoffTimestamp:cutoff,startBlock:start.number,startBlockHash:start.hash,endBlock:end.number,endBlockHash:end.hash,endTimestamp:num(end.timestamp),firstNonce,lastNonce,coveredNonceCount:transactions.length,transactions,byCategory,gasFeeWei:String(gas),outgoingValueWei:String(value),nativeBalanceBeforeWei:String(BigInt(before)),nativeBalanceAfterWei:String(BigInt(after)),nativeCreditsInferredWei:String(nativeCredits),rewardToken:token,rewardsAllocatedWei:String(sumEvent('allocated')),rewardsClaimedWei:String(sumEvent('claimed')),rewardEvents:events,scope:'Finalized rolling window; all outgoing nonce slots resolved or the report fails. Failed transactions cost gas too. Native credits inferred from the balance bridge, not individually attributed faucet receipts. WETH allocations and claims are separate; claims may pay earlier allocations. No ETH/WETH netting, fiat estimate, runway guarantee or signature.'};
+ return {status:'COMPLETE',checkedAt:new Date().toISOString(),chainId:11155111,worker,requestedSeconds:seconds,cutoffTimestamp:cutoff,windowEndExclusiveTimestamp:windowEndTimestamp??null,startBlock:start.number,startBlockHash:start.hash,endBlock:end.number,endBlockHash:end.hash,endTimestamp:num(end.timestamp),firstNonce,lastNonce,coveredNonceCount:transactions.length,transactions,byCategory,gasFeeWei:String(gas),outgoingValueWei:String(value),nativeBalanceBeforeWei:String(BigInt(before)),nativeBalanceAfterWei:String(BigInt(after)),nativeCreditsInferredWei:String(nativeCredits),rewardToken:token,rewardsAllocatedWei:String(sumEvent('allocated')),rewardsClaimedWei:String(sumEvent('claimed')),rewardEvents:events,scope:(windowEndTimestamp===undefined?'Finalized rolling window;':'Fixed finalized half-open historical window;')+' all outgoing nonce slots resolved or the report fails. Failed transactions cost gas too. Native credits inferred from the balance bridge, not individually attributed faucet receipts. WETH allocations and claims are separate; claims may pay earlier allocations. No ETH/WETH netting, fiat estimate, runway guarantee or signature.'};
 }
 
 export const DEFAULT_LIMITS={balanceWarnWei:'5000000000000000',balanceCriticalWei:'1000000000000000',backlogWarn:72,backlogCritical:144,seenWarnSeconds:43200,seenCriticalSeconds:86400,readyWarnSeconds:1800,readyCriticalSeconds:7200,logWarnSeconds:900,logCriticalSeconds:1800};

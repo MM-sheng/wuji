@@ -80,3 +80,43 @@ test('missing logs, frozen index, reserve deficits and insolvent pools are visib
  const r=assess({...healthy(),logAgeSeconds:null,indexFrozen:true,reserveDeficit:true,pools:[{address:pool,insolvent:true,nextEpochReady:false}]});
  for(const key of ['keeper-log','index-frozen','reserve-deficit','pool-insolvent:'+pool])assert.equal(r.conditions[key].severity,'critical');
 });
+
+test('adjacent historical windows exclude their end timestamp and count each nonce exactly once',async()=>{
+ const f=fixture(),base=f.rpc;
+ f.rpc=async(m,p)=>m==='eth_getLogs'?(await base(m,p)).filter(l=>BigInt(l.blockNumber)>=BigInt(p[0].fromBlock)&&BigInt(l.blockNumber)<=BigInt(p[0].toBlock)):base(m,p);
+ const a=await costWindow({...args(f),seconds:180,windowEndTimestamp:1420});
+ const b=await costWindow({...args(f),seconds:180,windowEndTimestamp:1600});
+ assert.equal(a.cutoffTimestamp,1240);assert.equal(a.windowEndExclusiveTimestamp,1420);
+ assert.equal(a.endBlock,b.startBlock);assert.equal(a.lastNonce,b.firstNonce);
+ assert.deepEqual(a.transactions.map(t=>t.nonce),[1]);assert.deepEqual(b.transactions.map(t=>t.nonce),[2]);
+ assert.equal(BigInt(a.gasFeeWei)+BigInt(b.gasFeeWei),52n);
+ // Block 8 is exactly at the exclusive end and must not enter the first window.
+ const exact=await costWindow({...args(f),seconds:180,windowEndTimestamp:1480});
+ assert.equal(exact.endBlock,'0x7');assert.deepEqual(exact.transactions.map(t=>t.nonce),[1]);
+});
+test('historical windows reject future/unfinalized boundaries and chain history gaps',async()=>{
+ const f=fixture();
+ for(const windowEndTimestamp of [1601,NaN,1])await assert.rejects(costWindow({...args(f),windowEndTimestamp}));
+ await assert.rejects(costWindow({...args(f),seconds:1000,windowEndTimestamp:1600}),/predates chain history/);
+});
+
+test('recent fixed windows work when the provider has pruned unrelated ancient block history',async()=>{
+ const last=2000000,stamp=n=>1000+n*12,queries=[];
+ const rpc=async(m,p)=>{
+  if(m==='eth_chainId')return '0xaa36a7';
+  if(m==='eth_getBlockByNumber'){
+   const n=p[0]==='finalized'?last:Number(BigInt(p[0]));queries.push(n);
+   assert.ok(n>=1000000,'pruned history unavailable');return {number:hex(n),hash:hash(n),timestamp:hex(stamp(n)),transactions:[]};
+  }
+  if(m==='eth_getTransactionCount'||m==='eth_getBalance')return '0x0';
+  if(m==='eth_getCode')return '0x';if(m==='eth_getLogs')return [];throw Error('unexpected method');
+ };
+ const r=await costWindow({...args({rpc}),seconds:86400,windowEndTimestamp:stamp(last)-6*86400,now:stamp(last)*1000});
+ assert.equal(r.status,'COMPLETE');assert.equal(r.gasFeeWei,'0');assert.ok(queries.every(n=>n>=1000000));
+});
+
+test('zero blob gas without a blob price is valid; positive blob gas still requires its price',async()=>{
+ const f=fixture();f.receipts[0].blobGasUsed='0x0';assert.equal((await costWindow(args(f))).gasFeeWei,'52');
+ f.receipts[0].blobGasUsed='0x2';await assert.rejects(costWindow(args(f)));
+ f.receipts[0].blobGasPrice='0x3';assert.equal((await costWindow(args(f))).gasFeeWei,'58');
+});
