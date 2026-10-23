@@ -3,8 +3,9 @@
 > 无极生太极，太极生两仪。
 > A market about nothing. Verifiable. Heartbeat: Bitcoin.
 
-**What this repository is.** Owner-less infrastructure that lets Ethereum contracts verify Bitcoin
-proof-of-work without trusting anyone, plus a public index derived from it:
+**What this repository is.** Infrastructure without an owner or admin key for Bitcoin-header verification
+and a derived public index, under explicit checkpoint, input-visibility and liveness assumptions.
+Historical relay and ZK research implementations below are separate from the current header-v3 candidate:
 
 - a Solidity Bitcoin header relay that enforces the header consensus rules (PoW, linkage, retargeting,
   median-time-past, heaviest work) from a public checkpoint;
@@ -26,9 +27,10 @@ derived from Bitcoin proof-of-work headers and can be independently recomputed. 
 the intended model; it is not a proof of unbiased mining, independence from every asset, or investment returns.
 There is no owner, governance or upgrade key. Paired YANG/YIN vaults are one application of this public index.
 
-Read the Chinese whitepaper: [PDF](docs/WHITEPAPER.pdf) · [editable Markdown](docs/WHITEPAPER.md).
-It describes the testnet implementation, conditional mathematical model and remaining verification boundaries.
-[Recompute its numbers or render the PDF](docs/tools/README.md).
+Read the current Chinese [whitepaper v0.3](docs/WHITEPAPER.md) for the header-v3 scope, changing account exposure, delayed exits and deterministic insolvency close.
+The committed [PDF](docs/WHITEPAPER.pdf) is a historical copy and does **not** include these corrections.
+[Arithmetic scope and optional PDF rendering](docs/tools/README.md).
+The [Tooling invitation](https://ethereum-magicians.org/t/wuji-seeking-an-independent-developer-to-replay-a-bitcoin-header-derived-index/30064) is published; no external acceptance has been returned.
 
 Application research: [rollover accounting and historical replay](docs/tasks/T7_DESIGN.md).
 This design study recommends deferring a rolling token; no rolling contract is implemented or approved.
