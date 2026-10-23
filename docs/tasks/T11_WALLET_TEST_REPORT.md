@@ -7,6 +7,27 @@ Sepolia header v3 的专用测试钱包完整协议往返已于 10 月 15 日完
 这不覆盖下文旧 BSC v4 的 MetaMask 真人界面验收；后者仍未完成。勿按下方旧清单启动历史 keeper。
 
 
+## Task C checkpoint — 2026-10-23, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 0.85 ETH.**
+Both historical 0.15 ETH targets remain complete; remaining balance is not the receipt total.
+
+Checked today's log before submitting. The existing Google tab had returned to an empty usable form,
+without the previous reCAPTCHA error. Submitted one free request using the existing Google session;
+no CAPTCHA, new login, terms acceptance or payment was presented. Google displayed
+`Transaction complete! Check your wallet address`. The first RPC lookup was pending; a later read confirmed it.
+
+Transaction `0xac3af9c117eec836e4aee18ae61cebb1854141552f56e667ec1dcdcd0f64c358`
+was verified via public Sepolia RPC: chain 11155111, status 0x1, authorized recipient,
+value 50000000000000000 wei, canonical block `0xb6be8d` (hash checked twice).
+Balance at that block: **0.765467113191317708 ETH**. Block time: 2026-10-23 19:21:12 Asia/Shanghai.
+[Raw transaction, receipt and balance](../../contracts/deployments/t11-sepolia-fuel-2026-10-23.json);
+[completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-23.png).
+
+Do not submit another October 23 request. Next attempt: October 24 after 19:25 Asia/Shanghai
+(18:25 Asia/Jakarta), beyond the latest successful receipt's 24-hour cooldown with a margin.
+No outgoing transfer, deployment or Task A signature.
+
 ## Task C checkpoint — 2026-10-22, human action required
 
 Checked today's log; there was no October 22 successful claim. After the previous success's 24-hour cooldown,
@@ -378,6 +399,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-10-20, approximately 18:11 | Google Cloud Web3 | 0.05 ETH | `0x288a351424b603aa46d44d04f0aee58865f4bf5c127368fe2baef4ac5d12231d` | 0.668469518691317708 ETH at block 0xb669b2; recorded post-round-2 upkeep receipts 0.75 ETH |
 | 2026-10-21, approximately 18:17 | Google Cloud Web3 | 0.05 ETH | `0xac2a5e761bf8ca76841704077e357de8aaf9c2d3226a0f0d7ea06fee7227d776` | 0.718469518691317708 ETH at block 0xb685a6; recorded post-round-2 upkeep receipts 0.80 ETH |
 | 2026-10-22, after 18:20 | Google reCAPTCHA service unavailable; human handoff | 0 ETH verified | None | 0.718469518691317708 ETH observed at block 0xb6a197; recorded upkeep receipts remain 0.80 ETH |
+| 2026-10-23, approximately 19:21 | Google Cloud Web3 | 0.05 ETH | `0xac3af9c117eec836e4aee18ae61cebb1854141552f56e667ec1dcdcd0f64c358` | 0.765467113191317708 ETH at block 0xb6be8d; recorded upkeep receipts 0.85 ETH |
 
 ## Historical report — 2026-09-26, v3
 
