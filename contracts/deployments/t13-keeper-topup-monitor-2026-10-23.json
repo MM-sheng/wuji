@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-23T14:44:28.271Z",
+  "monitorSource": "92c4fa77e837825baca5fd4a08bae465c54f7752",
+  "balanceWei": "60000000000000000",
+  "balanceAlertActive": false,
+  "costError": false,
+  "remainingAlerts": [
+    "reserve"
+  ],
+  "recovery": {
+    "seq": 9,
+    "at": "2026-10-23T14:44:28.271Z",
+    "key": "balance",
+    "type": "recovered",
+    "severity": "warning",
+    "message": "keeper 余额 60000000000000000 wei（Sepolia ETH）"
+  },
+  "transactionHash": "0xbc47354c5026ecef9bb9aaf654dee3e1cbe47717fe371f5ef49e8aead8a156af"
+}

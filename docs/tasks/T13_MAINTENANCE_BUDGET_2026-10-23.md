@@ -1,5 +1,18 @@
 # 维护预算与资金缺口 · 2026-10-23
 
+## 后续执行 · 2026-10-23
+
+用户已明确授权并完成一次部署钱包 → keeper 的 Sepolia 原生币补给。
+转账 **0.0573115126 Sepolia ETH**，收款块 keeper 余额 **0.06 Sepolia ETH**，
+实际 gas **0.0000021 Sepolia ETH**，部署钱包剩余 **0.708153500591317708 Sepolia ETH**。
+[链上交易](https://sepolia.etherscan.io/tx/0xbc47354c5026ecef9bb9aaf654dee3e1cbe47717fe371f5ef49e8aead8a156af)，
+[原始交易与收据](../../contracts/deployments/t13-keeper-topup-2026-10-23.json)。
+只读监控已观测到 0.06 余额，低余额告警恢复；零 WETH 赏金储备告警保持，
+[监控观测](../../contracts/deployments/t13-keeper-topup-monitor-2026-10-23.json)。
+这是一次补给，不是自动补给授权、主网预算或无限期赞助承诺。没有调整服务、告警阈值或注入 WETH 储备。
+**下文是补给前的余额快照及规划测算，原始数据保留；其中“待选择/待补”不再代表本次补给状态。**
+
+
 结论：当前单 keeper 测试网的 30 天平均 gas 预算约 **0.03496 Sepolia ETH**。
 按七天最高单日执行量重复 30 天、再加 25% 规划缓冲，约 **0.05892 Sepolia ETH**；
 可暂拟 keeper 目标余额为 **0.06 Sepolia ETH**，待用户选择，未设为运行阈值或资金承诺。
