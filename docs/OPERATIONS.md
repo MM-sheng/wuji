@@ -121,3 +121,5 @@ CONFIG 沿用 `manifest` / `worker`，可选 `costRpc` 指定支持历史状态�
 默认滚动统计的口径保持不变；固定历史模式不会让实时监控接受陈旧 finalized 视图。
 
 2026-10-16 至 22 日七个历史成本窗口与逐笔证据见 [七日核算报告](tasks/T13_OPERATIONS_WEEK_2026-10-23.md)。
+
+七日成本对应的 30 天 gas 情景、余额与条件性资金缺口见 [维护预算](tasks/T13_MAINTENANCE_BUDGET_2026-10-23.md)；仅为规划，不自动拨款或改变阈值。

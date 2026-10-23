@@ -1,0 +1,44 @@
+{
+  "observedAt": "2026-10-23T14:31:41.966Z",
+  "chainId": 11155111,
+  "rpcHost": "ethereum-sepolia-rpc.publicnode.com",
+  "block": {
+    "number": "0xb6c242",
+    "hash": "0xd137a73c231bc7b043c46c070d2e44e6e75c21dc52e34350100196b0cb753a2d",
+    "timestamp": "0x6adb6fc8"
+  },
+  "worker": {
+    "address": "0x27b2474c8ca832d25c301ea43cf90c57c5a2dcd2",
+    "nativeBalanceWei": "2688487400000000",
+    "code": "0x",
+    "wethWei": "35962799",
+    "claimableWethWei": "0",
+    "nonceAtBalanceBlock": "0x3c"
+  },
+  "deployer": {
+    "address": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+    "nativeBalanceWei": "765467113191317708",
+    "code": "0x",
+    "wethWei": "0",
+    "nonceAtBalanceBlock": "0xa3"
+  },
+  "rewards": {
+    "address": "0xe6933fB941861b6Ef3888Eb11e2Dfb476B3aAB35",
+    "token": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    "reserveWei": "0",
+    "allocatedWei": "0",
+    "actualTokenBalanceWei": "0"
+  },
+  "scope": "Pinned read-only testnet balances; no funds transferred, pledged or automatically netted against ETH requirements. WETH is not native gas.",
+  "feeRouter": {
+    "address": "0xcc32633A49eDf61400cBc48a0eE082a8866946b4",
+    "wethWei": "239604037201",
+    "fundsAllocatedToGas": false
+  },
+  "pendingObservation": {
+    "observedAt": "2026-10-23T14:33:59.775Z",
+    "workerNonce": "0x3c",
+    "deployerNonce": "0xa3",
+    "scope": "Pending observations are later unpinned reads, not committed expenses."
+  }
+}

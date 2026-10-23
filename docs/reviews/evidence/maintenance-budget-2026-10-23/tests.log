@@ -1,0 +1,11 @@
+✔ receipt-based planning yields a rounded fuel target and a conditional, not automatic, allocation (0.491ms)
+✔ a funded worker has zero top-up gap; no deployer funds leaves the worker gap uncovered (0.12525ms)
+✔ higher gas prices and doubled execution units increase planning costs without consuming testnet balances (0.76425ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48.93

@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "independentArithmetic": "Python Decimal and integer receipt gas",
+  "totalGas": 81564271,
+  "peakDayGas": 15712271,
+  "scenarios": 4,
+  "topupAndTransferAllowanceChecked": true,
+  "wethNettedAgainstNativeGas": false
+}

@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "status": "PLANNING_ESTIMATE",
+  "basis": {
+    "startTimestamp": 1792083600,
+    "endTimestamp": 1792688400,
+    "windowCount": 7,
+    "transactions": 34,
+    "totalGas": "81564271",
+    "peakDayGas": "15712271",
+    "observedEffectiveGasPricesWei": [
+      "100000000"
+    ],
+    "weeklyGasFeeWei": "8156427100000000"
+  },
+  "assumptions": {
+    "days": 30,
+    "contingencyPercent": 25,
+    "conservativeLoad": "Repeat highest observed daily gas for all 30 days; this is not a statistical upper bound.",
+    "priceScenarios": "Hypothetical constant effective prices, not current mainnet quotes. Same execution units, no deployment, catch-up, seal incident, host, RPC or audit costs.",
+    "doubleLoad": "Exactly twice execution units, illustrative; not a tested second-keeper architecture."
+  },
+  "scenarios": [
+    {
+      "effectiveGasPriceWei": "100000000",
+      "mean30DaysWei": "34956116142857143",
+      "peak30DaysWei": "47136813000000000",
+      "peak30DaysPlus25PercentWei": "58921016250000000",
+      "doubleExecutionLoadPlus25PercentWei": "117842032500000000"
+    },
+    {
+      "effectiveGasPriceWei": "1000000000",
+      "mean30DaysWei": "349561161428571429",
+      "peak30DaysWei": "471368130000000000",
+      "peak30DaysPlus25PercentWei": "589210162500000000",
+      "doubleExecutionLoadPlus25PercentWei": "1178420325000000000"
+    },
+    {
+      "effectiveGasPriceWei": "5000000000",
+      "mean30DaysWei": "1747805807142857143",
+      "peak30DaysWei": "2356840650000000000",
+      "peak30DaysPlus25PercentWei": "2946050812500000000",
+      "doubleExecutionLoadPlus25PercentWei": "5892101625000000000"
+    },
+    {
+      "effectiveGasPriceWei": "10000000000",
+      "mean30DaysWei": "3495611614285714286",
+      "peak30DaysWei": "4713681300000000000",
+      "peak30DaysPlus25PercentWei": "5892101625000000000",
+      "doubleExecutionLoadPlus25PercentWei": "11784203250000000000"
+    }
+  ],
+  "sepolia": {
+    "chainId": 11155111,
+    "balanceBlock": {
+      "number": "0xb6c242",
+      "hash": "0xd137a73c231bc7b043c46c070d2e44e6e75c21dc52e34350100196b0cb753a2d",
+      "timestamp": "0x6adb6fc8"
+    },
+    "workerBalanceWei": "2688487400000000",
+    "deployerBalanceWei": "765467113191317708",
+    "combinedObservedBalanceWei": "768155600591317708",
+    "proposedRoundedWorkerTargetWei": "60000000000000000",
+    "workerTopUpGapWei": "57311512600000000",
+    "combinedGapIfDeployerFundsAreAllocatedWei": "0",
+    "topUpFeeAllowanceWei": "5000000000000",
+    "topUpFeeAssumption": "50000 gas at 0.1 gwei as a planning allowance, not an estimate or signed transaction",
+    "deployerOutflowIfAllocatedWei": "57316512600000000",
+    "proposedDeployerAllocationWei": "57311512600000000",
+    "allocationAuthorizedOrExecuted": false,
+    "illustrativeMeanRunwayDays": 2.3073,
+    "runwayIsGuarantee": false
+  },
+  "funding": {
+    "weeklyWethAllocatedWei": "0",
+    "weeklyWethClaimedWei": "0",
+    "reserveWethWei": "0",
+    "allocatedWethWei": "0",
+    "actualReserveWethWei": "0",
+    "workerWethWei": "35962799",
+    "workerClaimableWethWei": "0",
+    "feeRouterWethWei": "239604037201",
+    "nativeGasCreditFromWethWei": "0",
+    "conversionOrFundingAssumed": false,
+    "knownProtocolNativeGasIncomeWei": "0",
+    "mainnetCommittedFundingWei": null,
+    "mainnetGap": "Not established; Sepolia ETH does not fund mainnet. With no committed mainnet funds, the full selected ETH scenario remains unfinanced.",
+    "unknownCosts": [
+      "hosting/electricity",
+      "paid or archival RPC",
+      "second independent operator",
+      "deployment/catch-up/reorg or seal incidents",
+      "external audit and incident handling"
+    ]
+  }
+}
