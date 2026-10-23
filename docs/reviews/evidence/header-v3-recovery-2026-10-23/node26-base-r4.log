@@ -1,0 +1,36 @@
+✔ public height 800000 vector pins raw/display order, R and integer increment (0.566125ms)
+✔ metadata encoding checks advertised block hash and malformed fields (0.787083ms)
+✔ Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors (3.367416ms)
+✔ compact targets reject sign, zero, overflow and excess target (0.158042ms)
+✔ signed ABI U is decoded exactly and truncated continuity fails (0.183333ms)
+✔ RPC rejects write methods and non-allowlisted calls before any network request (2.134ms)
+✔ endpoint configuration excludes URL credentials and insecure remote transport (0.133875ms)
+✔ provider cooldown stops without automatic retry: delta seconds (1.793542ms)
+✔ provider cooldown stops without automatic retry: HTTP date (2.520208ms)
+✔ provider cooldown stops without automatic retry: missing header (1.827625ms)
+✔ provider cooldown stops without automatic retry: invalid header (1.502584ms)
+✔ provider cooldown stops without automatic retry: service unavailable with cooldown (1.075958ms)
+✔ truncated local source.json stays unchanged and refuses repeated resume before network (1.543791ms)
+✔ truncated local rpc.json stays unchanged and refuses repeated resume before network (1.224125ms)
+✔ fixed-block RPC evidence checks every identity field (16.313625ms)
+✔ RPC refuses wrong chain, changed canonical block and wrong deployed code (23.250708ms)
+﹣ complete offline replay and header-rule counterexamples (0.033708ms) # SKIP
+﹣ offline recovery rejects missing page (0.017333ms) # SKIP
+﹣ offline recovery rejects truncated page JSON (0.014917ms) # SKIP
+﹣ offline recovery rejects changed header (0.012541ms) # SKIP
+﹣ offline recovery rejects changed RPC state (0.012791ms) # SKIP
+﹣ offline recovery rejects changed consumer series (0.024292ms) # SKIP
+﹣ offline recovery rejects changed source RPC (0.01525ms) # SKIP
+﹣ offline recovery rejects changed evidence RPC (0.015ms) # SKIP
+﹣ offline recovery rejects changed Bitcoin source (0.012916ms) # SKIP
+﹣ offline recovery rejects changed page URL (0.011542ms) # SKIP
+﹣ offline recovery rejects invalid observation (0.011458ms) # SKIP
+﹣ interrupted download resumes verified pages without overwriting a completed archive (0.012875ms) # SKIP
+ℹ tests 28
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 12
+ℹ todo 0
+ℹ duration_ms 62.904833

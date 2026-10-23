@@ -1,0 +1,67 @@
+{
+  "status": "PASS_OFFLINE_REPLAY",
+  "candidate": "wuji-sepolia-header-v3-fixed-11969645",
+  "candidateSha256": "6dc09008a22caae1537c35e7aeac660f5b0b2efa831ee49785fc771a1b73b4c6",
+  "chainId": 11155111,
+  "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "evmBlock": {
+    "number": "0xb6a46d",
+    "hash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+    "timestamp": "0x6ada0648"
+  },
+  "bitcoin": {
+    "from": 967680,
+    "to": 972610,
+    "headers": 4931,
+    "finalized": {
+      "hash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+      "height": 972510,
+      "bits": 386007187,
+      "time": 1792602665,
+      "epochStart": 1792154251,
+      "u": "293",
+      "times": [
+        1792597770,
+        1792598226,
+        1792598386,
+        1792599100,
+        1792600770,
+        1792600854,
+        1792600857,
+        1792601254,
+        1792601978,
+        1792601842,
+        1792602665
+      ],
+      "work": "1717113702291114818887492394",
+      "S_wad": "3516000000000000"
+    },
+    "confirmations": 100,
+    "retargets": [
+      969696,
+      971712
+    ]
+  },
+  "headersSha256": "6dacd62bf269e519c0e6db8c8b9c139d6918e35ad7a34452a6526fa4774a80aa",
+  "seriesSha256": "f014ef5800f2b817a7ca5077cb13b0af6a11838cf2e4b854a8302a36c6e03ade",
+  "rows": 2965,
+  "checkpoint": {
+    "height": 973865,
+    "status": "NOT_REACHED"
+  },
+  "observation": "2026-10-22T15:45:53.749Z",
+  "sources": {
+    "rpc": "https://ethereum-sepolia.publicnode.com",
+    "bitcoinApi": "https://mempool.space/api",
+    "labelConsistency": "CHECKED",
+    "authenticity": "NOT_ATTESTED"
+  },
+  "evidenceSha256": {
+    "source.json": "1b305ada9183a4293f41e30b3c3c695205827ed8e34b74a8be938a808e665116",
+    "rpc.json": "4074da260e0a0c4d1563fd6fd4a6d58f2db55a9ab829e74c2032a203050065f2",
+    "pages.json": "17b5ff09d6ee1de98bca8b037b07a1a23b69e206c4e35cfc47a638090f7b8867",
+    "final-block.json": "62929b1af5f7ce2b868324e70dd219322a384fa9a8e42940dac4bd399e3cfcd8"
+  },
+  "operatorIndependence": "NOT_ATTESTED",
+  "scope": "Historical fixed-block replay; not live freshness, full Bitcoin validation, solvency, or an audit."
+}

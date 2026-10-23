@@ -1,0 +1,135 @@
+(node:71890) ExperimentalWarning: The test runner is an experimental feature. This feature could change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+TAP version 13
+ok 1 - public height 800000 vector pins raw/display order, R and integer increment
+  ---
+  duration_ms: 0.000759833
+  ...
+ok 2 - metadata encoding checks advertised block hash and malformed fields
+  ---
+  duration_ms: 0.000993708
+  ...
+ok 3 - Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors
+  ---
+  duration_ms: 0.005892333
+  ...
+ok 4 - compact targets reject sign, zero, overflow and excess target
+  ---
+  duration_ms: 0.000172542
+  ...
+ok 5 - signed ABI U is decoded exactly and truncated continuity fails
+  ---
+  duration_ms: 0.000348125
+  ...
+ok 6 - RPC rejects write methods and non-allowlisted calls before any network request
+  ---
+  duration_ms: 0.00271925
+  ...
+ok 7 - endpoint configuration excludes URL credentials and insecure remote transport
+  ---
+  duration_ms: 0.000178917
+  ...
+ok 8 - provider cooldown stops without automatic retry: delta seconds
+  ---
+  duration_ms: 0.00249925
+  ...
+ok 9 - provider cooldown stops without automatic retry: HTTP date
+  ---
+  duration_ms: 0.002050041
+  ...
+ok 10 - provider cooldown stops without automatic retry: missing header
+  ---
+  duration_ms: 0.001986166
+  ...
+ok 11 - provider cooldown stops without automatic retry: invalid header
+  ---
+  duration_ms: 0.001973125
+  ...
+ok 12 - provider cooldown stops without automatic retry: service unavailable with cooldown
+  ---
+  duration_ms: 0.0019315
+  ...
+ok 13 - truncated local source.json stays unchanged and refuses repeated resume before network
+  ---
+  duration_ms: 0.001943625
+  ...
+ok 14 - truncated local rpc.json stays unchanged and refuses repeated resume before network
+  ---
+  duration_ms: 0.00150475
+  ...
+ok 15 - fixed-block RPC evidence checks every identity field
+  ---
+  duration_ms: 0.029752417
+  ...
+ok 16 - RPC refuses wrong chain, changed canonical block and wrong deployed code
+  ---
+  duration_ms: 0.043373958
+  ...
+ok 17 - complete offline replay and header-rule counterexamples
+  ---
+  duration_ms: 0.282844709
+  ...
+ok 18 - offline recovery rejects missing page
+  ---
+  duration_ms: 0.169072625
+  ...
+ok 19 - offline recovery rejects truncated page JSON
+  ---
+  duration_ms: 0.165384917
+  ...
+ok 20 - offline recovery rejects changed header
+  ---
+  duration_ms: 0.174402584
+  ...
+ok 21 - offline recovery rejects changed RPC state
+  ---
+  duration_ms: 0.083914334
+  ...
+ok 22 - offline recovery rejects changed consumer series
+  ---
+  duration_ms: 0.246283875
+  ...
+ok 23 - offline recovery rejects changed source RPC
+  ---
+  duration_ms: 0.063516
+  ...
+ok 24 - offline recovery rejects changed evidence RPC
+  ---
+  duration_ms: 0.065917583
+  ...
+ok 25 - offline recovery rejects changed Bitcoin source
+  ---
+  duration_ms: 0.062015459
+  ...
+ok 26 - offline recovery rejects changed page URL
+  ---
+  duration_ms: 0.0618525
+  ...
+ok 27 - offline recovery rejects invalid observation
+  ---
+  duration_ms: 0.061691875
+  ...
+Downloaded through Bitcoin height 972236; 25 pages verified.
+Downloaded through Bitcoin height 971861; 50 pages verified.
+Downloaded through Bitcoin height 971486; 75 pages verified.
+Downloaded through Bitcoin height 971111; 100 pages verified.
+Downloaded through Bitcoin height 970736; 125 pages verified.
+Downloaded through Bitcoin height 970361; 150 pages verified.
+Downloaded through Bitcoin height 969986; 175 pages verified.
+Downloaded through Bitcoin height 969611; 200 pages verified.
+Downloaded through Bitcoin height 969236; 225 pages verified.
+Downloaded through Bitcoin height 968861; 250 pages verified.
+Downloaded through Bitcoin height 968486; 275 pages verified.
+Downloaded through Bitcoin height 968111; 300 pages verified.
+Downloaded through Bitcoin height 967736; 325 pages verified.
+ok 28 - interrupted download resumes verified pages without overwriting a completed archive
+  ---
+  duration_ms: 1.005702959
+  ...
+1..28
+# tests 28
+# pass 28
+# fail 0
+# skipped 0
+# todo 0
+# duration_ms 2.575705083

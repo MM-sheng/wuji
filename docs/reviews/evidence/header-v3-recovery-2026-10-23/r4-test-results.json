@@ -1,0 +1,41 @@
+{
+  "checkedAt": "2026-10-23T09:15:30.766618+00:00",
+  "runtimes": [
+    {
+      "node": "v18.0.0",
+      "base": {
+        "pass": 16,
+        "fail": 0,
+        "skipped": 12
+      },
+      "full": {
+        "pass": 28,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "node": "v26.8.1",
+      "base": {
+        "pass": 16,
+        "fail": 0,
+        "skipped": 12
+      },
+      "full": {
+        "pass": 28,
+        "fail": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "toolFiles": {
+    "verify.mjs": "5d0574c3703ae4dd3d7b01b781324eaea384e33786cd8be3bad8cf259c58e73f",
+    "reference.mjs": "04c4ca0f5b760cb2a68ec1b67a695a1e2cf3f4b954fd37d7a27752b3e06990ca",
+    "keccak.mjs": "d523912b60123adff3759659497c46ef3722e277090cd41a346aa79102f32faf",
+    "consume.mjs": "e1ac9a9ff127c9ad7d6cb1f31d9a8eed6835f3ab402fc086d004540ee339691f",
+    "verify.test.mjs": "e78ad49449990bbeb4e987c76625a821d21f42bd8dc8945adf5578f6e7774950",
+    "candidate.json": "6dc09008a22caae1537c35e7aeac660f5b0b2efa831ee49785fc771a1b73b4c6",
+    "vector.json": "8df58034925bbf38e3c1a6829d09a241820f49bc11922f7337ca9260b7d3c76f"
+  },
+  "rateLimitPolicy": "HTTP 429 or failed response with Retry-After ends that request immediately without automatic retry; manual resume must obey provider cooldown. No persistent cooldown lock."
+}

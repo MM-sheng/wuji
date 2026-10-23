@@ -1,0 +1,122 @@
+(node:71893) ExperimentalWarning: The test runner is an experimental feature. This feature could change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+TAP version 13
+ok 1 - public height 800000 vector pins raw/display order, R and integer increment
+  ---
+  duration_ms: 0.000778917
+  ...
+ok 2 - metadata encoding checks advertised block hash and malformed fields
+  ---
+  duration_ms: 0.001003
+  ...
+ok 3 - Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors
+  ---
+  duration_ms: 0.005835042
+  ...
+ok 4 - compact targets reject sign, zero, overflow and excess target
+  ---
+  duration_ms: 0.000163667
+  ...
+ok 5 - signed ABI U is decoded exactly and truncated continuity fails
+  ---
+  duration_ms: 0.000266125
+  ...
+ok 6 - RPC rejects write methods and non-allowlisted calls before any network request
+  ---
+  duration_ms: 0.002726
+  ...
+ok 7 - endpoint configuration excludes URL credentials and insecure remote transport
+  ---
+  duration_ms: 0.000157375
+  ...
+ok 8 - provider cooldown stops without automatic retry: delta seconds
+  ---
+  duration_ms: 0.002293
+  ...
+ok 9 - provider cooldown stops without automatic retry: HTTP date
+  ---
+  duration_ms: 0.002040833
+  ...
+ok 10 - provider cooldown stops without automatic retry: missing header
+  ---
+  duration_ms: 0.002079375
+  ...
+ok 11 - provider cooldown stops without automatic retry: invalid header
+  ---
+  duration_ms: 0.0019805
+  ...
+ok 12 - provider cooldown stops without automatic retry: service unavailable with cooldown
+  ---
+  duration_ms: 0.001964166
+  ...
+ok 13 - truncated local source.json stays unchanged and refuses repeated resume before network
+  ---
+  duration_ms: 0.001834541
+  ...
+ok 14 - truncated local rpc.json stays unchanged and refuses repeated resume before network
+  ---
+  duration_ms: 0.001281541
+  ...
+ok 15 - fixed-block RPC evidence checks every identity field
+  ---
+  duration_ms: 0.030038125
+  ...
+ok 16 - RPC refuses wrong chain, changed canonical block and wrong deployed code
+  ---
+  duration_ms: 0.042846541
+  ...
+ok 17 - complete offline replay and header-rule counterexamples # SKIP
+  ---
+  duration_ms: 0.000010584
+  ...
+ok 18 - offline recovery rejects missing page # SKIP
+  ---
+  duration_ms: 0.000004333
+  ...
+ok 19 - offline recovery rejects truncated page JSON # SKIP
+  ---
+  duration_ms: 0.000003166
+  ...
+ok 20 - offline recovery rejects changed header # SKIP
+  ---
+  duration_ms: 0.000004708
+  ...
+ok 21 - offline recovery rejects changed RPC state # SKIP
+  ---
+  duration_ms: 0.000113875
+  ...
+ok 22 - offline recovery rejects changed consumer series # SKIP
+  ---
+  duration_ms: 0.000004459
+  ...
+ok 23 - offline recovery rejects changed source RPC # SKIP
+  ---
+  duration_ms: 0.000002875
+  ...
+ok 24 - offline recovery rejects changed evidence RPC # SKIP
+  ---
+  duration_ms: 0.00000275
+  ...
+ok 25 - offline recovery rejects changed Bitcoin source # SKIP
+  ---
+  duration_ms: 0.000002833
+  ...
+ok 26 - offline recovery rejects changed page URL # SKIP
+  ---
+  duration_ms: 0.000002542
+  ...
+ok 27 - offline recovery rejects invalid observation # SKIP
+  ---
+  duration_ms: 0.000002667
+  ...
+ok 28 - interrupted download resumes verified pages without overwriting a completed archive # SKIP
+  ---
+  duration_ms: 0.000002333
+  ...
+1..28
+# tests 28
+# pass 16
+# fail 0
+# skipped 12
+# todo 0
+# duration_ms 0.122105084

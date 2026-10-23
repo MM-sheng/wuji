@@ -1,0 +1,9 @@
+{
+  "command": "forge test --summary",
+  "passed": 325,
+  "failed": 0,
+  "skipped": 24,
+  "fullHistoryEnabled": false,
+  "logSha256": "4d71bf489f94b8924b2042da3743bdf44fac430c37266cfd4452db1b62cdb0fa",
+  "scope": "Required default repository regression; contracts unchanged. Not additional verification-kit or external acceptance."
+}

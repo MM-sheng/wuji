@@ -1,0 +1,49 @@
+✔ public height 800000 vector pins raw/display order, R and integer increment (0.552792ms)
+✔ metadata encoding checks advertised block hash and malformed fields (0.798917ms)
+✔ Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors (3.537208ms)
+✔ compact targets reject sign, zero, overflow and excess target (0.175ms)
+✔ signed ABI U is decoded exactly and truncated continuity fails (0.202417ms)
+✔ RPC rejects write methods and non-allowlisted calls before any network request (2.1515ms)
+✔ endpoint configuration excludes URL credentials and insecure remote transport (0.133875ms)
+✔ provider cooldown stops without automatic retry: delta seconds (1.775333ms)
+✔ provider cooldown stops without automatic retry: HTTP date (2.440292ms)
+✔ provider cooldown stops without automatic retry: missing header (1.87775ms)
+✔ provider cooldown stops without automatic retry: invalid header (1.575459ms)
+✔ provider cooldown stops without automatic retry: service unavailable with cooldown (1.076834ms)
+✔ truncated local source.json stays unchanged and refuses repeated resume before network (1.428375ms)
+✔ truncated local rpc.json stays unchanged and refuses repeated resume before network (1.230917ms)
+✔ fixed-block RPC evidence checks every identity field (16.166541ms)
+✔ RPC refuses wrong chain, changed canonical block and wrong deployed code (22.906459ms)
+✔ complete offline replay and header-rule counterexamples (195.267125ms)
+✔ offline recovery rejects missing page (100.11375ms)
+✔ offline recovery rejects truncated page JSON (97.30475ms)
+✔ offline recovery rejects changed header (102.538875ms)
+✔ offline recovery rejects changed RPC state (59.367958ms)
+✔ offline recovery rejects changed consumer series (133.172833ms)
+✔ offline recovery rejects changed source RPC (53.4545ms)
+✔ offline recovery rejects changed evidence RPC (55.3285ms)
+✔ offline recovery rejects changed Bitcoin source (56.688167ms)
+✔ offline recovery rejects changed page URL (63.022ms)
+✔ offline recovery rejects invalid observation (68.28175ms)
+Downloaded through Bitcoin height 972236; 25 pages verified.
+Downloaded through Bitcoin height 971861; 50 pages verified.
+Downloaded through Bitcoin height 971486; 75 pages verified.
+Downloaded through Bitcoin height 971111; 100 pages verified.
+Downloaded through Bitcoin height 970736; 125 pages verified.
+Downloaded through Bitcoin height 970361; 150 pages verified.
+Downloaded through Bitcoin height 969986; 175 pages verified.
+Downloaded through Bitcoin height 969611; 200 pages verified.
+Downloaded through Bitcoin height 969236; 225 pages verified.
+Downloaded through Bitcoin height 968861; 250 pages verified.
+Downloaded through Bitcoin height 968486; 275 pages verified.
+Downloaded through Bitcoin height 968111; 300 pages verified.
+Downloaded through Bitcoin height 967736; 325 pages verified.
+✔ interrupted download resumes verified pages without overwriting a completed archive (716.038667ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1764.359667

@@ -1,0 +1,20 @@
+{
+  "rateLimit": {
+    "requests": 2,
+    "requestedWaitsMs": [
+      1000
+    ],
+    "returned": "0xaa36a7",
+    "retryAfterSeconds": 3600,
+    "interpretation": "r3 retried after only 1000ms despite the server requesting 3600 seconds"
+  },
+  "partialLocalConfig": {
+    "failures": [
+      "Unexpected end of JSON input",
+      "Unexpected end of JSON input"
+    ],
+    "networkCalls": 0,
+    "bytesPreserved": "{\"candidateId\":",
+    "successReport": false
+  }
+}

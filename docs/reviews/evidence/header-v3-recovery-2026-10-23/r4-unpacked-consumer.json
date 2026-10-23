@@ -1,0 +1,13 @@
+{
+  "kind": "WUJI_HISTORICAL_SAMPLE",
+  "chainId": 11155111,
+  "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "evmBlockHash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+  "bitcoinHeight": 972510,
+  "bitcoinRawHash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+  "S_wad": "3516000000000000",
+  "displayIndex": 100.35221883786542,
+  "displayOnly": true,
+  "tradableQuote": false,
+  "live": false
+}

@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "id": "wuji-sepolia-header-v3-fixed-11969645",
+  "chainId": 11155111,
+  "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "contractsSourceCommit": "03f6256c2821e5a67a8b98739ee9b199a32da27a",
+  "repositoryBaseline": "a4cd706bd6d10aaf3bf6fb008c12e02e1b6b712a",
+  "runtimeSha256": "ea424d4928c54dc45684938ec78d67359635650bd927546d82d857096bfe008c",
+  "block": {
+    "number": "0xb6a46d",
+    "hash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+    "timestamp": "0x6ada0648"
+  },
+  "anchor": {
+    "anchorHeight": 969545,
+    "anchorHeader": "0x0000ae218bb026eba2802e50d7779674152ca91b30fcacf3078601000000000000000000ea76b6d638dd9167cc36ed1635aac0b23c4dc97ea53f500395a3b8fd41304e47154abf6ac51e02172d4246d0",
+    "anchorHash": "0000000000000000000093d46f3e6f339ae4e2c923d2ed46929250676943670f",
+    "epochFirst": 967680,
+    "epochStart": 1789801745,
+    "ancestorTimes": [
+      1790916084,
+      1790917422,
+      1790918189,
+      1790918276,
+      1790919973,
+      1790920259,
+      1790920396,
+      1790920403,
+      1790921054,
+      1790921121,
+      1790921237
+    ],
+    "genesisHeight": 969546
+  },
+  "anchorWork": "0",
+  "confirmations": 100,
+  "checkpointInterval": 4320,
+  "unit": "12000000000000",
+  "mean": 4080,
+  "reorgMargin": 144,
+  "rewards": "0xe6933fB941861b6Ef3888Eb11e2Dfb476B3aAB35",
+  "expected": {
+    "continuity": {
+      "hash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+      "height": 972510,
+      "bits": 386007187,
+      "time": 1792602665,
+      "epochStart": 1792154251,
+      "u": "293",
+      "times": [
+        1792597770,
+        1792598226,
+        1792598386,
+        1792599100,
+        1792600770,
+        1792600854,
+        1792600857,
+        1792601254,
+        1792601978,
+        1792601842,
+        1792602665
+      ],
+      "work": "1717113702291114818887492394",
+      "S_wad": "3516000000000000"
+    },
+    "seenHeight": 972610,
+    "seenTime": 1792667364,
+    "frozen": false,
+    "firstCheckpoint": 973865,
+    "firstCheckpointRecorded": false,
+    "spanFrom": 969535,
+    "spanTo": 972610,
+    "spanSha256": "52348deac3f4461fafcb5e75aed1a68c5449f3c6090e5fc4584ebebebfdeb921"
+  },
+  "selectors": {
+    "continuity()": "0xabc86e67",
+    "S()": "0x4be1c796",
+    "lastHeight()": "0x25159aa9",
+    "lastHash()": "0x3fa21806",
+    "CONFIRMATIONS()": "0x0438b0a4",
+    "frozen()": "0x054f7d9c",
+    "seenHeight()": "0x42fc5369",
+    "seenTime()": "0xaebd3c19",
+    "GENESIS_HEIGHT()": "0x207c8a4c",
+    "CHECKPOINT_INTERVAL()": "0xead68f82",
+    "UNIT()": "0x9d8e2177",
+    "MEAN()": "0xcf9df2f4",
+    "REORG_MARGIN()": "0xf0b3437b",
+    "rewards()": "0x9ec5a894",
+    "committedAt(uint64)": "0x96f4e12c",
+    "checkpointed(uint64)": "0x79a2496a",
+    "checkpointS(uint64)": "0x245bc84c"
+  },
+  "defaults": {
+    "rpc": "https://ethereum-sepolia.publicnode.com",
+    "bitcoinApi": "https://mempool.space/api"
+  },
+  "scope": "Fixed historical testnet fixture, not a current price oracle or wallet integration."
+}

@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-23T09:16:26.281257+00:00",
+  "revision": "header-v3-r4-20261023",
+  "archive": "/Users/m/Documents/Codex/2026-09-18/ni/wuji-deliverables/wuji-header-v3-verification-2026-10-23-r4.zip",
+  "sha256": "5c2bc154938772e88a3eee116133ad16742d8ad9abd1c6d37ded84e80866272d",
+  "files": 14,
+  "bytes": 42017,
+  "sourceFilesMatchUnpacked": true,
+  "originalR3PackageUnchanged": true,
+  "originalR3PackageSha256": "999ef5db46be168d692d91b34a5a80278a445dc135d6a0926e4575d468d521ed",
+  "unpackedChecks": [
+    {
+      "name": "r4-package-integrity",
+      "exitCode": 0,
+      "sha256": "541337d93e45b38eb8196d3b4f6e9ee5014aec0f621d9f5514686a6183c72235"
+    },
+    {
+      "name": "r4-unpacked-replay",
+      "exitCode": 0,
+      "sha256": "852335f3ba0439721a32b46758b3cb36a7afc8f07b8b1c86741d2c954cf471bf"
+    },
+    {
+      "name": "r4-unpacked-consumer",
+      "exitCode": 0,
+      "sha256": "8bea81c462de288c064933e11327cd8c745a324216f7206f8f34f325885e5908"
+    }
+  ],
+  "externalAcceptance": "NOT_RUN",
+  "newPublicAcquisition": false,
+  "jsonOutputTrailingWhitespaceNormalized": true
+}

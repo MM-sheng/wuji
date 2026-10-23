@@ -1,0 +1,268 @@
+{
+  "checkedAt": "2026-10-22T16:31:40.952415+00:00",
+  "node": "v26.8.1",
+  "scope": "Author self-check on the same machine; copied standalone kit and archive, not external acceptance.",
+  "externalAcceptance": "NOT_RUN",
+  "publicReplay": {
+    "status": "PASS_PUBLIC_REPLAY",
+    "candidate": "wuji-sepolia-header-v3-fixed-11969645",
+    "candidateSha256": "6dc09008a22caae1537c35e7aeac660f5b0b2efa831ee49785fc771a1b73b4c6",
+    "chainId": 11155111,
+    "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+    "evmBlock": {
+      "number": "0xb6a46d",
+      "hash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+      "timestamp": "0x6ada0648"
+    },
+    "bitcoin": {
+      "from": 967680,
+      "to": 972610,
+      "headers": 4931,
+      "finalized": {
+        "hash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+        "height": 972510,
+        "bits": 386007187,
+        "time": 1792602665,
+        "epochStart": 1792154251,
+        "u": "293",
+        "times": [
+          1792597770,
+          1792598226,
+          1792598386,
+          1792599100,
+          1792600770,
+          1792600854,
+          1792600857,
+          1792601254,
+          1792601978,
+          1792601842,
+          1792602665
+        ],
+        "work": "1717113702291114818887492394",
+        "S_wad": "3516000000000000"
+      },
+      "confirmations": 100,
+      "retargets": [
+        969696,
+        971712
+      ]
+    },
+    "headersSha256": "6dacd62bf269e519c0e6db8c8b9c139d6918e35ad7a34452a6526fa4774a80aa",
+    "seriesSha256": "f014ef5800f2b817a7ca5077cb13b0af6a11838cf2e4b854a8302a36c6e03ade",
+    "rows": 2965,
+    "checkpoint": {
+      "height": 973865,
+      "status": "NOT_REACHED"
+    },
+    "observation": "2026-10-22T15:45:53.749Z",
+    "operatorIndependence": "NOT_ATTESTED",
+    "scope": "Historical fixed-block replay; not live freshness, full Bitcoin validation, solvency, or an audit."
+  },
+  "metadataPages": 329,
+  "fullTest": {
+    "pass": 20,
+    "fail": 0,
+    "skip": 0
+  },
+  "offlineFetchDisabled": true,
+  "consumerExecuted": true,
+  "walletTestsRun": false,
+  "transactionsSent": 0,
+  "toolFiles": {
+    "verify.mjs": "c03b2cff0188b20daea4c356a75db444fa85852d58e5dc01a059b45c37208349",
+    "reference.mjs": "04c4ca0f5b760cb2a68ec1b67a695a1e2cf3f4b954fd37d7a27752b3e06990ca",
+    "keccak.mjs": "d523912b60123adff3759659497c46ef3722e277090cd41a346aa79102f32faf",
+    "consume.mjs": "e1ac9a9ff127c9ad7d6cb1f31d9a8eed6835f3ab402fc086d004540ee339691f",
+    "verify.test.mjs": "b809e6b81f3edf4ac8ffbdbac76023545099e5c21bde3efcda5ca8f974b7348b",
+    "candidate.json": "6dc09008a22caae1537c35e7aeac660f5b0b2efa831ee49785fc771a1b73b4c6",
+    "vector.json": "8df58034925bbf38e3c1a6829d09a241820f49bc11922f7337ca9260b7d3c76f"
+  },
+  "initialPublicCheckAt": "2026-10-22T16:00:58.738Z",
+  "deliveryRevision": "header-v3-r3-20261022",
+  "publicReplayRerun": false,
+  "compatibility": {
+    "testedOn": "macOS arm64, same author machine",
+    "runtimeArchive": {
+      "version": "v18.0.0",
+      "source": "https://nodejs.org/download/release/v18.0.0/node-v18.0.0-darwin-arm64.tar.xz",
+      "sha256": "7aaaef3814316f61b7378c0cc78e0b2360291d746b6314b18197c0ea83caff70",
+      "matchesOfficialChecksum": true
+    },
+    "initialFailures": {
+      "nodeVersion": "v18.0.0",
+      "documentedTestExit": 9,
+      "reason": "bad option: --test",
+      "fullTest": {
+        "pass": 13,
+        "fail": 1,
+        "skip": 0
+      },
+      "testFailure": "ERR_AMBIGUOUS_ARGUMENT"
+    },
+    "repaired": [
+      {
+        "node": "v18.0.0",
+        "baseTest": {
+          "pass": 9,
+          "fail": 0,
+          "skip": 6
+        },
+        "fullTest": {
+          "pass": 15,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      {
+        "node": "v26.8.1",
+        "baseTest": {
+          "pass": 9,
+          "fail": 0,
+          "skip": 6
+        },
+        "fullTest": {
+          "pass": 15,
+          "fail": 0,
+          "skip": 0
+        }
+      }
+    ],
+    "nativeNode18Rpc": {
+      "status": "PASS",
+      "observedAt": "2026-10-22T16:19:08.001Z",
+      "readCount": 17,
+      "block": "0xb6a46d"
+    },
+    "interruptionTest": "Mocked public responses, no network; only retry/page timers shortened; not another public acquisition.",
+    "evidenceLogSha256": {
+      "documented-base-test.log": "5a4c5b3a7507646294f8ffa19f729a7be452f8511a95a8b2face4bd6bc8acc06",
+      "full-test.log": "88767401572001a44ac94598ab6eaf9d6e1d5962f26e72d0b73322902858cc6f",
+      "public-rpc.log": "543dd99468b8b4ef133cc50088dca6a51ab82be58bd5bb4372a10f73da72dbb3",
+      "consumer.log": "8bea81c462de288c064933e11327cd8c745a324216f7206f8f34f325885e5908",
+      "node18-base-test-after.log": "48b2d736f70912666f354c21d54021b0ebdffb8676b05815b0673fb93b410d58",
+      "node18-full-test-after.log": "dd6d50b29f1f7a469cb3a63ab67259015fe7ec20541d462902de78a5a7c87291",
+      "node26-base-test-after.log": "b0561c25438e56124731d69616bbe92c7e006308861e92479ef160458651b864",
+      "node26-full-test-after.log": "a19e3717f3005278aa38b8fd9b758e51d3f45e040d5f77682c4a23272a6fdc66",
+      "initial-results.json": "63f93a130868e4bfe66dda0ff8f7b6003a84fd93be4d760c1ed4fef511d2b665",
+      "repaired-results.json": "a41c12e0eabc2b65a35187424bb54e8ec3662dee95c617049fead4bfa8cdfb47"
+    },
+    "originalPackageSha256": "493158fb71180073553077acf1528a4cfbef473bc1e7a4410c9b8c33e57f3120",
+    "revision": "header-v3-r2-20261022 (historical)"
+  },
+  "publicReplayRevision": "r1 (historical public acquisition; not rerun with r3)",
+  "currentOfflineReplay": {
+    "status": "PASS_OFFLINE_REPLAY",
+    "candidate": "wuji-sepolia-header-v3-fixed-11969645",
+    "candidateSha256": "6dc09008a22caae1537c35e7aeac660f5b0b2efa831ee49785fc771a1b73b4c6",
+    "chainId": 11155111,
+    "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+    "evmBlock": {
+      "number": "0xb6a46d",
+      "hash": "0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7",
+      "timestamp": "0x6ada0648"
+    },
+    "bitcoin": {
+      "from": 967680,
+      "to": 972610,
+      "headers": 4931,
+      "finalized": {
+        "hash": "0x78f899cb0fdcc5b4674e9239431ac50c7a6af652751501000000000000000000",
+        "height": 972510,
+        "bits": 386007187,
+        "time": 1792602665,
+        "epochStart": 1792154251,
+        "u": "293",
+        "times": [
+          1792597770,
+          1792598226,
+          1792598386,
+          1792599100,
+          1792600770,
+          1792600854,
+          1792600857,
+          1792601254,
+          1792601978,
+          1792601842,
+          1792602665
+        ],
+        "work": "1717113702291114818887492394",
+        "S_wad": "3516000000000000"
+      },
+      "confirmations": 100,
+      "retargets": [
+        969696,
+        971712
+      ]
+    },
+    "headersSha256": "6dacd62bf269e519c0e6db8c8b9c139d6918e35ad7a34452a6526fa4774a80aa",
+    "seriesSha256": "f014ef5800f2b817a7ca5077cb13b0af6a11838cf2e4b854a8302a36c6e03ade",
+    "rows": 2965,
+    "checkpoint": {
+      "height": 973865,
+      "status": "NOT_REACHED"
+    },
+    "observation": "2026-10-22T15:45:53.749Z",
+    "sources": {
+      "rpc": "https://ethereum-sepolia.publicnode.com",
+      "bitcoinApi": "https://mempool.space/api",
+      "labelConsistency": "CHECKED",
+      "authenticity": "NOT_ATTESTED"
+    },
+    "evidenceSha256": {
+      "source.json": "1b305ada9183a4293f41e30b3c3c695205827ed8e34b74a8be938a808e665116",
+      "rpc.json": "4074da260e0a0c4d1563fd6fd4a6d58f2db55a9ab829e74c2032a203050065f2",
+      "pages.json": "17b5ff09d6ee1de98bca8b037b07a1a23b69e206c4e35cfc47a638090f7b8867",
+      "final-block.json": "62929b1af5f7ce2b868324e70dd219322a384fa9a8e42940dac4bd399e3cfcd8"
+    },
+    "operatorIndependence": "NOT_ATTESTED",
+    "scope": "Historical fixed-block replay; not live freshness, full Bitcoin validation, solvency, or an audit."
+  },
+  "recordConsistency": {
+    "scope": "Record consistency only, not provider authentication or independent acceptance.",
+    "r2InconsistentCopiesAccepted": 5,
+    "r3InconsistentCopiesRejected": 5,
+    "resumeRejectsMislabeledRpcBeforeNetwork": true,
+    "runtimeTests": [
+      {
+        "node": "v18.0.0",
+        "baseTest": {
+          "pass": 9,
+          "fail": 0,
+          "skip": 11
+        },
+        "fullTest": {
+          "pass": 20,
+          "fail": 0,
+          "skip": 0
+        }
+      },
+      {
+        "node": "v26.8.1",
+        "baseTest": {
+          "pass": 9,
+          "fail": 0,
+          "skip": 11
+        },
+        "fullTest": {
+          "pass": 20,
+          "fail": 0,
+          "skip": 0
+        }
+      }
+    ],
+    "evidenceLogSha256": {
+      "node18-base-r3.log": "d1ff2624c4180494fe095904a8287be655e1ebabbcce88bf1449fd6ed73359c5",
+      "node18-full-r3-before-resume-guard.log": "9ea4c6bd13e47f3d6f15f2e543c58c0314e12fa183fbf25c14bea548d9b5f132",
+      "node18-full-r3.log": "93fa4fae187159e806228365a13b5aa7bd755d95b5c3e816a79eea06b3466366",
+      "node26-base-r3.log": "fe84e3f9167ff2f3fec9c3ba9eee1a086c399798cc7a872bf2ce47edbe6d2e9f",
+      "node26-full-r3-before-resume-guard.log": "3a7a6d2439396f89c67ec39b3db78a9d87d6b627f5acc866923d1c68ad5942a0",
+      "node26-full-r3.log": "94515f5de65a6d09d4c515866812384e34bc975ecb81f5e56aeeabf4f740e499",
+      "r2-SELF_CHECK.json": "5181bf80a19e0178e7beb7e59648c9034f20d94ae278591d503c74f64f25f5da",
+      "r2-reproduction.json": "4c6b0af0311f2c0d1b2d983a03cdf13f94b8d819a230585b2d3f57a52b332b1c",
+      "r3-consumer.json": "8bea81c462de288c064933e11327cd8c745a324216f7206f8f34f325885e5908",
+      "r3-offline-replay.json": "78663fabb748582b8a2337201efe0cc633f9a6646af64dcb2afc83e740c94769",
+      "r3-test-results.json": "a2f8ccdf897b172c6d1a10beef5170adc1988ddbeb5424b0c9efa3cec76c63bb"
+    },
+    "originalR2PackageSha256": "7255e67c3a999ec4822ba939a7e7357a8da3e974e2d1b87e859bc3d981471bef"
+  }
+}
