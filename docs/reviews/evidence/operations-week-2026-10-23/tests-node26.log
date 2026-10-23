@@ -1,0 +1,52 @@
+✔ complete nonce scan includes failed gas, excludes failed ETH value, and separates bounty allocations/claims (2.029958ms)
+✔ missing nonce transaction, missing receipt and incomplete log coverage cannot become a complete report (0.940667ms)
+✔ chain mismatch, reorganization, delegated worker, stale finality and excessive scan all fail closed (0.850875ms)
+✔ 100 confirmations and batching do not cause a false lag alert (0.200291ms)
+✔ durable transitions notify once, escalate once and recover once, without per-value spam (0.213792ms)
+✔ unavailable RPC does not silently recover a low balance or an existing backlog (0.087167ms)
+✔ ready-epoch timer persists across polls, resets for a new epoch, and does not clear on read failure (0.099ms)
+✔ missing logs, frozen index, reserve deficits and insolvent pools are visible (0.065209ms)
+✔ adjacent historical windows exclude their end timestamp and count each nonce exactly once (0.651708ms)
+✔ historical windows reject future/unfinalized boundaries and chain history gaps (0.285084ms)
+✔ recent fixed windows work when the provider has pruned unrelated ancient block history (0.224333ms)
+✔ zero blob gas without a blob price is valid; positive blob gas still requires its price (0.249458ms)
+✔ acknowledged transition stays quiet; new recovery notifies once (1.3525ms)
+✔ missing/stale monitor alerts once and notifies its recovery (0.515667ms)
+✔ truncated event history is visible, not silently acknowledged (0.084334ms)
+✔ persistent sequence corruption stays quiet after the first actionable alert (0.060958ms)
+{"window":1,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":2,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":3,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":4,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":5,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":6,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":7,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+✔ seven fixed Jakarta days are contiguous and summary uses integer receipts, not rolling totals (1.737833ms)
+✔ overlap, missing day, duplicate transaction, wrong nonce, receipt fee and balance inconsistencies fail closed (1.024667ms)
+✔ invalid plan timestamp and incomplete measurements cannot yield a weekly total (0.263333ms)
+✔ completed windows resume with canonical hash checks and no new cost scan or archive overwrite (3.889875ms)
+{"seq":1,"at":"2026-10-23T14:11:09.791Z","key":"balance","type":"opened","severity":"critical","message":"keeper 余额 1 wei（Sepolia ETH）"}
+{"at":"2026-10-23T14:11:09.792Z","status":"observed","active":["balance"],"costComplete":true}
+{"at":"2026-10-23T14:11:09.794Z","status":"observed","active":["balance"],"costComplete":true}
+{"seq":2,"at":"2026-10-23T14:11:09.795Z","key":"balance","type":"recovered","severity":"critical","message":"keeper 余额 100000000000000000 wei（Sepolia ETH）"}
+{"at":"2026-10-23T14:11:09.795Z","status":"observed","active":[],"costComplete":true}
+{"seq":1,"at":"2026-10-23T14:11:09.797Z","key":"balance","type":"opened","severity":"critical","message":"keeper 余额 1 wei（Sepolia ETH）"}
+{"seq":2,"at":"2026-10-23T14:11:09.797Z","key":"cost-coverage","type":"opened","severity":"warning","message":"24 小时成本窗口不完整，禁止按零成本展示"}
+{"at":"2026-10-23T14:11:09.797Z","status":"observed","active":["balance","cost-coverage"],"costComplete":false}
+{"at":"2026-10-23T14:11:09.798Z","status":"observed","active":["balance","cost-coverage"],"costComplete":false}
+{"seq":3,"at":"2026-10-23T14:11:09.799Z","key":"cost-coverage","type":"recovered","severity":"warning","message":"24 小时成本窗口不完整，禁止按零成本展示"}
+{"at":"2026-10-23T14:11:09.799Z","status":"observed","active":["balance"],"costComplete":true}
+{"at":"2026-10-23T14:11:09.799Z","status":"observed","active":["balance"],"costComplete":true}
+✔ real metrics path keeps pinned reads and reports a keeper RPC failure independently of log activity (88.840417ms)
+✔ a syntactically valid Bitcoin height older than the deployment cannot clear source alerts (1.295208ms)
+✔ CLI persistence deduplicates across restarts and emits one recovery; concurrent lock cannot be stolen (6.891458ms)
+✔ failed cost refresh retries after five minutes, preserves historical cost and recovers once (4.195041ms)
+✔ cost retry schedule is bounded and error diagnostics never retain raw RPC messages (0.272541ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 146.376167

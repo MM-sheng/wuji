@@ -1,0 +1,33 @@
+{
+  "sourceCommit": "e43c764aea357c9d3675f79e709c1c2c240931e2",
+  "observedAt": "2026-10-23T14:13:45.723399+00:00",
+  "mode": "RETROSPECTIVE_CHAIN_ACCOUNTING",
+  "rpcHosts": {
+    "state": "sepolia.gateway.tenderly.co",
+    "history": "sepolia.gateway.tenderly.co"
+  },
+  "sourceHashes": {
+    "indexer/operations.mjs": "e5f4a0fa5d7bcd916e7c08ae4a40906d80f8a0c2c05fd6c2303e38c035ee2222",
+    "scripts/wuji-cost-week.mjs": "b2af74e0c6e9722e40f921991169f3b7105544926fcea09d03b5bae4735d72ea"
+  },
+  "publicnodeObservations": [
+    {
+      "method": "eth_getBlockByNumber",
+      "block": "0x0",
+      "error": "pruned history unavailable: requested 0, earliest available 1000000"
+    },
+    {
+      "method": "eth_getTransactionCount",
+      "block": "0xb5e96e",
+      "error": "pruned history unavailable: requested 11921774, earliest available 11967076"
+    },
+    {
+      "method": "eth_getTransactionReceipt",
+      "hash": "0xd9f7278e5bf82c79f87dffe61d4d56b0250dff376501e97a7c2fc69c48ef5da2",
+      "result": null
+    }
+  ],
+  "receiptCompatibility": "Tenderly receipt included blobGasUsed=0x0 without blobGasPrice; fixed integer handling, nonzero usage still requires price.",
+  "productionServices": "UNCHANGED",
+  "historicalTelemetry": "UNKNOWN; not reconstructed from chain costs"
+}

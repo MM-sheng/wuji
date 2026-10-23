@@ -1,0 +1,55 @@
+{
+  "provider": "ethereum-sepolia-rpc.publicnode.com",
+  "status": "COMPLETE",
+  "scope": "Canonical daily boundary block hashes only; does not attest historical account state or external operator independence.",
+  "blocks": [
+    {
+      "number": "0xb5e96e",
+      "hash": "0xfd17fb19d24e5c5c23222e1c7b0f8c0f52148d3aa0ac2107770abd782db5af85",
+      "timestamp": "0x6ad10684",
+      "observedAt": "2026-10-23T14:20:47.973Z"
+    },
+    {
+      "number": "0xb60431",
+      "hash": "0x0de1b85de05a9e3d9f3ca00cf4f77d86051ab7abc58a95ed26f0deb8e22d4bf1",
+      "timestamp": "0x6ad25804",
+      "observedAt": "2026-10-23T14:20:48.388Z"
+    },
+    {
+      "number": "0xb61eb9",
+      "hash": "0x6169984fa762b27c8f367b8c740a88dfdd59f8c0e94f4e16048b515a469b0fd7",
+      "timestamp": "0x6ad3a984",
+      "observedAt": "2026-10-23T14:20:48.729Z"
+    },
+    {
+      "number": "0xb63a0b",
+      "hash": "0x6bb26aba9e72226102abd755f33025531f2e088abec2b89f1307a39b16d73f4a",
+      "timestamp": "0x6ad4fb04",
+      "observedAt": "2026-10-23T14:20:49.438Z"
+    },
+    {
+      "number": "0xb655c8",
+      "hash": "0x2039e760aeac1f8100cdd024c09563129bba09f5e625d7d14484ac458e8c4b09",
+      "timestamp": "0x6ad64c84",
+      "observedAt": "2026-10-23T14:20:49.788Z"
+    },
+    {
+      "number": "0xb671a4",
+      "hash": "0x1bf34dde61db70d082af4974af678e15e9fb7129b57fd6e3766ec1a2a28116c9",
+      "timestamp": "0x6ad79e04",
+      "observedAt": "2026-10-23T14:20:50.186Z"
+    },
+    {
+      "number": "0xb68d6e",
+      "hash": "0x5268023acc7e7d3eb58db94c6e3e681268b076b85d8e413c2c2269ab786f9fc1",
+      "timestamp": "0x6ad8ef84",
+      "observedAt": "2026-10-23T14:25:18.307Z"
+    },
+    {
+      "number": "0xb6a947",
+      "hash": "0x13057f7cc6896b467dff032179386e8abfdcbfb322a667b0dd67ba3c72742b4a",
+      "timestamp": "0x6ada4104",
+      "observedAt": "2026-10-23T14:25:19.204Z"
+    }
+  ]
+}

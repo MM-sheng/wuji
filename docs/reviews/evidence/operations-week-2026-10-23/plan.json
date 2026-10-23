@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "secondsPerWindow": 86400,
+  "windowCount": 7,
+  "startTimestamp": 1792083600,
+  "endTimestamp": 1792688400,
+  "windows": [
+    {
+      "id": 1,
+      "startTimestamp": 1792083600,
+      "endTimestamp": 1792170000
+    },
+    {
+      "id": 2,
+      "startTimestamp": 1792170000,
+      "endTimestamp": 1792256400
+    },
+    {
+      "id": 3,
+      "startTimestamp": 1792256400,
+      "endTimestamp": 1792342800
+    },
+    {
+      "id": 4,
+      "startTimestamp": 1792342800,
+      "endTimestamp": 1792429200
+    },
+    {
+      "id": 5,
+      "startTimestamp": 1792429200,
+      "endTimestamp": 1792515600
+    },
+    {
+      "id": 6,
+      "startTimestamp": 1792515600,
+      "endTimestamp": 1792602000
+    },
+    {
+      "id": 7,
+      "startTimestamp": 1792602000,
+      "endTimestamp": 1792688400
+    }
+  ],
+  "semantics": "Half-open [start,end); each transaction block belongs to exactly one window.",
+  "telemetry": "RETROSPECTIVE_CHAIN_ACCOUNTING; historical backlog, RPC outages and human interventions NOT_RECONSTRUCTED",
+  "worker": "0x27b2474c8ca832d25c301ea43cf90c57c5a2dcd2",
+  "index": "0x4a70Ebc03DA98f04d88964E17dF212ba1bb2705a",
+  "rewards": "0xe6933fB941861b6Ef3888Eb11e2Dfb476B3aAB35",
+  "token": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+}

@@ -1,0 +1,5 @@
+{
+  "manifest": "contracts/deployments/sepolia-header-v3.json",
+  "worker": "0x27b2474c8ca832d25c301ea43cf90c57c5a2dcd2",
+  "costRpc": "https://sepolia.gateway.tenderly.co"
+}

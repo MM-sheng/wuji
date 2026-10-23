@@ -1,0 +1,30 @@
+{
+  "status": "COMPLETE",
+  "windowCount": 7,
+  "startTimestamp": 1792083600,
+  "endTimestamp": 1792688400,
+  "chainId": 11155111,
+  "worker": "0x27b2474c8ca832d25c301ea43cf90c57c5a2dcd2",
+  "transactions": 34,
+  "failedTransactions": 0,
+  "foldedHeights": 1013,
+  "gasFeeWei": "8156427100000000",
+  "outgoingValueWei": "0",
+  "nativeCreditsInferredWei": "0",
+  "rewardsAllocatedWei": "0",
+  "rewardsClaimedWei": "0",
+  "byCategory": {
+    "index": {
+      "transactions": 28,
+      "failed": 0,
+      "gasFeeWei": "7797408300000000"
+    },
+    "pool-maintenance": {
+      "transactions": 6,
+      "failed": 0,
+      "gasFeeWei": "359018800000000"
+    }
+  },
+  "telemetry": "RETROSPECTIVE_CHAIN_ACCOUNTING; historical backlog, RPC outages and human interventions NOT_RECONSTRUCTED",
+  "scope": "Keeper outgoing gas and value, inferred native credits, worker WETH allocations/claims. Excludes deployer, user-wallet gas, off-chain host/RPC costs. Not seven days of prospective operational monitoring or economic self-sufficiency."
+}

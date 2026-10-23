@@ -1,0 +1,31 @@
+{"window":1,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":2,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":3,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":4,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":5,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":6,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+{"window":7,"status":"COMPLETE","gasFeeWei":"42","transactions":1}
+TAP version 13
+ok 1 - seven fixed Jakarta days are contiguous and summary uses integer receipts, not rolling totals
+  ---
+  duration_ms: 0.001549
+  ...
+ok 2 - overlap, missing day, duplicate transaction, wrong nonce, receipt fee and balance inconsistencies fail closed
+  ---
+  duration_ms: 0.001726166
+  ...
+ok 3 - invalid plan timestamp and incomplete measurements cannot yield a weekly total
+  ---
+  duration_ms: 0.000138417
+  ...
+ok 4 - completed windows resume with canonical hash checks and no new cost scan or archive overwrite
+  ---
+  duration_ms: 0.007455166
+  ...
+1..4
+# tests 4
+# pass 4
+# fail 0
+# skipped 0
+# todo 0
+# duration_ms 0.088990958

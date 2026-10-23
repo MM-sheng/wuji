@@ -1,0 +1,56 @@
+TAP version 13
+ok 1 - complete nonce scan includes failed gas, excludes failed ETH value, and separates bounty allocations/claims
+  ---
+  duration_ms: 0.00155325
+  ...
+ok 2 - missing nonce transaction, missing receipt and incomplete log coverage cannot become a complete report
+  ---
+  duration_ms: 0.000844625
+  ...
+ok 3 - chain mismatch, reorganization, delegated worker, stale finality and excessive scan all fail closed
+  ---
+  duration_ms: 0.001685542
+  ...
+ok 4 - 100 confirmations and batching do not cause a false lag alert
+  ---
+  duration_ms: 0.0001685
+  ...
+ok 5 - durable transitions notify once, escalate once and recover once, without per-value spam
+  ---
+  duration_ms: 0.000274375
+  ...
+ok 6 - unavailable RPC does not silently recover a low balance or an existing backlog
+  ---
+  duration_ms: 0.000056334
+  ...
+ok 7 - ready-epoch timer persists across polls, resets for a new epoch, and does not clear on read failure
+  ---
+  duration_ms: 0.000185167
+  ...
+ok 8 - missing logs, frozen index, reserve deficits and insolvent pools are visible
+  ---
+  duration_ms: 0.000033208
+  ...
+ok 9 - adjacent historical windows exclude their end timestamp and count each nonce exactly once
+  ---
+  duration_ms: 0.001009709
+  ...
+ok 10 - historical windows reject future/unfinalized boundaries and chain history gaps
+  ---
+  duration_ms: 0.000245458
+  ...
+ok 11 - recent fixed windows work when the provider has pruned unrelated ancient block history
+  ---
+  duration_ms: 0.000255041
+  ...
+ok 12 - zero blob gas without a blob price is valid; positive blob gas still requires its price
+  ---
+  duration_ms: 0.000479583
+  ...
+1..12
+# tests 12
+# pass 12
+# fail 0
+# skipped 0
+# todo 0
+# duration_ms 0.0301665
