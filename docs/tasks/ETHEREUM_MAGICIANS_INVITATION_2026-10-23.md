@@ -1,6 +1,12 @@
 # Ethereum Magicians 外部验收邀请
 
-状态：用户于 2026-10-23 已授权将既有英文短稿发布至 Tooling；尚未发布。
+状态：已于 2026-10-23 22:35 左右（Asia/Jakarta）按用户既有授权发布至 Tooling，账号 `MM-sheng` / `mm-sheng`。
+
+帖子：https://ethereum-magicians.org/t/wuji-seeking-an-independent-developer-to-replay-a-bitcoin-header-derived-index/30064
+
+已核对标题、三段正文、作者及 Tooling 栏目；帖子在栏目最新列表中出现，页面没有待审核提示。未上传附件。外部独立验收仍为 OPEN，发帖不代表已有人参与或通过审阅。
+
+以下为发布前阻塞的历史记录，最新排查与解决进展见文末。
 用户完成登录后，已确认 Chrome mm 会话的论坛账号为 `mm-sheng`。
 当前阻塞为新用户发帖限制：Tooling 和首页均没有创建主题入口，正常新主题路由也返回栏目页而不打开编辑器。
 版主说明新用户须先阅读讨论再创建主题；论坛 Basic 徽章说明达到信任等级 1 后解除新用户限制。
@@ -33,7 +39,7 @@ If it fits an existing project of yours, a small read-only consumer and an expla
 
 ## 发布后记录
 
-等待发布后填写实际帖子链接、账号、时间和公开或待审核状态；发帖本身不构成外部独立验收通过。
+实际帖子链接和发布状态见文件顶部；原定英文标题与正文保持不变。
 
 ## 权限复查
 
@@ -63,3 +69,21 @@ If it fits an existing project of yours, a small read-only consumer and an expla
 返回 Tooling 后仍没有创建主题按钮；尝试网站 Keyboard Shortcuts 明示的 `C` 新主题入口，也未打开编辑器。
 因此本轮未提交帖子，尚无帖子 URL 或待审核回执。后续需要论坛实际开放该账号的创建主题入口再继续。
 不重复要求用户授权发布；既有对 Tooling 英文邀请的授权仍有效。
+
+## 阅读统计排查与发布完成 · 2026-10-23
+
+本轮通过 Chrome 原生开发者工具只读观察网站正常阅读产生的请求，没有重放请求、注入计时或修改网站状态。
+
+- 正常阅读产生的 `POST /topics/timings` 返回 `200 OK`、空响应正文；一次耗时 37.52 秒，另一次 545 毫秒。请求数据中包含帖子 28086 的真实页面计时（`timings[1]` 和 `topic_time` 均为 97999 毫秒）。成功响应本身不能保证汇总数字已刷新。
+- 通过网站「Profile → Activity → Read」确认服务器提供的已读历史已列出 12 个先前阅读主题，包括 ethPM、轻客户端、多 RPC、元数据、随机源及验证 EVM 讨论。因此不能再将摘要的 0 解读为所有阅读提交均失败。
+- 切回原文并重新加载后，正常菜单和主题导航恢复；继续阅读了 [eth2-package 可复现测试网络介绍](https://ethereum-magicians.org/t/introducing-eth2-package-a-tool-for-spinning-up-private-testnets-in-a-single-command/15390)。其内容为历史工具介绍，不作为当前产品兼容性或 WUJI 安全结论。
+- Summary 重新加载后仍显示 `<1m` / `0 topics viewed` / `0 posts read`；发帖后它甚至仍显示 `0 topics created`。这表明已读历史、已发主题与摘要汇总存在不一致。当前证据将问题缩小至摘要/汇总更新或缓存环节，未取得论坛服务端日志，不能声称已修复论坛后端或确定唯一根因。
+- 22:34 左右通过网站正常新主题路由重载后，Tooling 已出现「New Topic」并打开编辑器。没有绕过权限检查；按既有授权提交一次英文邀请，随后核对主题页面及栏目列表，完成发布。
+
+本地截图证据（仅保存在本机，未上传论坛）：
+
+- `wuji-deliverables/ethereum-magicians-read-history-2026-10-23.png`
+- `wuji-deliverables/ethereum-magicians-wuji-published-2026-10-23.png`
+- `wuji-deliverables/ethereum-magicians-wuji-tooling-list-2026-10-23.png`
+
+以上截图目录为 `/Users/m/Documents/Codex/2026-09-18/ni/`。发帖权限阻塞已解除；摘要统计不一致仍需论坛侧后续刷新或管理员排查，不影响本次已完成的邀请发布。
