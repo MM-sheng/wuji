@@ -7,6 +7,26 @@ Sepolia header v3 的专用测试钱包完整协议往返已于 10 月 15 日完
 这不覆盖下文旧 BSC v4 的 MetaMask 真人界面验收；后者仍未完成。勿按下方旧清单启动历史 keeper。
 
 
+## Task C checkpoint — 2026-10-25, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 0.95 ETH.**
+Both historical 0.15 ETH targets remain complete; maintenance receipts are distinct from remaining balance.
+
+Checked today's log before one free Google Cloud Web3 request after the latest receipt's 24-hour cooldown
+and scheduled margin. Used the existing login session; no CAPTCHA, new login, terms acceptance or payment
+was presented. Google displayed `Transaction complete! Check your wallet address`.
+
+Transaction `0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f`
+was verified via public Sepolia RPC: chain 11155111, status 0x1, authorized recipient,
+value 50000000000000000 wei, canonical block `0xb6f679` (hash checked twice).
+Balance at that block: **0.808153500591317708 ETH**. Block time: 2026-10-25T11:44:24.000Z.
+[Raw transaction, receipt and balance](../../contracts/deployments/t11-sepolia-fuel-2026-10-25.json);
+[completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-25.png).
+
+Do not submit another October 25 request. Next attempt: October 26 after 19:50 Asia/Shanghai
+(18:50 Asia/Jakarta), at least 24 hours after this receipt with a margin.
+No outgoing transfer, deployment or Task A signature.
+
 ## Task C checkpoint — 2026-10-24, upkeep collection complete
 
 **Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 0.90 ETH.**
@@ -421,6 +441,7 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-10-22, after 18:20 | Google reCAPTCHA service unavailable; human handoff | 0 ETH verified | None | 0.718469518691317708 ETH observed at block 0xb6a197; recorded upkeep receipts remain 0.80 ETH |
 | 2026-10-23, approximately 19:21 | Google Cloud Web3 | 0.05 ETH | `0xac3af9c117eec836e4aee18ae61cebb1854141552f56e667ec1dcdcd0f64c358` | 0.765467113191317708 ETH at block 0xb6be8d; recorded upkeep receipts 0.85 ETH |
 | 2026-10-24, approximately 19:35 | Google Cloud Web3 | 0.05 ETH | `0x19938e3d5610cf94e4051d87477cbef32d400503710aa9a9dca72b40d21ec3d3` | 0.758153500591317708 ETH at block 0xb6daaa; recorded upkeep receipts 0.90 ETH |
+| 2026-10-25, approximately 19:44 | Google Cloud Web3 | 0.05 ETH | `0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f` | 0.808153500591317708 ETH at block 0xb6f679; recorded upkeep receipts 0.95 ETH |
 
 ## Historical report — 2026-09-26, v3
 

@@ -1,0 +1,82 @@
+{
+  "observedAt": "2026-10-25T11:45:11.658Z",
+  "dateAsiaShanghai": "2026-10-25",
+  "task": "C",
+  "status": "confirmed",
+  "chainId": 11155111,
+  "address": "0x85967858e2464535A12031103ABA38f2795Fe8Fd",
+  "faucet": "Google Cloud Web3",
+  "faucetURL": "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
+  "amountReceivedWei": "50000000000000000",
+  "transactionHash": "0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f",
+  "transaction": {
+    "type": "0x2",
+    "chainId": "0xaa36a7",
+    "nonce": "0x9f709",
+    "gas": "0x99cf0",
+    "maxFeePerGas": "0x2941c",
+    "maxPriorityFeePerGas": "0x293fc",
+    "to": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "value": "0xb1a2bc2ec50000",
+    "accessList": [],
+    "input": "0x",
+    "r": "0xc02a291c5a71799c43dfa3e059f270fef756f465aeb6f8055d7bfb75a48d3d7f",
+    "s": "0x75a8e32141f65c60a58ed8714d247684f4a7534439337ae41cf969ba14b1e026",
+    "yParity": "0x1",
+    "v": "0x1",
+    "hash": "0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f",
+    "blockHash": "0x7d5256d78c4490490e4c560e8ff7f67cc8e4c02835f108e3f72e8c3d1d6f2b7b",
+    "blockNumber": "0xb6f679",
+    "transactionIndex": "0x48",
+    "from": "0xb2de751d22adfb449e95da3c1e8836c6c61b537d",
+    "gasPrice": "0x2940c",
+    "blockTimestamp": "0x6addeb98"
+  },
+  "receipt": {
+    "type": "0x2",
+    "status": "0x1",
+    "cumulativeGasUsed": "0x3a31610",
+    "logs": [
+      {
+        "address": "0xfffffffffffffffffffffffffffffffffffffffe",
+        "topics": [
+          "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+          "0x000000000000000000000000b2de751d22adfb449e95da3c1e8836c6c61b537d",
+          "0x00000000000000000000000085967858e2464535a12031103aba38f2795fe8fd"
+        ],
+        "data": "0x00000000000000000000000000000000000000000000000000b1a2bc2ec50000",
+        "blockHash": "0x7d5256d78c4490490e4c560e8ff7f67cc8e4c02835f108e3f72e8c3d1d6f2b7b",
+        "blockNumber": "0xb6f679",
+        "blockTimestamp": "0x6addeb98",
+        "transactionHash": "0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f",
+        "transactionIndex": "0x48",
+        "logIndex": "0x82",
+        "removed": false
+      }
+    ],
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000020000000000008000000000000000000000000000000000000000000000000000000002000000000000000000000000000400000000010000000000000000000000000000000010000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000008000000000200000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000",
+    "transactionHash": "0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f",
+    "transactionIndex": "0x48",
+    "blockHash": "0x7d5256d78c4490490e4c560e8ff7f67cc8e4c02835f108e3f72e8c3d1d6f2b7b",
+    "blockNumber": "0xb6f679",
+    "gasUsed": "0x5208",
+    "effectiveGasPrice": "0x2940c",
+    "from": "0xb2de751d22adfb449e95da3c1e8836c6c61b537d",
+    "to": "0x85967858e2464535a12031103aba38f2795fe8fd",
+    "contractAddress": null
+  },
+  "blockTimestamp": 1792928664,
+  "balance": {
+    "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+    "blockNumber": "0xb6f679",
+    "blockHash": "0x7d5256d78c4490490e4c560e8ff7f67cc8e4c02835f108e3f72e8c3d1d6f2b7b",
+    "wei": "808153500591317708",
+    "eth": "0.808153500591317708"
+  },
+  "canonicalBlockRecheck": {
+    "number": "0xb6f679",
+    "hash": "0x7d5256d78c4490490e4c560e8ff7f67cc8e4c02835f108e3f72e8c3d1d6f2b7b"
+  },
+  "postRound2UpkeepReceiptsWei": "950000000000000000",
+  "scope": "One free request after 24-hour cooldown and scheduled margin with existing Google login; no CAPTCHA, new login, terms acceptance or payment presented. No outgoing transfer, deployment or Task A signature."
+}
