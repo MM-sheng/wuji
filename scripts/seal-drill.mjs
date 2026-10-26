@@ -72,8 +72,8 @@ try {
   const idxArgs = cast('abi-encode', 'f(bytes,uint64,uint32[11],uint64)', '0x' + main[ANCHOR - FIRST], String(ANCHOR), times, String(K));
   const INDEX = create(artifact('WujiHeaderIndex.reorg.t.sol', 'EasyHeaderIndex') + idxArgs.slice(2));
   const USDT = create(artifact('MockUSDT.sol', 'MockUSDT'));
-  const cfg = `(${USDT},${INDEX},11500000000000000000,6,2,1800,0x000000000000000000000000000000000000fEE0,0,0,1000)`;
-  const POOL = create(artifact('WujiAccounts.sol', 'WujiAccounts') + cast('abi-encode', 'f((address,address,int256,uint64,uint64,uint256,address,uint256,uint256,uint256))', cfg).slice(2));
+  const cfg = `(${USDT},${INDEX},11500000000000000000,6,2,1800,0x000000000000000000000000000000000000fEE0,0,0,1000,1000000000000000000000,0)`;
+  const POOL = create(artifact('WujiAccounts.sol', 'WujiAccounts') + cast('abi-encode', 'f((address,address,int256,uint64,uint64,uint256,address,uint256,uint256,uint256,uint256,uint64))', cfg).slice(2));
   log('index', INDEX, 'pool', POOL);
 
   // The production keeper, configured as on Sepolia but signing with anvil's unlocked account.
@@ -113,17 +113,32 @@ try {
   // 4. Bitcoin reorganizes 30 blocks below the finalized tip. First the new branch is too light.
   const fork = tipHeight - 30;
   const branch = extend(main.slice(0, fork - FIRST + 1), FIRST, seen + 400, 2);
+  // A segmented index (beginReorg/extendReorg) lets the keeper authenticate the branch while it is still too
+  // light; either way nothing may seal before the branch carries enough work.
   release(branch, seen + 20); await setTime(timeOf(seen + 20) + 60);
-  const waiting = await tick();
-  assert.equal(waiting.action, 'reorg-wait'); assert.equal(read(INDEX, 'frozen()(bool)'), 'false');
-  log(`branch from ${fork} to ${seen + 20}: keeper waits (${waiting.reason})`);
+  let light = [], segments = 0, sealHeaders = 0;
+  for (let i = 0; i < 6; i++) {
+    const r = await tick();
+    light.push(r.action);
+    assert.ok(['reorg-wait', 'reorg-progress'].includes(r.action), 'light branch: ' + r.action);
+    assert.equal(read(INDEX, 'frozen()(bool)'), 'false', 'a light branch never seals');
+    if (r.action === 'reorg-progress') { segments++; sealHeaders += r.headers; } else break;
+  }
+  log(`branch from ${fork} to ${seen + 20}: keeper ${light.join(', ')}; not sealed`);
 
   // 5. The branch outgrows the finalized chain by K + 144 blocks: the keeper seals, then freezes the pool.
   release(branch, seen + 400); await setTime(timeOf(seen + 400) + 60);
-  const sealed = await tick();
-  assert.equal(sealed.action, 'sealed'); assert.equal(read(INDEX, 'frozen()(bool)'), 'true');
-  assert.equal(read(POOL, 'frozen()(bool)'), 'true', 'pool frozen in the same round');
-  log(`sealed: ${sealed.headers} headers, gas ${sealed.gas}; pool frozen`);
+  let sealed = null;
+  for (let i = 0; i < 8 && !sealed; i++) {
+    const r = await tick();
+    if (r.action === 'sealed') sealed = r;
+    else { assert.equal(r.action, 'reorg-progress', 'heavy branch: ' + r.action); segments++; sealHeaders += r.headers; }
+  }
+  assert.ok(sealed, 'the keeper seals once the branch is heavy enough');
+  sealHeaders += sealed.headers || 0;
+  assert.equal(read(INDEX, 'frozen()(bool)'), 'true');
+  assert.equal(read(POOL, 'frozen()(bool)'), 'true', 'pool frozen in the sealing round');
+  log(`sealed after ${segments} segment(s), ${sealHeaders} headers; last gas ${sealed.gas}; pool frozen`);
   assert.equal((await tick()).action, 'frozen');
   assert.throws(() => cast('call', INDEX, 'foldHeaders(bytes,address[])', '0x' + branch.slice(0, 101).join(''), '[]', '--rpc-url', RPC), /IndexFrozen|revert/);
   assert.equal(read(INDEX, 'lastHeight()(uint64)'), String(tipHeight), 'nothing advanced');
@@ -137,7 +152,7 @@ try {
   assert.equal(paid.alice, frozenAlice, 'Alice paid her value at the last recorded S');
   assert.equal(paid.bob, frozenBob, 'Bob paid his value at the last recorded S');
   assert.ok(paid.alice + paid.bob <= 160n * 10n ** 18n, 'never more than was deposited');
-  const result = { fork, finalizedTip: tipHeight, frozenS: read(INDEX, 'S()(int256)'), valuesWhenProcessed: [valueAlice, valueBob].map(v => (Number(v) / 1e18).toFixed(6)), sealHeaders: sealed.headers, sealGas: sealed.gas,
+  const result = { fork, finalizedTip: tipHeight, frozenS: read(INDEX, 'S()(int256)'), valuesWhenProcessed: [valueAlice, valueBob].map(v => (Number(v) / 1e18).toFixed(6)), segments, sealHeaders, sealGas: sealed.gas,
     paid: Object.fromEntries(Object.entries(paid).map(([k, v]) => [k, (Number(v) / 1e18).toFixed(6)])), poolLeft: (Number(bal(POOL)) / 1e18).toFixed(6) };
   console.log('SEAL DRILL PASSED', JSON.stringify(result));
 } finally {
