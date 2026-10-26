@@ -11,8 +11,11 @@ contract WujiAccountsCode {
     }
 }
 
-/// @notice The volatility menu, fixed forever: one pool per (collateral, tier), created once, by anyone.
+/// @notice The volatility menu, fixed forever: one pool per tier, created once, by anyone, all in one collateral.
 /// A fixed menu keeps liquidity in few pools; a free slider would split it into pools nobody matches.
+/// One collateral keeps the menu's exposure to S bounded: each tier's per-side cap is K · EXPOSURE_BUDGET / 3,
+/// so Σ cap / K over the menu is EXPOSURE_BUDGET (asset units per unit of S) in era CAP_ERA, halving after
+/// (docs/decisions/2026-10-06-pool-exposure.md). Mainnet uses WETH: no issuer can freeze it.
 contract WujiAccountsFactory {
     // S moves ≈115% per year; pool annual vol ≈ 115% / K.
     int256 public constant K_5 = 23e18;    //  5% per year
@@ -31,13 +34,20 @@ contract WujiAccountsFactory {
     uint256 public immutable BUFFER_BPS;
     address public immutable codeLeft;
     address public immutable codeRight;
+    IERC20 public immutable ASSET;
+    uint256 public immutable EXPOSURE_BUDGET;
+    uint64 public immutable CAP_ERA;
 
     mapping(address => WujiAccounts[3]) internal pools;
     event Created(address indexed asset, uint256 tier, int256 k, address pool);
 
-    constructor(WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps, uint256 bufferBps) {
+    constructor(
+        WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps,
+        uint256 bufferBps, IERC20 asset_, uint256 exposureBudget, uint64 capEra
+    ) {
+        require(exposureBudget > 0, "budget");
         index = index_; treasury = treasury_; EPOCH = epoch; DELAY = delay; MAX_TIP_AGE = maxTipAge;
-        FEE_BPS = feeBps; BUFFER_BPS = bufferBps;
+        FEE_BPS = feeBps; BUFFER_BPS = bufferBps; ASSET = asset_; EXPOSURE_BUDGET = exposureBudget; CAP_ERA = capEra;
         bytes memory code = type(WujiAccounts).creationCode;
         uint256 split = code.length / 2;
         codeLeft = address(new WujiAccountsCode(_part(code, 0, split)));
@@ -53,13 +63,20 @@ contract WujiAccountsFactory {
         return [K_5, K_10, K_25][tier];
     }
 
+    /// @notice A tier's per-side principal cap in era CAP_ERA.
+    function capOf(uint256 tier) public view returns (uint256) {
+        return uint256(kOf(tier)) * EXPOSURE_BUDGET / (TIERS * 1e18);
+    }
+
     /// @notice Create the pool for (`asset`, `tier`), once, by anyone. Create one pool per transaction and
     /// estimate gas on the target chain: state-creation costs can differ from local execution measurements.
     function create(IERC20 asset, uint256 tier) external returns (WujiAccounts created) {
+        require(asset == ASSET, "collateral");
         require(tier < TIERS, "tier");
         require(address(pools[address(asset)][tier]) == address(0), "exists");
         bytes memory args = abi.encode(WujiAccounts.Config(
-            asset, index, kOf(tier), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, BOUNTY_DIVISOR, BUFFER_BPS));
+            asset, index, kOf(tier), EPOCH, DELAY, MAX_TIP_AGE, treasury, FEE_BPS, BOUNTY_DIVISOR, BUFFER_BPS,
+            capOf(tier), CAP_ERA));
         address left = codeLeft; address right = codeRight;
         uint256 a = left.code.length - 1; uint256 b = right.code.length - 1;
         bytes memory code = new bytes(a + b + args.length);
