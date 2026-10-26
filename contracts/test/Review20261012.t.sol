@@ -98,7 +98,7 @@ contract Review20261012Accounting is Test {
         token = new MockUSDT();
         pool = new WujiAccounts(WujiAccounts.Config(
             token, WujiIndex(address(idx)), 4.6e18, 6, 16, 30 minutes, address(0xFEE), 30, 10_000, 1000
-        ));
+        , type(uint128).max, 0));
         address[3] memory users = [alice, bob, carol];
         for (uint256 i; i < users.length; ++i) {
             token.mint(users[i], 1000e18);
