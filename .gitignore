@@ -16,3 +16,5 @@ contracts/.keystore-password-sepolia-v4
 .env.docker
 operator/
 docs/private/
+contracts/.env.mainnet-keeper
+contracts/.keystore-password-mainnet-keeper

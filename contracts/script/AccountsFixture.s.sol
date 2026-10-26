@@ -17,7 +17,7 @@ contract AccountsFixture is Script {
         FrozenExitRelayMock r = new FrozenExitRelayMock();
         WujiIndex idx = new WujiIndex(BitcoinRelay(address(r)), 1000, 4320, RelayerRewards(address(0)));
         MockUSDT token = new MockUSDT();
-        WujiAccounts pool = new WujiAccounts(WujiAccounts.Config(token, idx, 11.5e18, 6, 2, 30 minutes, address(0xFEE), 30, 10_000, 1_000));
+        WujiAccounts pool = new WujiAccounts(WujiAccounts.Config(token, idx, 11.5e18, 6, 2, 30 minutes, address(0xFEE), 30, 10_000, 1_000, type(uint128).max, 0));
         token.mint(msg.sender, 1_000e18);
         token.approve(address(pool), type(uint256).max);
         _advance(r, idx, 1000, 1010);

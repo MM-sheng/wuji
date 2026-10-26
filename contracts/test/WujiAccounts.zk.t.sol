@@ -41,7 +41,7 @@ contract WujiAccountsZkTest is Test {
         idx.foldHeaders(_headers(anchorHeight, 106), new address[](0)); // finalized tip at anchor + 100
         asset = new MockUSDT();
         pool = new WujiAccounts(WujiAccounts.Config(
-            asset, WujiIndex(address(idx)), 11.5e18, EPOCH, DELAY, 30 minutes, address(0xFEE), 0, 0, 1_000));
+            asset, WujiIndex(address(idx)), 11.5e18, EPOCH, DELAY, 30 minutes, address(0xFEE), 0, 0, 1_000, type(uint128).max, 0));
         for (uint256 i; i < 2; i++) {
             address u = [alice, bob][i];
             asset.mint(u, 1_000_000e18);
