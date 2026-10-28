@@ -40,10 +40,12 @@ contract AccountsHandler is Test {
 
     function idCount() external view returns (uint256) { return ids.length; }
 
+    /// Joined the pool: priced and not refunded. An entry refunded by a freeze also reads valueOf 0, but it is
+    /// owed its principal back, not at a floor, and retire must refuse it.
     function _entered(uint256 id) internal view returns (bool) {
         (,, uint64 e,,) = pool.accounts(id);
-        (,, bool processed) = pool.epochAcc(e);
-        return processed;
+        (bool processed, bool refunded) = pool.epochInfo(e);
+        return processed && !refunded;
     }
 
     function enter(uint256 seed, bool yang, uint256 amount) external {
@@ -233,4 +235,23 @@ contract WujiAccountsInvariantTest is Test {
 /// With frequent deep-reorg freezes: refunds, frozen pricing and frozen claims, same invariants.
 contract WujiAccountsFreezeInvariantTest is WujiAccountsInvariantTest {
     function freezes() internal pure override returns (bool) { return true; }
+
+    /// Regression (CI, 2026-10-26): while freezePool is still working through the queue, an entry it refunded
+    /// reads valueOf 0; the handler took that for a floor and called retire, which the pool rightly refused.
+    function test_retireSkipsEntriesRefundedByAFreeze() public {
+        h.enter(900, false, 14129);
+        h.mine(13419);
+        h.enter(47407984198846620053070612304842793208331953691135291908369873688, false, 7106783119369469073893378032873699996904721924057177112710482094129836470363);
+        h.enter(2, true, 12542);
+        h.mine(3000000000000000000);
+        h.enter(389, true, 23658);
+        h.enter(998, true, 16187);
+        h.enter(1600000000, false, 157198260);
+        h.mine(5);
+        h.enter(1064086905, false, 3635);
+        h.freeze(896);
+        h.process();
+        h.retire(1198474062880967034636149708994641026222264319955248248674009245);
+        assertTrue(idx.frozen() && !pool.frozen(), "the freeze is still in progress, as in the original run");
+    }
 }
