@@ -11,6 +11,8 @@ import { readPool, readAccount } from './accounts.mjs';
 const api=createBitcoinSource();
 const genesis=Number(process.env.GENESIS_HEIGHT), port=Number(process.env.PORT||8789);
 if(!Number.isSafeInteger(genesis)||genesis<1) throw Error('GENESIS_HEIGHT required');
+const CONFIRMATIONS=Number(process.env.CONFIRMATIONS||6);
+if(!Number.isSafeInteger(CONFIRMATIONS)||CONFIRMATIONS<1) throw Error('CONFIRMATIONS must be a positive integer');
 const dir=process.env.DATA_DIR||path.join(path.dirname(fileURLToPath(import.meta.url)),'data');fs.mkdirSync(dir,{recursive:true});
 const file=path.join(dir,`bitcoin-${genesis}.json`);
 let rows=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):[];
@@ -18,12 +20,24 @@ let tip=genesis-1, tipHash=null, tipTs=null, error=null, halted=false, chain=nul
 const price=u=>100*Math.exp(u*1.2e-5);
 const save=()=>{fs.writeFileSync(file+'.tmp',JSON.stringify(rows));fs.renameSync(file+'.tmp',file);};
 const hex=n=>'0x'+n.toString(16);
-const RPC=(process.env.RPC||'https://bsc-testnet-rpc.publicnode.com').split(',')[0];
+const RPCS=(process.env.RPC||'https://bsc-testnet-rpc.publicnode.com').split(',').map(s=>s.trim()).filter(Boolean);
+if(!RPCS.length) throw Error('RPC required');
+const MAX_RPC_FAILURES=Number(process.env.INDEXER_MAX_RPC_FAILURES??12);
+const POLL_MS=Number(process.env.INDEXER_POLL_MS||5000);
+let rpcIdx=0, rpcTransportFailures=0;
 const CONTRACT=process.env.CONTRACT, FACTORY=process.env.FACTORY;
 const CHAIN_ID=Number(process.env.CHAIN_ID||97);
 const ACCOUNTS=(process.env.ACCOUNTS||'').split(',').map(s=>s.trim().toLowerCase()).filter(a=>/^0x[0-9a-f]{40}$/.test(a));
 const NETWORK=network(CHAIN_ID);
-const rpc=(method,params)=>rpcRequest(RPC,method,params);
+async function rpc(method,params){
+ let lastErr;
+ for(let i=0;i<RPCS.length;i++){
+  const idx=(rpcIdx+i)%RPCS.length;
+  try{const res=await rpcRequest(RPCS[idx],method,params);rpcIdx=idx;return res;}
+  catch(e){lastErr=e;if(!e.rpcTransportError)throw e;}
+ }
+ throw lastErr;
+}
 const call=async(to,data,block='latest')=>rpc('eth_call',[{to,data},block]);
 const toInt=h=>{const v=BigInt(h);return v>=1n<<255n?v-(1n<<256n):v;};
 const SEL={"S": "0x4be1c796", "lastHeight": "0x25159aa9", "yangShare": "0xdbc1faef", "currentId": "0xe00dd161", "series": "0xdc22cb6a", "asset": "0x38d52e0f", "liabilities": "0xb4add307", "balanceOf": "0x70a08231"};
@@ -67,8 +81,16 @@ async function pollChain(){
   if(ACCOUNTS.length)c.accountPools=await Promise.all(ACCOUNTS.map(p=>readPool((to,data)=>call(to,data,at),p)));
   if(process.env.FROZEN_EXIT==='1')c.frozenExit=await readFrozenExit((to,data)=>call(to,data,at),CONTRACT,c.relay.address);
   if((await rpc('eth_getBlockByNumber',[at,false]))?.hash!==block.hash)throw Error('EVM reorg during snapshot');
-  c.observedHash=block.hash;chain=c;
- }catch(e){chain={contract:CONTRACT,err:e.message};}
+  c.observedHash=block.hash;chain=c;rpcTransportFailures=0;
+ }catch(e){
+  chain={contract:CONTRACT,err:e.message};
+  if(e.rpcTransportError){
+   if(MAX_RPC_FAILURES>0&&++rpcTransportFailures>=MAX_RPC_FAILURES){
+    console.error(`Exiting after ${rpcTransportFailures} consecutive RPC transport failures: ${e.message}`);
+    process.exit(1);
+   }
+  }else rpcTransportFailures=0;
+ }
 }
 async function sync(){
  if(halted)return;
@@ -76,16 +98,16 @@ async function sync(){
  const tipBlock=await api.at(nextTip);const tipStep=step(tipBlock.header);if(tipStep.hash!==tipBlock.hash)throw Error("tip hash mismatch");tip=nextTip;tipHash=tipStep.hash;tipTs=tipStep.timestamp;
  if(!genesisTs)genesisTs=step((await api.at(genesis)).header).timestamp;
  if(rows.length){const last=rows.at(-1);if((await api.hashAt(last.height))!==last.hash){halted=true;throw Error('deep Bitcoin reorg: finalized history changed');}}
- const final=tip-6;
+ const final=tip-CONFIRMATIONS;
  let previous=rows.at(-1)?.hash;
  for(let h=genesis+rows.length;h<=final;h++){
-   // Confirm the six descendants link to the candidate before publishing it.
+   // Confirm the required descendants link to the candidate before publishing it.
    const block=await api.at(h);const s=step(block.header);
    if(s.hash!==block.hash)throw Error('source header hash mismatch');
    const parent=Buffer.from(block.header.slice(8,72),'hex').reverse().toString('hex');
    if(previous&&parent!==previous){halted=true;throw Error('deep Bitcoin reorg: broken finalized linkage');}
    let hash=s.hash, confirmedAt=s.timestamp;
-   for(let k=1;k<=6;k++){
+   for(let k=1;k<=CONFIRMATIONS;k++){
      const child=await api.at(h+k);const cs=step(child.header);
      if(cs.hash!==child.hash||Buffer.from(child.header.slice(8,72),'hex').reverse().toString('hex')!==hash)throw Error('Bitcoin tip changed during confirmation check');
      hash=cs.hash;confirmedAt=Math.max(confirmedAt,cs.timestamp);
@@ -96,7 +118,7 @@ async function sync(){
  }
 }
 function at(ts){let lo=0,hi=rows.length-1,answer=-1;while(lo<=hi){const m=(lo+hi)>>1;if(rows[m].ts<=ts){answer=m;lo=m+1;}else hi=m-1;}return answer;}
-function head(){const last=rows.at(-1);return {source:'bitcoin',block:last?.height??genesis-1,height:last?.height??genesis-1,hash:last?.hash,ts:Math.floor(Date.now()/1000),blockTs:last?.timestamp,genesisTs,genesisBlock:genesis,genesisHeight:genesis,blocks:rows.length,U:last?.U||0,S:(last?.U||0)*1.2e-5,price:price(last?.U||0),chainHead:tip,tipHash,tipTs,behind:Math.max(0,tip-6-(last?.height??genesis-1)),synced:!error&&!halted,confirmations:6,unit:1.2e-5,sigma:1.2e-5*Math.sqrt(32*65535/12),err:error,halted,chain};}
+function head(){const last=rows.at(-1);return {source:'bitcoin',block:last?.height??genesis-1,height:last?.height??genesis-1,hash:last?.hash,ts:Math.floor(Date.now()/1000),blockTs:last?.timestamp,genesisTs,genesisBlock:genesis,genesisHeight:genesis,blocks:rows.length,U:last?.U||0,S:(last?.U||0)*1.2e-5,price:price(last?.U||0),chainHead:tip,tipHash,tipTs,behind:Math.max(0,tip-CONFIRMATIONS-(last?.height??genesis-1)),synced:!error&&!halted,confirmations:CONFIRMATIONS,unit:1.2e-5,sigma:1.2e-5*Math.sqrt(32*65535/12),err:error,halted,chain};}
 const staticDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../apps/terminal');
 http.createServer(async(req,res)=>{
  const u=new URL(req.url,'http://local'),q=u.searchParams;
@@ -119,11 +141,11 @@ http.createServer(async(req,res)=>{
   if(acct){const pool=acct[1].toLowerCase();if(!ACCOUNTS.includes(pool))return json({error:'unknown pool'},404);
    return json(await readAccount((to,data)=>call(to,data,'latest'),pool,Number(acct[2])));}
   const match=u.pathname.match(/^\/proof\/(\d+)$/);
-  if(match){const row=rows[Number(match[1])-genesis];if(!row)return json({error:'height not finalized'},404);const s=step(row.header);return json({...row,block:row.height,R_h:s.R,S:row.U*1.2e-5,S_wad:(BigInt(row.U)*12000000000000n).toString(),price:price(row.U),confirmations:6,confirmedAt:row.ts,url:'https://mempool.space/block/'+row.hash,byteOrder:'R = SHA256(raw SHA256d(header)); explorer hash reverses raw digest'});}
+  if(match){const row=rows[Number(match[1])-genesis];if(!row)return json({error:'height not finalized'},404);const s=step(row.header);return json({...row,block:row.height,R_h:s.R,S:row.U*1.2e-5,S_wad:(BigInt(row.U)*12000000000000n).toString(),price:price(row.U),confirmations:CONFIRMATIONS,confirmedAt:row.ts,url:'https://mempool.space/block/'+row.hash,byteOrder:'R = SHA256(raw SHA256d(header)); explorer hash reverses raw digest'});}
   const p=path.resolve(staticDir,'.'+(u.pathname==='/'?'/index.html':u.pathname));
   if(p.startsWith(staticDir+path.sep)&&fs.existsSync(p)&&fs.statSync(p).isFile()){res.writeHead(200,{'content-type':p.endsWith('.html')?'text/html; charset=utf-8':'application/octet-stream'});return fs.createReadStream(p).pipe(res);}
   json({error:'not found'},404);
  }catch(e){json({error:e.message},500);}
 }).listen(port,()=>console.log(`Bitcoin index :${port}, genesis ${genesis}`));
 async function loop(fn,ms){for(;;){try{await fn();if(fn===sync&&!halted)error=null;}catch(e){error=e.message;console.error(e.message);}await new Promise(r=>setTimeout(r,ms));}}
-loop(sync,15000);loop(pollChain,5000);
+loop(sync,15000);loop(pollChain,POLL_MS);

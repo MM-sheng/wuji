@@ -38,3 +38,43 @@ for(const v4 of [false,true])test(`Sepolia ${v4?'v4 frozen':'v3'} indexer refuse
   else assert.equal(h.chain.frozenExit,undefined);
  }finally{child.kill();await once(child,'exit');server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('indexer fails over across comma-separated RPCs, honors CONFIRMATIONS, and exits on wedged RPC', {timeout:20000}, async()=>{
+ const genesis=798336,fixture=fs.readFileSync(new URL('../contracts/test/fixtures/bitcoin-798336.hex',import.meta.url),'utf8').slice(2);
+ const blocks=Array.from({length:20},(_,i)=>{const header=fixture.slice(i*160,(i+1)*160);return {header,...step(header)};});
+ const address=n=>'0x'+String(n).repeat(40),word=n=>BigInt(n).toString(16).padStart(64,'0'),contract=address(1);
+ const server=http.createServer(async(req,res)=>{
+  if(req.method==='POST'){
+   let body='';for await(const b of req)body+=b;const {id,method,params}=JSON.parse(body);let result;
+   if(method==='eth_chainId')result='0xaa36a7';
+   if(method==='eth_getBlockByNumber')result={number:'0x55',hash:'0x'+word(55),timestamp:'0x'+Math.floor(Date.now()/1000).toString(16)};
+   if(method==='eth_call'){
+    const sig=params[0].data.slice(0,10);
+    result='0x'+({'0x4be1c796':word(0),'0x25159aa9':word(genesis-1),'0x207c8a4c':word(genesis),'0x3fa21806':word(0)}[sig]);
+   }
+   res.setHeader('content-type','application/json');res.end(JSON.stringify({id,jsonrpc:'2.0',result}));return;
+  }
+  if(req.url==='/blocks/tip/height'){res.end(String(genesis+10));return;}
+  if(req.url.startsWith('/block-height/')){res.end(blocks[Number(req.url.split('/').at(-1))-genesis].hash);return;}
+  const block=blocks.find(b=>b.hash===req.url.split('/')[2]);res.end(block?.header||'');
+ });server.listen(0,'127.0.0.1');await once(server,'listening');
+ const dead=http.createServer();dead.listen(0,'127.0.0.1');await once(dead,'listening');const deadPort=dead.address().port;await new Promise(r=>dead.close(r));
+ const probe=http.createServer();probe.listen(0,'127.0.0.1');await once(probe,'listening');const port=probe.address().port;await new Promise(r=>probe.close(r));
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wuji-failover-')),url='http://127.0.0.1:'+server.address().port,deadUrl='http://127.0.0.1:'+deadPort;
+ const child=spawn(process.execPath,[new URL('./bitcoin-index.mjs',import.meta.url).pathname],{env:{...process.env,GENESIS_HEIGHT:String(genesis),CONFIRMATIONS:'8',DATA_DIR:dir,PORT:String(port),RPC:`${deadUrl}, ${url}`,BITCOIN_API:url,CHAIN_ID:'11155111',CONTRACT:contract},stdio:'ignore'});
+ const until=async fn=>{for(let i=0;i<100;i++){try{const h=await(await fetch('http://127.0.0.1:'+port+'/head')).json();if(fn(h))return h;}catch{}await new Promise(r=>setTimeout(r,100));}throw Error('indexer timeout');};
+ try{
+  const h=await until(h=>h.chain?.agree===true&&h.blocks===3);
+  assert.equal(h.confirmations,8);
+  assert.equal(h.height,genesis+2);
+  const proof=await(await fetch(`http://127.0.0.1:${port}/proof/${genesis}`)).json();
+  assert.equal(proof.confirmations,8);
+ }finally{child.kill();await once(child,'exit');}
+
+ const probe2=http.createServer();probe2.listen(0,'127.0.0.1');await once(probe2,'listening');const port2=probe2.address().port;await new Promise(r=>probe2.close(r));
+ const wedged=spawn(process.execPath,[new URL('./bitcoin-index.mjs',import.meta.url).pathname],{env:{...process.env,GENESIS_HEIGHT:String(genesis),DATA_DIR:dir,PORT:String(port2),RPC:deadUrl,BITCOIN_API:url,CHAIN_ID:'11155111',CONTRACT:contract,INDEXER_MAX_RPC_FAILURES:'2',INDEXER_POLL_MS:'50'},stdio:'ignore'});
+ try{
+  const [code]=await once(wedged,'exit');
+  assert.equal(code,1,'indexer must exit for supervisor restart after consecutive RPC transport failures');
+ }finally{wedged.kill();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
+});
