@@ -91,3 +91,64 @@ test('the keeper does not prove on top of a pending batch that does not match th
     assert.equal(r.action, 'blocked');
   } finally { globalThis.fetch = rpcStub; }
 });
+
+test('keeper clamps fold size to on-chain RelayerRewards.MAX_HEIGHTS when reward tokens are set', async () => {
+  const { encodeContinuity, fixture, header, journal, w } = await import('./zk-test-helpers.mjs');
+  const { sel } = await import('./zk-challenge.mjs');
+  const { step } = await import('./bitcoin.mjs');
+  const j = journal(fixture('zk-journal.hex'));
+  const rewardsAddr = '0x' + 'aa'.repeat(20);
+  const oldFold = process.env.ZK_MAX_FOLD, oldTok = process.env.ZK_REWARD_TOKENS, oldWork = process.env.ZK_WORK_DIR;
+  process.env.ZK_MAX_FOLD = '80';
+  process.env.ZK_REWARD_TOKENS = '0x' + 'bb'.repeat(20);
+  process.env.ZK_WORK_DIR = (await import('node:fs')).mkdtempSync((await import('node:path')).join((await import('node:os')).tmpdir(), 'wuji-keeper-cap-'));
+  const views = {
+    [sel('rewards()')]: w(BigInt(rewardsAddr)),
+    [sel('GENESIS_HEIGHT()')]: w(j.genesisHeight), [sel('CHECKPOINT_INTERVAL()')]: w(4320), [sel('CONFIRMATIONS()')]: w(6),
+    [sel('MAX_HEADERS()')]: w(512), [sel('MAX_PROOF_HEADERS()')]: w(0), [sel('verifier()')]: w(0),
+    [sel('DISPUTE_BOND()')]: w(0), [sel('REORG_MARGIN()')]: w(144), [sel('MAX_REORG_HEADERS()')]: w(800),
+    [sel('MAX_REORG_SEGMENT_HEADERS()')]: w(0), [sel('frozen()')]: w(0), [sel('pendingCount()')]: w(0),
+  };
+  const h0 = header(0), s0 = step(h0);
+  const startCont = { ...j.prev, height: j.prev.height + 1, hash: '0x' + s0.internalHash };
+  let maxRequestedHeight = 0;
+  const rpcStub = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const { method, params, id } = JSON.parse(init.body);
+    let result;
+    if (method === 'eth_chainId') result = '0x7a69';
+    else {
+      const to = (params[0].to || '').toLowerCase(), s = params[0].data.slice(0, 10);
+      if (to === rewardsAddr && s === sel('MAX_HEIGHTS()')) result = '0x' + w(40); // on-chain cap < ZK_MAX_FOLD (80)
+      else if (to === rewardsAddr && s === sel('claimable(address,address)')) result = '0x' + w(0);
+      else if (s === sel('continuity()')) result = encodeContinuity(startCont);
+      else result = '0x' + views[s];
+    }
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id, result }));
+  };
+  try {
+    const { round } = await import('./zk-keeper.mjs?reward-cap');
+    // Let all 46 headers (6 confirmations + 40 on-chain MAX_HEIGHTS) succeed; fail if header 47..86 is requested.
+    const source = {
+      tip: async () => startCont.height + 90,
+      at: async h => {
+        if (h === startCont.height) return { height: h, header: h0, hash: s0.hash };
+        const idx = h - startCont.height;
+        maxRequestedHeight = Math.max(maxRequestedHeight, idx);
+        if (idx > 46) throw Error(`exceeded-reward-cap:${idx}`);
+        const x = header(idx);
+        return { height: h, header: x, hash: step(x).hash };
+      },
+    };
+    await assert.rejects(round(source), e => {
+      if (/exceeded-reward-cap/.test(e.message)) return false;
+      return true;
+    });
+    assert.equal(maxRequestedHeight, 46);
+  } finally {
+    globalThis.fetch = rpcStub;
+    if (oldFold === undefined) delete process.env.ZK_MAX_FOLD; else process.env.ZK_MAX_FOLD = oldFold;
+    if (oldTok === undefined) delete process.env.ZK_REWARD_TOKENS; else process.env.ZK_REWARD_TOKENS = oldTok;
+    if (oldWork === undefined) delete process.env.ZK_WORK_DIR; else process.env.ZK_WORK_DIR = oldWork;
+  }
+});

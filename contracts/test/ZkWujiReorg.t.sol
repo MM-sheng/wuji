@@ -8,6 +8,10 @@ import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiAccounts} from "../src/WujiAccounts.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 
+contract AcceptAllReorgVerifier is ISP1Verifier {
+    function verifyProof(bytes32, bytes calldata, bytes calldata) external pure {}
+}
+
 /// Test-only: the production index with its difficulty floor removed, so real competing branches can be mined
 /// inside a test (as T9 does with a low-difficulty relay). Every other rule is the production code.
 contract EasyZkIndex is ZkWujiIndex {
@@ -23,6 +27,36 @@ contract EasyZkIndex is ZkWujiIndex {
             0,
             Schedule(anchorHeight + 1, 4320, confirmations),
             Challenge(0, 0, 0)
+        )
+    {}
+
+    function targetOf(uint32 bits) public pure virtual override returns (uint256 target) {
+        uint256 size = bits >> 24;
+        uint256 word = bits & 0x007fffff;
+        target = size <= 3 ? word >> (8 * (3 - size)) : word << (8 * (size - 3));
+    }
+}
+
+contract ChallengeEasyZkIndex is ZkWujiIndex {
+    constructor(
+        ISP1Verifier v,
+        bytes memory anchor,
+        uint64 anchorHeight,
+        uint32[11] memory times,
+        uint64 confirmations,
+        uint256 bond
+    )
+        ZkWujiIndex(
+            v,
+            bytes32(uint256(1)),
+            RelayerRewards(address(0)),
+            anchor,
+            anchorHeight,
+            0,
+            times,
+            0,
+            Schedule(anchorHeight + 1, 4320, confirmations),
+            Challenge(1 hours, 1 hours, bond)
         )
     {}
 
@@ -382,5 +416,125 @@ contract ZkWujiReorgTest is Test {
         assertTrue(deep.isReorgProof(proof));
         deep.freezeReorg(proof);
         assertTrue(deep.frozen());
+    }
+
+    function _queueSealBatches(ChallengeEasyZkIndex pIdx, bytes memory main, uint256 bond)
+        internal
+        returns (bytes memory batch0Headers)
+    {
+        AcceptAllReorgVerifier v = AcceptAllReorgVerifier(address(pIdx.verifier()));
+        ChallengeEasyZkIndex ref = new ChallengeEasyZkIndex(v, anchorHeader, ANCHOR, anchorTimes, K, bond);
+        ref.foldHeaders(main, new address[](0));
+
+        // Honest headers for batch 0 (6 overlap headers from main + 10 new headers -> folds to ANCHOR + 64).
+        bytes memory extra = _chain(_last(main), ANCHOR + 61, 10, 2_222_000);
+        batch0Headers = new bytes(16 * 80);
+        for (uint256 i = 0; i < 6 * 80; ++i) batch0Headers[i] = main[54 * 80 + i];
+        for (uint256 i = 0; i < 10 * 80; ++i) batch0Headers[6 * 80 + i] = extra[i];
+        ref.foldHeaders(batch0Headers, new address[](0));
+
+        (ZkWujiIndex.Continuity memory s0, uint32[11] memory st0, uint256 sw0) = pIdx.continuity();
+        (ZkWujiIndex.Continuity memory s1, uint32[11] memory st1, uint256 sw1) = ref.continuity();
+
+        // Batch 0: proposed by 0x1001, disputed by 0x2001, backed by 0x3001 before freeze.
+        ZkWujiIndex.Journal memory j = ZkWujiIndex.Journal({
+            prevHash: s0.hash, prevHeight: s0.height, prevBits: s0.bits, prevTime: s0.time,
+            prevEpochStart: s0.epochStart, prevTimes: st0, prevU: s0.u, prevWork: sw0,
+            maxTime: uint32(block.timestamp), genesisHeight: ANCHOR + 1, checkpointInterval: 4320, confirmations: K,
+            newHash: s1.hash, newHeight: s1.height, newBits: s1.bits, newTime: s1.time,
+            newEpochStart: s1.epochStart, newTimes: st1, newU: s1.u, newWork: sw1,
+            checkpointHeights: new uint64[](0), checkpointU: new int64[](0)
+        });
+        vm.deal(address(0x1001), bond);
+        vm.prank(address(0x1001));
+        pIdx.foldProof{value: bond}(hex"00", abi.encode(j), new address[](0));
+        vm.deal(address(0x2001), bond);
+        vm.prank(address(0x2001));
+        pIdx.dispute{value: bond}(0, new address[](0));
+        vm.prank(address(0x3001));
+        pIdx.back(0, batch0Headers);
+
+        // Batch 1: proposed by 0x1002, disputed by 0x2002, left unbacked.
+        j.prevHash = s1.hash; j.prevHeight = s1.height; j.prevBits = s1.bits; j.prevTime = s1.time;
+        j.prevEpochStart = s1.epochStart; j.prevTimes = st1; j.prevU = s1.u; j.prevWork = sw1;
+        j.newHash = bytes32(uint256(0xB1)); j.newHeight = s1.height + 10; j.newTime = s1.time + 6000;
+        j.newU = s1.u + 5; j.newWork = sw1 + 10;
+        vm.deal(address(0x1002), bond);
+        vm.prank(address(0x1002));
+        pIdx.foldProof{value: bond}(hex"01", abi.encode(j), new address[](0));
+        vm.deal(address(0x2002), bond);
+        vm.prank(address(0x2002));
+        pIdx.dispute{value: bond}(1, new address[](0));
+
+        // Batch 2: proposed by 0x1003, undisputed.
+        j.prevHash = j.newHash; j.prevHeight = j.newHeight; j.prevTime = j.newTime;
+        j.prevU = j.newU; j.prevWork = j.newWork;
+        j.newHash = bytes32(uint256(0xB2)); j.newHeight += 10; j.newTime += 6000;
+        j.newU -= 3; j.newWork += 10;
+        vm.deal(address(0x1003), bond);
+        vm.prank(address(0x1003));
+        pIdx.foldProof{value: bond}(hex"02", abi.encode(j), new address[](0));
+    }
+
+    /// Cross-review regression: when a deep reorg seals ZkWujiIndex while pending batches exist (backed, disputed
+    /// unbacked, and undisputed), post-seal slashing paths are closed and cancelFrozen refunds every locked bond.
+    function test_sealWithPendingBatchesRefundsAllProverAndOpenDisputerBonds() public {
+        uint256 bond = 0.1 ether;
+        ChallengeEasyZkIndex pIdx =
+            new ChallengeEasyZkIndex(new AcceptAllReorgVerifier(), anchorHeader, ANCHOR, anchorTimes, K, bond);
+        (ZkWujiIndex.Continuity memory c0, uint32[11] memory t0, uint256 w0) = pIdx.continuity();
+        bytes memory anchorBase = abi.encode(c0, t0, w0);
+
+        bytes memory main = _chain(anchorHeader, ANCHOR + 1, 60, 1_000_000);
+        pIdx.foldHeaders(main, new address[](0));
+        assertEq(pIdx.lastHeight(), ANCHOR + 54);
+
+        vm.expectRevert(ZkWujiIndex.NotFrozen.selector);
+        pIdx.cancelFrozen(1);
+
+        bytes memory batch0Headers = _queueSealBatches(pIdx, main, bond);
+        assertEq(pIdx.owed(address(0x3001)), bond, "backer earned d1's bond before freeze");
+        assertEq(pIdx.pendingCount(), 3);
+        assertEq(address(pIdx).balance, 5 * bond);
+
+        // Deep reorg from anchor seals pIdx while all 3 pending batches are in the queue.
+        bytes memory branch = _chain(anchorHeader, ANCHOR + 1, 210, 7_000_000);
+        pIdx.freezeOnReorg(anchorBase, branch);
+        assertTrue(pIdx.frozen());
+
+        // Neither finalize nor post-seal dispute/back/reject/refute can slash or advance orphaned batches.
+        vm.warp(block.timestamp + 2 hours);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.finalize(3);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.back(1, batch0Headers);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.reject(1);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.refute(1, batch0Headers, new address[](0));
+
+        // Drain the pending queue in bounded steps (1 + remainder).
+        assertEq(pIdx.cancelFrozen(1), 1);
+        assertEq(pIdx.pendingCount(), 2);
+        assertEq(pIdx.cancelFrozen(10), 2);
+        assertEq(pIdx.pendingCount(), 0);
+        assertEq(pIdx.cancelFrozen(10), 0);
+
+        // Continuity returns the finalized frozen state, and every locked bond is accounted for to the wei.
+        (ZkWujiIndex.Continuity memory endState,,) = pIdx.continuity();
+        assertEq(endState.height, ANCHOR + 54);
+        assertEq(pIdx.owed(address(0x3001)), bond);
+        assertEq(pIdx.owed(address(0x1001)), bond);
+        assertEq(pIdx.owed(address(0x2001)), 0);
+        assertEq(pIdx.owed(address(0x1002)), bond);
+        assertEq(pIdx.owed(address(0x2002)), bond);
+        assertEq(pIdx.owed(address(0x1003)), bond);
+
+        address[5] memory payees = [address(0x3001), address(0x1001), address(0x1002), address(0x2002), address(0x1003)];
+        for (uint256 i = 0; i < payees.length; ++i) {
+            vm.prank(payees[i]);
+            assertEq(pIdx.withdraw(), bond);
+        }
+        assertEq(address(pIdx).balance, 0, "zero bond ETH left locked in frozen contract");
     }
 }

@@ -177,6 +177,7 @@ contract ZkWujiIndex {
     error NotForged();
     error TransferFailed();
     error IndexFrozen();
+    error NotFrozen();
     error NoReorg();
 
     /// @param anchorHeader the 80-byte header at `anchorHeight`; an immutable, publicly auditable starting point
@@ -532,7 +533,7 @@ contract ZkWujiIndex {
             owed[b.prover] += DISPUTE_BOND;
             if (address(rewards) != address(0)) rewards.credit(b.prover, from, b.to.height, b.proverTokens);
             emit Fold(from, b.to.height, int256(b.to.u) * UNIT, true);
-            delete batches[id];
+            _deleteBatch(id);
             firstPending = id + 1;
             ++done;
         }
@@ -557,6 +558,7 @@ contract ZkWujiIndex {
     ///         They are checked by the same Solidity rules as `foldHeaders`, from the batch's starting
     ///         state, and must reproduce the claimed end state exactly. The caller earns the bond.
     function back(uint256 id, bytes calldata headers) external {
+        if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         if (block.timestamp > b.respondBy) revert WindowClosed();
@@ -576,10 +578,25 @@ contract ZkWujiIndex {
     ///         built on it). The disputer of `id` receives their bond back plus `id`'s slashed prover bond;
     ///         later batches have their prover and open disputer bonds refunded.
     function reject(uint256 id) external {
+        if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         if (block.timestamp <= b.respondBy) revert WindowOpen();
         _reject(id);
+    }
+
+    /// @notice Refund locked prover and open disputer bonds once a deep reorg has sealed the index.
+    ///         Anyone may drain up to `maxBatches` orphaned pending batches; recipients pull via `withdraw`.
+    function cancelFrozen(uint256 maxBatches) external returns (uint256 done) {
+        if (!frozen) revert NotFrozen();
+        while (done < maxBatches && firstPending < nextBatch) {
+            uint256 id = firstPending;
+            _refundBatch(batches[id]);
+            _deleteBatch(id);
+            firstPending = id + 1;
+            ++done;
+        }
+        if (done > 0) emit Rejected(firstPending - done, done, address(0));
     }
 
     /// @notice Prove a disputed batch false at once, instead of waiting out the response window: the real
@@ -616,16 +633,21 @@ contract ZkWujiIndex {
         for (uint256 k = nextBatch; k > id;) {
             --k;
             Batch storage later = batches[k];
-            if (k == id) {
-                owed[later.disputer] += 2 * DISPUTE_BOND;
-            } else {
-                owed[later.prover] += DISPUTE_BOND;
-                if (later.disputer != address(0) && !later.backed) owed[later.disputer] += DISPUTE_BOND;
-            }
-            delete batches[k];
+            if (k == id) owed[later.disputer] += 2 * DISPUTE_BOND;
+            else _refundBatch(later);
+            _deleteBatch(k);
         }
         nextBatch = id;
         emit Rejected(id, removed, disputer);
+    }
+
+    function _refundBatch(Batch storage b) internal {
+        owed[b.prover] += DISPUTE_BOND;
+        if (b.disputer != address(0) && !b.backed) owed[b.disputer] += DISPUTE_BOND;
+    }
+
+    function _deleteBatch(uint256 id) internal {
+        delete batches[id];
     }
 
     function withdraw() external returns (uint256 amount) {

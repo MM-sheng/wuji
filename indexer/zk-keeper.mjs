@@ -138,20 +138,51 @@ export async function round(source) {
     try { return BigInt(await call(sel(sig))); }
     catch(e) { if(e.rpcReadError||e.rpcTransportError)throw e;return fallback; }
   };
-  immut ||= {
-    genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
-    interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
-    confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
-    maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
-    maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
-    headerOnly: (await optional('verifier()', 0n)) === 0n,
-    bond: await optional('DISPUTE_BOND()', 0n),
-    margin: Number(await optional('REORG_MARGIN()', 144n)),
-    maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
-    maxReorgSegmentHeaders: Number(await optional('MAX_REORG_SEGMENT_HEADERS()', 0n)),
-  };
-  // Rule 3 sealed the index: nothing advances any more; pools exit through maintainAccounts (freezePool).
+  if (!immut) {
+    let maxRewardHeights = 0;
+    if (REWARD_TOKENS.length) {
+      const rewardsWord = await call(sel('rewards()')).catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
+      const rewardsAddr = '0x' + rewardsWord.slice(-40).toLowerCase();
+      if (!/^0x0{40}$/.test(rewardsAddr)) {
+        const mh = await rpc('eth_call', [{ to: rewardsAddr, data: sel('MAX_HEIGHTS()') }, 'latest'])
+          .catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x100'; });
+        maxRewardHeights = Number(BigInt(mh));
+        if (maxRewardHeights > 0 && MAX_FOLD > maxRewardHeights) {
+          log(`clamping ZK_MAX_FOLD (${MAX_FOLD}) to on-chain RelayerRewards.MAX_HEIGHTS (${maxRewardHeights})`);
+        }
+      }
+    }
+    immut = {
+      genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
+      interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
+      confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
+      maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
+      maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
+      headerOnly: (await optional('verifier()', 0n)) === 0n,
+      bond: await optional('DISPUTE_BOND()', 0n),
+      margin: Number(await optional('REORG_MARGIN()', 144n)),
+      maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
+      maxReorgSegmentHeaders: Number(await optional('MAX_REORG_SEGMENT_HEADERS()', 0n)),
+      maxRewardHeights,
+    };
+  }
+  const rewardHeaderCap = REWARD_TOKENS.length && immut.maxRewardHeights > 0 ? immut.confirmations + immut.maxRewardHeights : Infinity;
+  // Rule 3 sealed the index: nothing advances any more; unwind any pending proof bonds, pools exit via maintainAccounts.
   if ((await optional('frozen()', 0n)) === 1n) {
+    if (!immut.headerOnly) {
+      if (Number(await optional('pendingCount()', 0n)) > 0) {
+        const ctx = await send('cancelFrozen(uint256)', 1_500_000, '32');
+        log(`cancelFrozen gas ${ctx.gas} ${ctx.hash}`);
+      }
+      const worker = chain.senderAddress();
+      const owedWord = await call(sel('owed(address)') + uint(BigInt(worker)))
+        .catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
+      const owed = BigInt(owedWord);
+      if (owed > 0n) {
+        const wtx = await send('withdraw()', 200_000);
+        log(`withdraw frozen bond ${owed} gas ${wtx.gas} ${wtx.hash}`);
+      }
+    }
     if (!frozenLogged) log('index is frozen (a deep reorg was sealed); nothing to fold');
     frozenLogged = true;
     return { action: 'frozen' };
@@ -241,7 +272,7 @@ export async function round(source) {
     if (available <= immut.confirmations || (available < immut.confirmations + MIN_FOLD && waited < MAX_WAIT_MIN)) {
       return { action: 'wait', height: start.height, available };
     }
-    const n = Math.min(available, immut.confirmations + MAX_FOLD, immut.maxHeaders);
+    const n = Math.min(available, immut.confirmations + MAX_FOLD, immut.maxHeaders, rewardHeaderCap);
     const headers = await fetchHeaders(n);
     const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.join(''), tokens);
     log(`foldHeaders ${n} headers (folds ${n - immut.confirmations}) gas ${tx.gas} ${tx.hash}`);
@@ -260,7 +291,7 @@ export async function round(source) {
     }
     return { action: 'wait', height: start.height, available };
   }
-  const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders);
+  const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders, rewardHeaderCap);
   const headers = await fetchHeaders(count);
   const input = {
     start, headers: '0x' + headers.join(''),
@@ -283,7 +314,7 @@ export async function round(source) {
     if (!FALLBACK) throw e;
     // The header path runs only from the finalized state; while batches are pending it would revert.
     if (pending > 0) throw Error('proof path failed with batches pending; header fallback waits for them');
-    const n = Math.min(count, immut.maxHeaders);
+    const n = Math.min(count, immut.maxHeaders, rewardHeaderCap);
     const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.slice(0, n).join(''), tokens);
     log(`fallback foldHeaders ${n} headers gas ${tx.gas} ${tx.hash}`);
     return { action: 'headers', ...tx, headers: n };
