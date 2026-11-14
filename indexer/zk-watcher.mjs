@@ -24,8 +24,10 @@ const env = process.env;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
 const within = (promise, what) => withinMs(promise, SOURCE_TIMEOUT_MS, what);
-// Empirical _replay cost is ~21k gas/header; cap below EIP-7825 2^24 (16,777,216) per-tx limit.
+// Empirical _replay cost is ~21k gas/header; clearing up to MAX_PENDING (32) batches uses up to ~180k pre-refund
+// gas/batch when 8-token lists and cold owed[] slots are populated; cap every tx strictly below EIP-7825 (16,777,216).
 const verifyGas = count => Math.min(16_000_000, 600_000 + 28_000 * count);
+const queueClearGas = removed => Math.min(16_000_000, 500_000 + 250_000 * removed);
 
 /// One watcher round. `chain` is a contractClient; `sources` are two independent Bitcoin sources
 /// ({tip(), at(h) → {header, hash}}); `dryRun` returns the planned actions without sending them.
@@ -59,7 +61,7 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
       const otherTip = typeof second?.tip === 'function' ? await within(second.tip(), 'second Bitcoin tip') : tip;
       const maxTip = Math.max(tip, otherTip);
       if (disputed && !b.backed && now > b.respondBy) {
-        await act(`reject unbacked batch ${id}`, 'reject(uint256)', 3_000_000, [String(id)]);
+        await act(`reject unbacked batch ${id}`, 'reject(uint256)', queueClearGas(next - id), [String(id)]);
         break;
       }
       // A forged proof claiming non-existent future heights (> maxTip + 2) or nearing finalAt before
@@ -99,11 +101,12 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
       // Refute at once with the real headers (no need to wait out the response window); for the oldest
       // batch this also folds the real state, so forged proofs at the head of the queue cannot hold the index.
       try {
-        await act(`refute batch ${id} with ${count} headers`, 'refute(uint256,bytes,address[])', verifyGas(count),
+        const refuteGas = Math.min(16_000_000, verifyGas(count) + 250_000 * (next - id));
+        await act(`refute batch ${id} with ${count} headers`, 'refute(uint256,bytes,address[])', refuteGas,
           [String(id), '0x' + headers.join(''), '[]']);
       } catch (e) {
         log(`refute batch ${id} failed: ${e.message}`);
-        if (disputed && !b.backed && now > b.respondBy) await act(`reject batch ${id}`, 'reject(uint256)', 3_000_000, [String(id)]);
+        if (disputed && !b.backed && now > b.respondBy) await act(`reject batch ${id}`, 'reject(uint256)', queueClearGas(next - id), [String(id)]);
       }
       break; // everything after it is built on it
     }
@@ -113,7 +116,7 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
     }
     if (id === first && (b.backed || (!disputed && now >= b.finalAt))) ready = true;
   }
-  if (ready) await act('finalize', 'finalize(uint256)', 1_500_000, ['8']);
+  if (ready) await act('finalize', 'finalize(uint256)', 4_500_000, ['8']);
   return actions;
 }
 

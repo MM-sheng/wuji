@@ -133,8 +133,15 @@ test('the watcher disputes forged future-height batches beyond Bitcoin tip and r
   await watch({ chain, sources: [realSource, realSource] });
   assert.deepEqual(chain.sent.map(s => s.sig), ['reject(uint256)']);
 
-  // Verify back/refute gas stays strictly below EIP-7825 (16,777,216)
+  // Verify back/refute gas stays strictly below EIP-7825 (16,777,216), and full 32-batch queue clear scales gas safely
   const normal = setup({ forge: false, disputed: true, now: 1500 });
   await watch(normal);
   assert.ok(normal.chain.sent[0].gas < 16_777_216);
+
+  const fullQueue = Array.from({ length: 32 }, () => ({ ...batch, disputer: '0x' + '22'.repeat(20), respondBy: 2000 }));
+  chain = fakeChain({ batches: fullQueue, start: { state: j.prev, genesisHeight: j.genesisHeight }, now: 2001 });
+  await watch({ chain, sources: [realSource, realSource] });
+  assert.equal(chain.sent[0].sig, 'reject(uint256)');
+  assert.equal(chain.sent[0].gas, 8_500_000, '32-batch reject gets 8.5M gas (>2.7M spare above worst-case 5.77M pre-refund)');
+  assert.ok(chain.sent[0].gas < 16_777_216);
 });

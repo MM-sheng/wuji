@@ -49,6 +49,10 @@ const MIN_FOLD = Number(env.ZK_MIN_FOLD || 36);
 const MAX_FOLD = Number(env.ZK_MAX_FOLD || 250);
 // Every transaction must stay under the 2^24 per-transaction gas cap (EIP-7825); ≈ 18.7k gas per header.
 const headerGas = n => Math.min(16_000_000, 200_000 + 22_000 * n);
+// Draining MAX_PENDING (32) frozen batches uses up to ~180k pre-refund gas/batch when 8-token lists and cold
+// owed[] slots are populated; unwind in 16-batch chunks with 250k gas/batch + 500k base (4.5M for 16).
+export const CANCEL_FROZEN_BATCH = 16;
+export const cancelFrozenGas = n => Math.min(16_000_000, 500_000 + 250_000 * n);
 // Relayer-bounty tokens (sorted, unique, ≤ 8) credited to this keeper for every height it folds.
 const REWARD_TOKENS = (env.ZK_REWARD_TOKENS || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort();
 if (REWARD_TOKENS.some(t => !/^0x[0-9a-f]{40}$/.test(t)) || new Set(REWARD_TOKENS).size !== REWARD_TOKENS.length || REWARD_TOKENS.length > 8) {
@@ -170,15 +174,22 @@ export async function round(source) {
   // Rule 3 sealed the index: nothing advances any more; unwind any pending proof bonds, pools exit via maintainAccounts.
   if ((await optional('frozen()', 0n)) === 1n) {
     if (!immut.headerOnly) {
-      if (Number(await optional('pendingCount()', 0n)) > 0) {
-        const ctx = await send('cancelFrozen(uint256)', 1_500_000, '32');
-        log(`cancelFrozen gas ${ctx.gas} ${ctx.hash}`);
+      let frozenPending = Number(await optional('pendingCount()', 0n));
+      while (frozenPending > 0) {
+        const n = Math.min(frozenPending, CANCEL_FROZEN_BATCH);
+        await chain.simulate(INDEX, 'cancelFrozen(uint256)(uint256)', String(n));
+        const ctx = await send('cancelFrozen(uint256)', cancelFrozenGas(n), String(n));
+        log(`cancelFrozen(${n}) gas ${ctx.gas} ${ctx.hash}`);
+        const left = Number(await optional('pendingCount()', 0n));
+        if (left >= frozenPending) break;
+        frozenPending = left;
       }
       const worker = chain.senderAddress();
       const owedWord = await call(sel('owed(address)') + uint(BigInt(worker)))
         .catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
       const owed = BigInt(owedWord);
       if (owed > 0n) {
+        await chain.simulate(INDEX, 'withdraw()(uint256)');
         const wtx = await send('withdraw()', 200_000);
         log(`withdraw frozen bond ${owed} gas ${wtx.gas} ${wtx.hash}`);
       }
@@ -190,7 +201,7 @@ export async function round(source) {
   // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
   let pending = Number(await optional('pendingCount()', 0n));
   if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
-    const tx = await send('finalize(uint256)', 1_500_000, '8');
+    const tx = await send('finalize(uint256)', 4_500_000, '8');
     log(`finalize gas ${tx.gas} ${tx.hash}`);
     pending = Number(await optional('pendingCount()', 0n));
     const worker = chain.senderAddress();

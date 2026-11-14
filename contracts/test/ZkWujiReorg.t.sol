@@ -537,4 +537,82 @@ contract ZkWujiReorgTest is Test {
         }
         assertEq(address(pIdx).balance, 0, "zero bond ETH left locked in frozen contract");
     }
+
+    function _fillMaxPendingBatches(ChallengeEasyZkIndex pIdx, uint256 bond) internal {
+        address[] memory toks = new address[](8);
+        for (uint256 t = 0; t < 8; ++t) {
+            toks[t] = address(uint160(0x9001 + t));
+        }
+        (ZkWujiIndex.Continuity memory s, uint32[11] memory st, uint256 sw) = pIdx.continuity();
+        ZkWujiIndex.Journal memory j = ZkWujiIndex.Journal({
+            prevHash: s.hash, prevHeight: s.height, prevBits: s.bits, prevTime: s.time,
+            prevEpochStart: s.epochStart, prevTimes: st, prevU: s.u, prevWork: sw,
+            maxTime: uint32(block.timestamp + 1 hours), genesisHeight: ANCHOR + 1, checkpointInterval: 4320,
+            confirmations: K, newHash: s.hash, newHeight: s.height, newBits: s.bits, newTime: s.time,
+            newEpochStart: s.epochStart, newTimes: st, newU: s.u, newWork: sw,
+            checkpointHeights: new uint64[](0), checkpointU: new int64[](0)
+        });
+        for (uint256 i = 0; i < 32; ++i) {
+            j.prevHash = j.newHash; j.prevHeight = j.newHeight; j.prevTime = j.newTime;
+            j.prevU = j.newU; j.prevWork = j.newWork;
+            j.newHash = bytes32(uint256(0xC000 + i)); j.newHeight += 10; j.newTime += 600;
+            j.newU += 1; j.newWork += 10;
+            vm.deal(address(uint160(0x4000 + i)), bond);
+            vm.prank(address(uint160(0x4000 + i)));
+            pIdx.foldProof{value: bond}(hex"00", abi.encode(j), toks);
+            vm.deal(address(uint160(0x5000 + i)), bond);
+            vm.prank(address(uint160(0x5000 + i)));
+            pIdx.dispute{value: bond}(i, toks);
+        }
+        j.prevHash = j.newHash; j.prevHeight = j.newHeight; j.prevTime = j.newTime;
+        j.prevU = j.newU; j.prevWork = j.newWork;
+        j.newHash = bytes32(uint256(0xDEAD)); j.newHeight += 10; j.newTime += 600;
+        bytes memory overflowJournal = abi.encode(j);
+        vm.deal(address(0x4999), bond);
+        vm.prank(address(0x4999));
+        vm.expectRevert(ZkWujiIndex.QueueFull.selector);
+        pIdx.foldProof{value: bond}(hex"00", overflowJournal, toks);
+    }
+
+    /// Round-2 cross-review regression: a completely full MAX_PENDING (32) queue with 32 distinct cold provers,
+    /// 32 distinct cold open disputers, and maximum 8-token reward lists drains safely in two 16-batch keeper calls
+    /// well within cancelFrozenGas(16) = 4,500,000 pre-refund gas per transaction, leaving 0 wei locked.
+    function test_sealWithFull32BatchQueueDrainsWithinKeeperGasBudget() public {
+        uint256 bond = 0.1 ether;
+        ChallengeEasyZkIndex pIdx =
+            new ChallengeEasyZkIndex(new AcceptAllReorgVerifier(), anchorHeader, ANCHOR, anchorTimes, K, bond);
+        (ZkWujiIndex.Continuity memory c0, uint32[11] memory t0, uint256 w0) = pIdx.continuity();
+        bytes memory anchorBase = abi.encode(c0, t0, w0);
+
+        pIdx.foldHeaders(_chain(anchorHeader, ANCHOR + 1, 60, 1_000_000), new address[](0));
+        _fillMaxPendingBatches(pIdx, bond);
+        assertEq(pIdx.pendingCount(), 32);
+        assertEq(address(pIdx).balance, 64 * bond);
+
+        // Seal the index via deep reorg while all 32 batches (64 locked bonds) sit in the queue.
+        pIdx.freezeOnReorg(anchorBase, _chain(anchorHeader, ANCHOR + 1, 210, 7_000_000));
+        assertTrue(pIdx.frozen());
+
+        // Drain in two 16-batch chunks matching zk-keeper CANCEL_FROZEN_BATCH = 16, cancelFrozenGas(16) = 4,500,000.
+        uint256 keeperGasBudget = 500_000 + 250_000 * 16; // 4,500,000 (>1.5M spare above 2.88M pre-refund + 21k intrinsic)
+        uint256 g0 = gasleft();
+        assertEq(pIdx.cancelFrozen(16), 16);
+        uint256 usedFirst16 = g0 - gasleft();
+        assertEq(pIdx.pendingCount(), 16);
+        assertLt(usedFirst16 + 1_500_000, keeperGasBudget, "first 16-batch drain retains >1.5M pre-refund gas headroom");
+
+        uint256 g1 = gasleft();
+        assertEq(pIdx.cancelFrozen(16), 16);
+        uint256 usedSecond16 = g1 - gasleft();
+        assertEq(pIdx.pendingCount(), 0);
+        assertLt(usedSecond16 + 1_500_000, keeperGasBudget, "second 16-batch drain retains >1.5M pre-refund gas headroom");
+
+        for (uint256 i = 0; i < 32; ++i) {
+            vm.prank(address(uint160(0x4000 + i)));
+            assertEq(pIdx.withdraw(), bond);
+            vm.prank(address(uint160(0x5000 + i)));
+            assertEq(pIdx.withdraw(), bond);
+        }
+        assertEq(address(pIdx).balance, 0, "all 64 bonds withdrawn to 0 wei");
+    }
 }
