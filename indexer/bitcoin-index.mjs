@@ -79,7 +79,10 @@ async function pollChain(){
   }
   if(FACTORY){const count=Number(BigInt(await call(FACTORY,'0x06661abd',at)));c.vaults=[];for(let i=0;i<count;i++){const v='0x'+(await call(FACTORY,'0x8c64ea4a'+i.toString(16).padStart(64,'0'),at)).slice(26);c.vaults.push(await readVault(v,at));}c.vault=c.vaults[0];}
   if(ACCOUNTS.length)c.accountPools=await Promise.all(ACCOUNTS.map(p=>readPool((to,data)=>call(to,data,at),p)));
-  if(process.env.FROZEN_EXIT==='1')c.frozenExit=await readFrozenExit((to,data)=>call(to,data,at),CONTRACT,c.relay.address);
+  if(process.env.FROZEN_EXIT==='1'){
+   const relayAddr=c.relay?.address||'0x'+(await call(CONTRACT,'0xb59589d1',at)).slice(-40);
+   c.frozenExit=await readFrozenExit((to,data)=>call(to,data,at),CONTRACT,relayAddr);
+  }
   if((await rpc('eth_getBlockByNumber',[at,false]))?.hash!==block.hash)throw Error('EVM reorg during snapshot');
   c.observedHash=block.hash;chain=c;rpcTransportFailures=0;
  }catch(e){
@@ -136,10 +139,19 @@ http.createServer(async(req,res)=>{
    res.writeHead(200,{'content-type':'application/octet-stream','cache-control':'no-store'});return res.end(buf);
   }
   if(u.pathname==='/blockAt'){const r=rows[at(Number(q.get('ts')))];return json(r?{block:r.height,hash:r.hash,ts:r.ts,url:'https://mempool.space/block/'+r.hash}:{error:'before first final height'});}
-  if(u.pathname==='/blocks'){return json(rows.filter(r=>r.height>=Number(q.get('from'))&&r.height<=Number(q.get('to'))));}
+  if(u.pathname==='/blocks'){
+   const from=Number(q.get('from')),to=Number(q.get('to'));
+   if(!Number.isSafeInteger(from)||!Number.isSafeInteger(to)||to<from||to-from>10_000)return json({error:'range'},400);
+   return json(rows.filter(r=>r.height>=from&&r.height<=to));
+  }
   const acct=u.pathname.match(/^\/account\/(0x[0-9a-fA-F]{40})\/(\d{1,12})$/);
-  if(acct){const pool=acct[1].toLowerCase();if(!ACCOUNTS.includes(pool))return json({error:'unknown pool'},404);
-   return json(await readAccount((to,data)=>call(to,data,'latest'),pool,Number(acct[2])));}
+  if(acct){
+   const pool=acct[1].toLowerCase();if(!ACCOUNTS.includes(pool))return json({error:'unknown pool'},404);
+   const block=await rpc('eth_getBlockByNumber',['latest',false]);
+   const out=await readAccount((to,data)=>call(to,data,block.number),pool,Number(acct[2]));
+   if((await rpc('eth_getBlockByNumber',[block.number,false]))?.hash!==block.hash)throw Error('EVM reorg during account read');
+   return json(out);
+  }
   const match=u.pathname.match(/^\/proof\/(\d+)$/);
   if(match){const row=rows[Number(match[1])-genesis];if(!row)return json({error:'height not finalized'},404);const s=step(row.header);return json({...row,block:row.height,R_h:s.R,S:row.U*1.2e-5,S_wad:(BigInt(row.U)*12000000000000n).toString(),price:price(row.U),confirmations:CONFIRMATIONS,confirmedAt:row.ts,url:'https://mempool.space/block/'+row.hash,byteOrder:'R = SHA256(raw SHA256d(header)); explorer hash reverses raw digest'});}
   const p=path.resolve(staticDir,'.'+(u.pathname==='/'?'/index.html':u.pathname));

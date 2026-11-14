@@ -134,3 +134,44 @@ export async function recoverFoldTransaction({ history, rpc, index, transactionH
   history.putBatch(headers);
   return (headers.length - 2) / 160;
 }
+
+// WujiHeaderIndex: Fold(uint64,uint64,int256); ZkWujiIndex: Fold(uint64,uint64,int256,bool).
+export const FOLD_EVENT_TOPICS = [
+  '0x51c664ed2003763aba1dbbe1b93e786fce0b6dbffd1316ae042b3a2a2464e46e',
+  '0xa18f88cf44a7525592749fe01c3cc2a5ba918bea1f82238a892cfd4e95ae6620',
+];
+
+/// Automatically scan on-chain Fold logs and recover direct foldHeaders calldata without manual tx lists.
+export async function recoverFoldLogs({
+  history, rpc, index, minHeight = 0, maxHeight = Number.MAX_SAFE_INTEGER,
+  lookbackBlocks = 250_000, chunkBlocks = 10_000, seen = new Set(),
+}) {
+  const tipBlock = Number(BigInt(await rpc('eth_blockNumber', [])));
+  const floorBlock = Math.max(0, tipBlock - lookbackBlocks);
+  let recovered = 0;
+  for (let end = tipBlock; end >= floorBlock; end -= chunkBlocks) {
+    const start = Math.max(floorBlock, end - chunkBlocks + 1);
+    const logs = await rpc('eth_getLogs', [{
+      address: index,
+      fromBlock: '0x' + start.toString(16),
+      toBlock: '0x' + end.toString(16),
+      topics: [FOLD_EVENT_TOPICS],
+    }]);
+    for (const entry of [...(logs || [])].reverse()) {
+      const txHash = entry?.transactionHash?.toLowerCase();
+      if (!txHash || seen.has(txHash)) continue;
+      if (Array.isArray(entry.topics) && entry.topics.length >= 3) {
+        const foldFrom = Number(BigInt(entry.topics[1])), foldTo = Number(BigInt(entry.topics[2]));
+        // Direct foldHeaders carries foldFrom .. foldTo + CONFIRMATIONS; skip non-overlapping logs.
+        if (foldFrom > maxHeight || foldTo + 512 < minHeight) continue;
+      }
+      seen.add(txHash);
+      try {
+        recovered += await recoverFoldTransaction({ history, rpc, index, transactionHash: txHash });
+      } catch (e) {
+        if (e.rpcReadError || e.rpcTransportError) throw e;
+      }
+    }
+  }
+  return recovered;
+}

@@ -1,6 +1,7 @@
 import test from 'node:test'; import assert from 'node:assert/strict';
 import { sha256d } from './bitcoin.mjs';
-import { headerWork, planSeal } from './seal.mjs';
+import { headerWork, planSeal, saveState, loadStates } from './seal.mjs';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 
 // Regtest difficulty: about every second nonce qualifies, and each header carries work 2.
 const BITS = 0x207fffff;
@@ -70,4 +71,16 @@ test('a branch longer than the contract accepts asks for an older state', async 
   const branch = chain(251, 600, 2, new Map([...main].filter(([h]) => h <= 250)));
   const plan = await planSeal({ ...opts, maxHeaders: 300, source: source(branch) });
   assert.equal(plan.action, 'wait'); assert.match(plan.reason, /more than 300 headers/);
+});
+
+test('saveState retains medium-depth landmarks across 300 single-block folds so deep forks do not fall back to anchor', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wuji-seal-states-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'states.json');
+  for (let h = 100; h <= 400; h++) saveState(file, state(main, h, (h - 100) * 2));
+  const saved = Object.keys(loadStates(file)).map(Number).sort((a, b) => a - b);
+  assert.equal(saved[0], 100);
+  assert.equal(saved.at(-1), 400);
+  // Even after 300 single-block folds (> KEEP=64), landmarks around ~272 and ~144 remain available
+  assert.ok(saved.some(h => h >= 200 && h <= 280), 'must retain intermediate landmarks between anchor and recent 64');
 });

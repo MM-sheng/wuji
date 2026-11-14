@@ -8,7 +8,7 @@ import path from 'node:path';
 import { sha256, sha256d } from './bitcoin.mjs';
 import { rpcRequest } from './evm-rpc.mjs';
 import { assertChain } from './networks.mjs';
-import { estimateKeeperGas } from './keeper-gas.mjs';
+import { estimateKeeperGas, EIP_7825_TX_GAS_CAP } from './keeper-gas.mjs';
 
 const word = (hex, i) => BigInt('0x' + hex.slice(2 + 64 * i, 66 + 64 * i));
 const signed = v => (v >= 1n << 255n ? v - (1n << 256n) : v);
@@ -130,6 +130,7 @@ export const uint = n => BigInt(n).toString(16).padStart(64, '0');
 
 /// cast --json reports failures on stdout ({"errors":[{"message"}]}); stderr is often empty.
 const castError = out => { try { return JSON.parse(out).errors?.map(e => e.message).join('; '); } catch { return ''; } };
+const redactRpc = s => String(s ?? '').replace(/https?:\/\/\S+/gi, '[redacted-url]');
 
 /// Reads and signed writes against one contract. Signs with `cast` and an encrypted keystore (or anvil's
 /// unlocked account on chain 31337); never handles a key.
@@ -139,32 +140,48 @@ export function contractClient({ rpc, chainId, to, env = process.env }) {
   if (unlocked && chainId !== 31337) throw Error('ZK_UNLOCKED_FROM is for anvil (chain 31337) only');
   // Reading needs no key: an alert-only watcher runs without one and fails only if it tries to send.
   const canSign = !!unlocked || (!!env.KEYSTORE_ACCOUNT && !!env.PASSWORD_FILE);
+  const castTimeoutMs = Math.max(5_000, Number(env.KEEPER_CAST_TIMEOUT_S || 120) * 1000);
   let sender = unlocked;
+  const senderAddress = () => {
+    if (!canSign) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE to resolve sender');
+    sender ||= execFileSync(CAST, ['wallet', 'address', '--account', env.KEYSTORE_ACCOUNT,
+      '--password-file', env.PASSWORD_FILE], { encoding: 'utf8', timeout: 30_000 }).trim();
+    if (!/^0x[0-9a-f]{40}$/i.test(sender)) throw Error('invalid keeper sender');
+    return sender;
+  };
   const send = (sig, gas, args = [], value) => sendTo(to, sig, gas, args, value);
   async function sendTo(target, sig, gas, args = [], value) {
     if (!canSign) throw Error('need KEYSTORE_ACCOUNT and PASSWORD_FILE to send');
     assertChain(await rpcRequest(rpc, 'eth_chainId', []), chainId);
+    const from = senderAddress();
+    if (!unlocked) {
+      const [latestNonce, pendingNonce] = await Promise.all([
+        rpcRequest(rpc, 'eth_getTransactionCount', [from, 'latest']),
+        rpcRequest(rpc, 'eth_getTransactionCount', [from, 'pending']),
+      ]);
+      if (BigInt(pendingNonce) > BigInt(latestNonce)) {
+        throw Error(`keeper transaction already pending in mempool (nonce ${BigInt(latestNonce)}..${BigInt(pendingNonce) - 1n})`);
+      }
+    }
     if (env.KEEPER_ESTIMATE_GAS === '1') {
-      sender ||= execFileSync(CAST, ['wallet', 'address', '--account', env.KEYSTORE_ACCOUNT,
-        '--password-file', env.PASSWORD_FILE], {encoding:'utf8'}).trim();
-      if (!/^0x[0-9a-f]{40}$/i.test(sender)) throw Error('invalid keeper sender');
-      const data = execFileSync(CAST, ['calldata', sig, ...args.map(String)], {encoding:'utf8', maxBuffer:64<<20}).trim();
-      gas = await estimateKeeperGas({rpc:(method,params)=>rpcRequest(rpc,method,params),from:sender,to:target,data,value,
-        fallbackGas:gas,maxGas:Number(env.KEEPER_MAX_GAS || 50_000_000)});
+      const data = execFileSync(CAST, ['calldata', sig, ...args.map(String)], { encoding: 'utf8', maxBuffer: 64 << 20, timeout: 30_000 }).trim();
+      gas = await estimateKeeperGas({ rpc: (method, params) => rpcRequest(rpc, method, params), from, to: target, data, value,
+        fallbackGas: gas, maxGas: Number(env.KEEPER_MAX_GAS || EIP_7825_TX_GAS_CAP) });
     }
     const who = unlocked ? ['--unlocked', '--from', unlocked] : ['--account', env.KEYSTORE_ACCOUNT, '--password-file', env.PASSWORD_FILE];
     const price = env.KEEPER_GAS_PRICE ? ['--legacy', '--gas-price', env.KEEPER_GAS_PRICE] : [];
     const paid = value ? ['--value', String(value)] : [];
     const out = await new Promise((resolve, reject) => execFile(CAST, ['send', target, sig, ...args, '--rpc-url', rpc,
-      '--chain', String(chainId), '--gas-limit', String(gas), ...who, ...price, ...paid, '--json'], { maxBuffer: 64 << 20 },
-    (e, so, se) => e ? reject(Error(castError(so) || String(se || e.message).split('\n').find(Boolean))) : resolve(so)));
+      '--chain', String(chainId), '--gas-limit', String(gas), ...who, ...price, ...paid, '--json'],
+    { maxBuffer: 64 << 20, timeout: castTimeoutMs },
+    (e, so, se) => e ? reject(Error(redactRpc(castError(so) || String(se || e.message).split('\n').find(Boolean)))) : resolve(so)));
     const r = JSON.parse(out);
     if (r.status !== '0x1' && r.status !== 1) throw Error(sig.split('(')[0] + ' reverted ' + r.transactionHash);
     return { hash: r.transactionHash, gas: parseInt(r.gasUsed, 16) };
   }
   /// Dry-run a call (reverts throw), returning cast's decoded output; `sig` may carry return types.
   const simulate = (target, sig, ...args) => new Promise((resolve, reject) => execFile(CAST, ['call', target, sig, ...args,
-    '--rpc-url', rpc, ...(unlocked ? ['--from', unlocked] : [])], { maxBuffer: 64 << 20 },
-  (e, so, se) => e ? reject(Error(String(se || e.message).split('\n').find(Boolean))) : resolve(so.trim())));
-  return { call, send, sendTo, simulate, canSign, rpc: (m, p) => rpcRequest(rpc, m, p) };
+    '--rpc-url', rpc, ...(unlocked ? ['--from', unlocked] : [])], { maxBuffer: 64 << 20, timeout: castTimeoutMs },
+  (e, so, se) => e ? reject(Error(redactRpc(String(se || e.message).split('\n').find(Boolean)))) : resolve(so.trim())));
+  return { call, send, sendTo, simulate, canSign, senderAddress, rpc: (m, p) => rpcRequest(rpc, m, p) };
 }

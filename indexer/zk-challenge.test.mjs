@@ -51,7 +51,7 @@ function fakeChain({ batches, start, now }) {
     sent,
     call: async data => views[data.slice(0, 10)](data),
     rpc: async m => (m === 'eth_getBlockByNumber' ? { timestamp: '0x' + now.toString(16) } : null),
-    send: async (sig, gas, args, value) => { sent.push({ sig, args, value }); return { hash: '0x', gas: 0 }; },
+    send: async (sig, gas, args, value) => { sent.push({ sig, gas, args, value }); return { hash: '0x', gas: 0 }; },
   };
 }
 
@@ -114,4 +114,27 @@ test('the watcher does not act when its two sources disagree', async () => {
   const liar = { ...sources[0], at: async () => ({ header: '', hash: 'ff'.repeat(32) }) };
   await watch({ chain, sources: [sources[0], liar] });
   assert.deepEqual(chain.sent, []);
+});
+
+test('the watcher disputes forged future-height batches beyond Bitcoin tip and rejects once expired, keeping gas < EIP-7825', async () => {
+  const j = journal(fixture('zk-journal.hex'));
+  const futureTo = { ...j.to, height: j.prev.height + 500 };
+  const realSource = { tip: async () => j.prev.height + 50, at: async () => ({ header: header(0), hash: step(header(0)).hash }) };
+  // Undisputed future-height forgery: disputed immediately instead of waiting forever for future blocks
+  let batch = { to: futureTo, checkpointHeights: [], checkpointU: [], prover: '0x' + '11'.repeat(20), finalAt: 10_000,
+    disputer: '0x' + '0'.repeat(40), respondBy: 0, backed: false };
+  let chain = fakeChain({ batches: [batch], start: { state: j.prev, genesisHeight: j.genesisHeight }, now: 500 });
+  await watch({ chain, sources: [realSource, realSource] });
+  assert.deepEqual(chain.sent.map(s => s.sig), ['dispute(uint256,address[])']);
+
+  // Once disputed and respondBy expired without backing, watcher calls reject(id)
+  batch = { ...batch, disputer: '0x' + '22'.repeat(20), respondBy: 2000 };
+  chain = fakeChain({ batches: [batch], start: { state: j.prev, genesisHeight: j.genesisHeight }, now: 2001 });
+  await watch({ chain, sources: [realSource, realSource] });
+  assert.deepEqual(chain.sent.map(s => s.sig), ['reject(uint256)']);
+
+  // Verify back/refute gas stays strictly below EIP-7825 (16,777,216)
+  const normal = setup({ forge: false, disputed: true, now: 1500 });
+  await watch(normal);
+  assert.ok(normal.chain.sent[0].gas < 16_777_216);
 });

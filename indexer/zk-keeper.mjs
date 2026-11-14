@@ -24,7 +24,7 @@ import { watch } from './zk-watcher.mjs';
 import { maintainPool } from './accounts.mjs';
 import { loadStates, planSeal, saveState } from './seal.mjs';
 import { decodeReorgProof, planSegmentedSeal, submitReorgStep } from './seal-segments.mjs';
-import { HeaderHistory, recoverFoldTransaction } from './header-history.mjs';
+import { HeaderHistory, recoverFoldTransaction, recoverFoldLogs } from './header-history.mjs';
 import { keeperHealth, keeperCycle } from './keeper-health.mjs';
 export { decodeContinuity };
 
@@ -55,9 +55,12 @@ if (REWARD_TOKENS.some(t => !/^0x[0-9a-f]{40}$/.test(t)) || new Set(REWARD_TOKEN
   throw Error('ZK_REWARD_TOKENS must be up to 8 distinct token addresses');
 }
 const tokens = `[${REWARD_TOKENS.join(',')}]`;
-// RelayerRewards.credit refuses more than MAX_HEIGHTS (256) heights per call when tokens are listed, which would
-// revert the whole fold: fail at start rather than on every fold.
-if (REWARD_TOKENS.length && MAX_FOLD > 256) throw Error('ZK_MAX_FOLD above 256 cannot collect bounties (RelayerRewards.MAX_HEIGHTS)');
+// RelayerRewards.credit refuses more than MAX_HEIGHTS heights per call when tokens are listed; cap default fold size.
+if (REWARD_TOKENS.length && MAX_FOLD > 512) throw Error('ZK_MAX_FOLD above 512 cannot collect bounties');
+const FEE_ROUTER = (env.FEE_ROUTER || '').trim().toLowerCase();
+if (FEE_ROUTER && !/^0x[0-9a-f]{40}$/.test(FEE_ROUTER)) throw Error('FEE_ROUTER must be an address');
+const ROUTE_EVERY_HEIGHTS = Number(env.ROUTE_EVERY_HEIGHTS || 144);
+const CLAIM_EVERY_HEIGHTS = Number(env.CLAIM_EVERY_HEIGHTS || 144);
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
@@ -83,6 +86,44 @@ function prove(inputFile, outFile) {
 }
 
 let immut, lastProgress = Date.now(), lastHeight = -1, frozenLogged = false;
+let lastRouteHeight = 0, lastClaimHeight = 0;
+
+/// Route accrued FeeRouter balances into RelayerRewards and claim earned keeper bounties.
+export async function maintainRewards(currentHeight = 0) {
+  if (!REWARD_TOKENS.length && !FEE_ROUTER) return [];
+  const rewardsWord = await call(sel('rewards()')).catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
+  const rewardsAddr = '0x' + rewardsWord.slice(-40).toLowerCase();
+  const hasRewards = !/^0x0{40}$/.test(rewardsAddr);
+  const actions = [];
+  if (FEE_ROUTER && currentHeight - lastRouteHeight >= ROUTE_EVERY_HEIGHTS) {
+    lastRouteHeight = currentHeight;
+    for (const token of REWARD_TOKENS) {
+      try {
+        const bal = BigInt(await rpc('eth_call', [{ to: token, data: sel('balanceOf(address)') + uint(BigInt(FEE_ROUTER)) }, 'latest']));
+        if (bal > 0n) {
+          const tx = await chain.sendTo(FEE_ROUTER, 'route(address)', 700_000, [token]);
+          log('route fees', token, bal.toString(), tx.hash);
+          actions.push({ action: 'route', token, hash: tx.hash });
+        }
+      } catch (e) { if (e.rpcTransportError) throw e; log('fee route:', e.message); }
+    }
+  }
+  if (hasRewards && REWARD_TOKENS.length && currentHeight - lastClaimHeight >= CLAIM_EVERY_HEIGHTS) {
+    lastClaimHeight = currentHeight;
+    const worker = chain.senderAddress();
+    for (const token of REWARD_TOKENS) {
+      try {
+        const amt = BigInt(await rpc('eth_call', [{ to: rewardsAddr, data: sel('claimable(address,address)') + uint(BigInt(token)) + uint(BigInt(worker)) }, 'latest']));
+        if (amt > 0n) {
+          const tx = await chain.sendTo(rewardsAddr, 'claim(address)', 300_000, [token]);
+          log('claim bounty', token, amt.toString(), tx.hash);
+          actions.push({ action: 'claim', token, amount: amt.toString(), hash: tx.hash });
+        }
+      } catch (e) { if (e.rpcTransportError) throw e; log('bounty claim:', e.message); }
+    }
+  }
+  return actions;
+}
 // Finalized states seen on chain, kept so a deep reorg can be sealed from one of them (seal.mjs).
 const STATES = path.join(WORK, `sealable-states-${INDEX}.json`);
 const REORG_PROOF = path.join(WORK, `reorg-proof-${INDEX}.json`);
@@ -131,7 +172,8 @@ export async function round(source) {
   }
   const raw = await call(sel('continuity()'));
   const start = decodeContinuity(raw);
-  if (immut.headerOnly) {
+  // Save finalized states and check for sealable deep reorgs on both header-only indexes and idle ZkWujiIndex queues.
+  if (immut.headerOnly || pending === 0) {
     saveState(STATES, raw);
     const timed = { tip: () => within(source.tip(), 'Bitcoin tip'), at: h => within(source.at(h), `Bitcoin header ${h}`) };
     const planning = { tip: start, states: loadStates(STATES), source: timed, confirmations: immut.confirmations, margin: immut.margin };
@@ -167,6 +209,7 @@ export async function round(source) {
       return { ...plan, action: 'reorg-wait' };
     }
   }
+  if (REWARD_TOKENS.length) await maintainRewards(start.height);
   if (start.height !== lastHeight) { lastHeight = start.height; lastProgress = Date.now(); }
   const tip = await within(source.tip(), 'Bitcoin tip');
   const available = tip - start.height;
@@ -246,7 +289,20 @@ export async function maintainAccounts(source, pools = ACCOUNTS) {
       log('restored', n, 'historical headers from public fold', transactionHash);
     } catch (e) { log('header recovery:', e.message); }
   }
-  const headersFor = (from, to, anchorHash) => headerHistory.headersFor(source, from, to, anchorHash, within);
+  const headersFor = async (from, to, anchorHash) => {
+    try {
+      return await headerHistory.headersFor(source, from, to, anchorHash, within);
+    } catch (e) {
+      if (!/historical Bitcoin header unavailable/.test(String(e?.message))) throw e;
+      const n = await recoverFoldLogs({
+        history: headerHistory, index: INDEX, minHeight: from, maxHeight: to, seen: recoveredHeaderTransactions,
+        lookbackBlocks: Number(env.ZK_HEADER_LOOKBACK_BLOCKS || 250_000),
+        rpc: (method, args) => within(rpc(method, args), 'historical fold log scan'),
+      });
+      if (n > 0) log('auto-recovered', n, 'historical headers from on-chain Fold logs');
+      return headerHistory.headersFor(source, from, to, anchorHash, within);
+    }
+  };
   for (const pool of pools) {
     try {
       const r = await maintainPool({

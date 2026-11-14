@@ -32,3 +32,16 @@ test('timeouts are classified and invalid retry budgets fail before fetching',as
  await assert.rejects(rpcRequest('rpc','eth_call',[],{attempts:1,fetcher:async()=>{throw new DOMException('sensitive URL','TimeoutError');}}),e=>e.rpcTransportError&&/TimeoutError/.test(e.message));
  for(const attempts of [0,-1,NaN,1.5])await assert.rejects(rpcRequest('rpc','eth_call',[],{attempts}),/positive integer/);
 });
+test('JSON-RPC rate-limit and backend errors retry on reads, set rpcReadError, and redact URLs',async()=>{
+ let calls=0;
+ const ok=await rpcRequest('rpc','eth_call',[],{retryDelayMs:0,fetcher:async()=>({ok:true,json:async()=>++calls<3?{error:{code:-32005,message:'Too Many Requests'}}:{result:'0x01'}})});
+ assert.equal(ok,'0x01');assert.equal(calls,3);
+ let exhausted=0;
+ await assert.rejects(rpcRequest('rpc','eth_call',[],{retryDelayMs:0,fetcher:async()=>({ok:true,json:async()=>(exhausted++,{error:{code:-32603,message:'upstream https://rpc.secret/api?key=123 failed'}})})}),e=>{
+  assert.equal(e.rpcReadError,true);assert.equal(e.rpcTransportError,true);
+  assert.ok(!e.message.includes('key=123'));return true;
+ });
+ assert.equal(exhausted,3);
+ // Non-retryable non-revert JSON-RPC error still sets rpcReadError so optional() never swallows it as an absent ABI view
+ await assert.rejects(rpcRequest('rpc','eth_call',[],{retryDelayMs:0,fetcher:async()=>({ok:true,json:async()=>({error:{code:-32601,message:'Method not found'}})})}),e=>e.rpcReadError===true&&e.rpcTransportError===false);
+});

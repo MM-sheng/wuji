@@ -26,7 +26,20 @@ export function saveState(file, hex) {
   if (states[height] === hex) return states;
   states[height] = hex;
   const heights = Object.keys(states).map(Number).sort((a, b) => b - a);
-  const keep = [...new Set([...heights.slice(0, KEEP), heights.at(-1)])];
+  const tipH = heights[0], oldest = heights.at(-1);
+  const kept = new Set(heights.slice(0, KEEP));
+  kept.add(oldest);
+  // Retain fixed-modulus bucket representatives (independent of tipH so incremental 1-block saves never evict
+  // a landmark as it crosses tipH - KEEP): 1 per 64 blocks within 4,096 of tip, 1 per 1,024 within 65,536,
+  // and 1 per 16,384 back to the earliest observed anchor.
+  const buckets = new Set();
+  for (const h of heights) {
+    const age = tipH - h;
+    const stride = age <= 4096 ? 64 : age <= 65536 ? 1024 : 16384;
+    const key = `${stride}:${Math.floor(h / stride)}`;
+    if (!buckets.has(key)) { buckets.add(key); kept.add(h); }
+  }
+  const keep = [...kept].sort((a, b) => b - a);
   states = Object.fromEntries(keep.map(h => [h, states[h]]));
   fs.writeFileSync(file + '.tmp', JSON.stringify(states));
   fs.renameSync(file + '.tmp', file);

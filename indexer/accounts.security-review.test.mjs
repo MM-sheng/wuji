@@ -29,6 +29,7 @@ test('review: the keeper bypasses a legacy price mark without a hash', async () 
     headersFor: async (from, to) => '0x' + 'ab'.repeat(80 * (to - from + 1)),
   });
   await run();
-  assert.deepEqual(attempts, [[1000, 2000]]);
-  assert.equal(sends.length, 1);
+  // 1990 (marked without a hash) is bypassed; the 1000-block gap is walked in <=512-header steps (< Linux MAX_ARG_STRLEN).
+  assert.deepEqual(attempts, [[1488, 2000], [1000, 1488]]);
+  assert.equal(sends.length, 2);
 });
