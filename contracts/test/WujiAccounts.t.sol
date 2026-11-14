@@ -410,6 +410,60 @@ contract WujiAccountsTest is Test {
         assertEq(address(f.pool(address(other), 0)), address(0));
         vm.expectRevert(bytes("budget"));
         new WujiAccountsFactory(idx, treasury, EPOCH, DELAY, 30 minutes, 30, 1_000, asset, 0, 0);
+        vm.expectRevert(bytes("treasury"));
+        new WujiAccountsFactory(idx, address(0), EPOCH, DELAY, 30 minutes, 30, 1_000, asset, 300e18, 0);
+    }
+
+    /// Regression: 2-wei dust accounts floor-divide to zero on any adverse tick, so retire() must cap its
+    /// bounty below half the retired account's own entry fee instead of paying a full buffer share per id.
+    function test_dustAccountsCannotFarmRetireBounty() public {
+        FEE = 30; BOUNTY = 10_000;
+        WujiAccounts p = make(K);
+        advance(10);
+        (uint256 whaleYang, uint64 e0) = enter(p, alice, true, 1_000e18);
+        enter(p, bob, false, 1_000e18);
+        uint256[8] memory dustYang;
+        uint256[8] memory dustYin;
+        for (uint256 i; i < 8; ++i) {
+            (dustYang[i],) = enter(p, carol, true, 2); // 1 wei fee, 1 wei principal
+            (dustYin[i],) = enter(p, carol, false, 2);
+        }
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        p.processMany(10);
+        advance(12);
+        (, uint64 e1) = enter(p, alice, true, 2);
+        if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
+        p.processMany(10);
+
+        uint256 bufferBefore = p.buffer();
+        uint256 carolBefore = asset.balanceOf(carol);
+        uint256 retired;
+        for (uint256 i; i < 8; ++i) {
+            if (p.valueOf(dustYang[i]) == 0) { vm.prank(carol); p.retire(dustYang[i]); retired++; }
+            if (p.valueOf(dustYin[i]) == 0) { vm.prank(carol); p.retire(dustYin[i]); retired++; }
+        }
+        assertEq(retired, 8, "every 1-wei dust account on the losing side hit zero on a single move");
+        assertEq(asset.balanceOf(carol) - carolBefore, 0, "1-wei dust retirements pay zero bounty");
+        assertEq(p.buffer(), bufferBefore, "buffer is untouched by dust retirement farming");
+
+        // A real account that paid >= 2x the buffer share still receives up to half its own fee (capped at 1/10000 buffer).
+        WujiAccounts pReal = make(0.001e18);
+        advance(10);
+        (uint256 bigA, uint64 er0) = enter(pReal, alice, true, 100e18);
+        (uint256 bigB,) = enter(pReal, bob, false, 100e18);
+        if (idx.lastHeight() < er0) advance(er0 - idx.lastHeight());
+        pReal.processMany(10);
+        advance(60);
+        (, uint64 er1) = enter(pReal, alice, true, 1e18);
+        if (idx.lastHeight() < er1) advance(er1 - idx.lastHeight());
+        pReal.processMany(10);
+        uint256 loser = pReal.valueOf(bigA) == 0 ? bigA : bigB;
+        uint256 expectedShare = pReal.buffer() / 10_000;
+        uint256 callerBefore = asset.balanceOf(carol);
+        vm.prank(carol);
+        pReal.retire(loser);
+        assertEq(asset.balanceOf(carol) - callerBefore, expectedShare, "real floored account pays normal bounty share");
+        whaleYang;
     }
 
     function test_aPoolNeedsACap() public {

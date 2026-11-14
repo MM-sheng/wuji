@@ -45,6 +45,7 @@ contract WujiAccountsFactory {
         WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps,
         uint256 bufferBps, IERC20 asset_, uint256 exposureBudget, uint64 capEra
     ) {
+        require(treasury_ != address(0), "treasury");
         require(exposureBudget > 0, "budget");
         index = index_; treasury = treasury_; EPOCH = epoch; DELAY = delay; MAX_TIP_AGE = maxTipAge;
         FEE_BPS = feeBps; BUFFER_BPS = bufferBps; ASSET = asset_; EXPOSURE_BUDGET = exposureBudget; CAP_ERA = capEra;

@@ -27,7 +27,6 @@ interface IZkTip {
 contract WujiAccounts is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    int256 internal constant ONE = 1e18;
     int256 internal constant ACC = 1e27;   // accumulator precision per unit of principal
     uint256 public constant MAX_WALK = 1024;
     uint256 public constant ACCOUNT_BATCH = 64;
@@ -56,9 +55,9 @@ contract WujiAccounts is ReentrancyGuard {
     bool public immutable RELAY_TIP;
     address public immutable treasury;  // FeeRouter: surplus fees go to the relayers' operations reserve
     uint256 public immutable FEE_BPS;   // charged on entry and on normal exit
-    /// @notice Each processed epoch and each retirement pays `buffer / BOUNTY_DIVISOR` to its caller (0 = none).
-    /// A share, not a constant, like RelayerRewards: it cannot outgrow the buffer, needs no per-token amount,
-    /// and farming it with dust requests drains at most one share per epoch (≈0.24%/day at 1/10000).
+    /// @notice Each processed epoch pays `buffer / BOUNTY_DIVISOR` to its caller (0 = none), and each
+    /// retirement pays `min(buffer / BOUNTY_DIVISOR, principal · FEE_BPS / 20_000)`: at most half the
+    /// account's own entry fee, so dust or paired accounts can never drain the buffer.
     uint256 public immutable BOUNTY_DIVISOR;
     uint256 public immutable BUFFER_BPS; // buffer kept against floor overshoot, relative to live principal
 
@@ -432,7 +431,7 @@ contract WujiAccounts is ReentrancyGuard {
                 uint64 mid = from - uint64(MAX_WALK);
                 mark(mid, from);
                 bridge = mid;
-                _payBounty(msg.sender);
+                _payBounty(msg.sender, type(uint256).max);
                 return false;
             }
             mark(e, from);
@@ -447,7 +446,7 @@ contract WujiAccounts is ReentrancyGuard {
 
     function _price(uint64 e, int256 s) internal returns (bool done) {
         done = _advance(e, s);
-        if (done) _payBounty(msg.sender);
+        if (done) _payBounty(msg.sender, type(uint256).max);
     }
 
     function _removeActive(uint256 id) internal {
@@ -558,9 +557,9 @@ contract WujiAccounts is ReentrancyGuard {
         return a.exitEpoch != 0 && epochs[a.exitEpoch].processed ? epochs[a.exitEpoch].acc[a.yang ? 1 : 0] : acc[a.yang ? 1 : 0];
     }
 
-    function _payBounty(address to) internal {
+    function _payBounty(address to, uint256 cap) internal {
         if (BOUNTY_DIVISOR == 0) return;
-        uint256 amount = buffer / BOUNTY_DIVISOR;
+        uint256 amount = Math.min(buffer / BOUNTY_DIVISOR, cap);
         if (amount == 0) return;
         buffer -= amount;
         asset.safeTransfer(to, amount);
@@ -649,12 +648,13 @@ contract WujiAccounts is ReentrancyGuard {
         require(a.owner != address(0) && a.exitEpoch == 0 && !frozen, "not live");
         require(epochs[a.enterEpoch].processed && !epochs[a.enterEpoch].frozenRefund, "entry pending");
         require(valueOf(id) == 0, "not at floor");
-        principalOf[a.yang ? 1 : 0] -= a.principal;
+        uint256 p = a.principal;
+        principalOf[a.yang ? 1 : 0] -= uint128(p);
         _removeActive(id);
         delete accounts[id];
         openAccounts--;
         emit Retired(id);
-        _payBounty(msg.sender);
+        _payBounty(msg.sender, p * FEE_BPS / 20_000);
     }
 
     // ---------------------------------------------------------------- frozen state
