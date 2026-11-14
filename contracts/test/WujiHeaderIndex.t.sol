@@ -107,6 +107,42 @@ contract WujiHeaderIndexTest is Test {
         idx.foldHeaders(short_, new address[](0));
     }
 
+    function test_rejectsOutdatedOrNegativeVersionAtBuriedHeights() public {
+        bytes memory v3 = _slice(0, 40);
+        v3[0] = 0x03;
+        v3[1] = 0x00;
+        v3[2] = 0x00;
+        v3[3] = 0x00;
+        vm.expectRevert(WujiHeaderIndex.BadVersion.selector);
+        idx.foldHeaders(v3, new address[](0));
+
+        bytes memory neg = _slice(0, 40);
+        neg[0] = 0x00;
+        neg[1] = 0x00;
+        neg[2] = 0x00;
+        neg[3] = 0x80; // -2147483648 as signed int32
+        vm.expectRevert(WujiHeaderIndex.BadVersion.selector);
+        idx.foldHeaders(neg, new address[](0));
+
+        bytes memory badAnchor = anchor;
+        badAnchor[0] = 0x01;
+        badAnchor[1] = 0x00;
+        badAnchor[2] = 0x00;
+        badAnchor[3] = 0x00;
+        vm.expectRevert(WujiHeaderIndex.BadVersion.selector);
+        new WujiHeaderIndex(
+            RelayerRewards(address(0)),
+            badAnchor,
+            anchorHeight,
+            uint32(vm.parseJsonUint(meta, ".epochStartTime")),
+            times,
+            0,
+            genesis,
+            4320,
+            6
+        );
+    }
+
     function test_futureTimeBoundIsTheChainsNotTheSubmitters() public {
         bytes memory batch = _slice(0, 40);
         vm.warp(1_600_000_000);

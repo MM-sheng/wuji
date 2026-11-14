@@ -7,7 +7,8 @@ import {RelayerRewards} from "./RelayerRewards.sol";
 /// @notice The mainnet index (T13). Anyone submits raw 80-byte Bitcoin headers; the contract checks them and
 ///         folds the path into S. Three rules:
 ///         1. Headers must be valid: proof of work against the target, linkage, difficulty (2016-block retarget
-///            with the ×4/÷4 clamp), timestamp above the median of the previous eleven and at most two hours ahead.
+///            with the ×4/÷4 clamp), buried BIP34/66/65 signed nVersion, timestamp above the median of the previous
+///            eleven and at most two hours ahead.
 ///         2. A height counts only once `CONFIRMATIONS` valid headers follow it (mainnet: 100, Bitcoin's coinbase
 ///            maturity).
 ///         3. A valid branch from a recorded finalized state that avoids the finalized tip and out-works it by
@@ -88,6 +89,7 @@ contract WujiHeaderIndex {
     error Difficulty();
     error MedianTimePast();
     error FutureTime();
+    error BadVersion();
     error BadWork();
     error NotEnoughConfirmations();
     error Discontinuous();
@@ -124,6 +126,7 @@ contract WujiHeaderIndex {
 
         uint32 bits = _read32(anchorHeader, 72);
         uint32 time = _read32(anchorHeader, 68);
+        _checkVersion(int32(_read32(anchorHeader, 0)), anchorHeight);
         if (_pow(anchorHeader) > targetOf(bits)) revert BadWork();
         tip = Continuity({
             hash: sha256(abi.encodePacked(sha256(anchorHeader))),
@@ -386,6 +389,7 @@ contract WujiHeaderIndex {
         if (bits != expected) revert Difficulty();
         if (time <= _median(times)) revert MedianTimePast();
         if (time > maxTime) revert FutureTime();
+        _checkVersion(int32(_read32c(raw, 0)), height);
 
         uint256 target = targetOf(bits);
         bytes32 hash = sha256(abi.encodePacked(sha256(raw)));
@@ -502,6 +506,14 @@ contract WujiHeaderIndex {
 
     function _pow(bytes memory h) internal pure returns (uint256) {
         return uint256(reverse(sha256(abi.encodePacked(sha256(h)))));
+    }
+
+    function _checkVersion(int32 version, uint64 height) internal pure {
+        // Mainnet buried deployments in Bitcoin Core (BIP34, BIP66, BIP65; signed 32-bit nVersion).
+        if ((height >= 227_931 && version < 2) || (height >= 363_725 && version < 3) || (height >= 388_381 && version < 4))
+        {
+            revert BadVersion();
+        }
     }
 
     function _read32(bytes memory h, uint256 at) internal pure returns (uint32) {
