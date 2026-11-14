@@ -24,6 +24,22 @@ contract FeeOnTransferToken is ERC20("Fee token", "FEE") {
     }
 }
 
+contract MalformedSymbolToken is ERC20("Malformed", "MAL") {
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function symbol() public pure override returns (string memory) {
+        assembly ("memory-safe") {
+            let p := mload(0x40)
+            mstore(p, not(0))
+            mstore(add(p, 0x20), 5)
+            mstore(add(p, 0x40), " WEIRD")
+            return(p, 0x60)
+        }
+    }
+}
+
 contract WujiVaultTest is WujiTestBase {
     uint256 constant WAD = 1e18;
     uint256 constant NOTIONAL = 100e18;
@@ -288,5 +304,41 @@ contract WujiVaultTest is WujiTestBase {
         vm.prank(bob);
         vault.redeemSettled(0, 3e18, 3e18);
         assertLe(vault.liabilities(), usdt.balanceOf(address(vault)));
+    }
+
+    function _tryNewVault(uint256 notional_, SeriesTokenDeployer dep) external returns (WujiVault) {
+        return new WujiVault(usdt, index, notional_, treasury, dep);
+    }
+
+    function test_highNotionalMulDivMalformedSymbolAndFrozenShareView() public {
+        SeriesTokenDeployer dep = new SeriesTokenDeployer();
+        vm.expectRevert("notional too large");
+        this._tryNewVault(uint256(type(uint128).max) + 1, dep);
+
+        MalformedSymbolToken mal = new MalformedSymbolToken();
+        WujiVault high = new WujiVault(mal, index, 1e36, treasury, dep);
+        assertEq(high.collateralSymbol(), "TOKEN", "bogus ABI string offset falls back to TOKEN");
+
+        uint256 bigMint = 1_000_000e18; // 1e24 * 1e36 * 5e17 = 5e77 > 2^256: overflowed before Math.mulDiv!
+        mal.mint(alice, 2_000_000 * 1e36);
+        vm.startPrank(alice);
+        mal.approve(address(high), type(uint256).max);
+        high.mint(bigMint);
+        vm.stopPrank();
+
+        reachSettlement(91);
+        high.settle();
+        assertLe(high.liabilities(), mal.balanceOf(address(high)));
+
+        vm.prank(alice);
+        high.redeemSettled(0, bigMint, bigMint);
+        assertEq(high.liabilities(), 0);
+
+        // Frozen index without boundary checkpoint immediately reports 1/2 in yangShare() before settleFrozen().
+        advance(25, 92);
+        assertTrue(high.yangShare() != WAD / 2);
+        vm.mockCall(address(index), abi.encodeWithSelector(index.frozen.selector), abi.encode(true));
+        assertEq(high.yangShare(), WAD / 2);
+        vm.clearMockedCalls();
     }
 }
