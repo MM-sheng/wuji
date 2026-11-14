@@ -1,0 +1,46 @@
+{
+  "revision": "header-v3-r2-20261022",
+  "kind": "Author-created inconsistent copies; original archive unchanged",
+  "cases": [
+    {
+      "name": "changed source RPC",
+      "accepted": true,
+      "status": "PASS_OFFLINE_REPLAY",
+      "observation": "2026-10-22T15:45:53.749Z",
+      "S_wad": "3516000000000000",
+      "sourcesReturned": null
+    },
+    {
+      "name": "changed RPC evidence label",
+      "accepted": true,
+      "status": "PASS_OFFLINE_REPLAY",
+      "observation": "2026-10-22T15:45:53.749Z",
+      "S_wad": "3516000000000000",
+      "sourcesReturned": null
+    },
+    {
+      "name": "changed Bitcoin source",
+      "accepted": true,
+      "status": "PASS_OFFLINE_REPLAY",
+      "observation": "2026-10-22T15:45:53.749Z",
+      "S_wad": "3516000000000000",
+      "sourcesReturned": null
+    },
+    {
+      "name": "changed page URL",
+      "accepted": true,
+      "status": "PASS_OFFLINE_REPLAY",
+      "observation": "2026-10-22T15:45:53.749Z",
+      "S_wad": "3516000000000000",
+      "sourcesReturned": null
+    },
+    {
+      "name": "malformed observation",
+      "accepted": true,
+      "status": "PASS_OFFLINE_REPLAY",
+      "observation": "not a timestamp",
+      "S_wad": "3516000000000000",
+      "sourcesReturned": null
+    }
+  ]
+}

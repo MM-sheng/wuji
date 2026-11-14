@@ -1,0 +1,30 @@
+[
+  {
+    "runtime": "node18",
+    "case": "base",
+    "exitCode": 0,
+    "file": "node18-base-r3.log",
+    "sha256": "d1ff2624c4180494fe095904a8287be655e1ebabbcce88bf1449fd6ed73359c5"
+  },
+  {
+    "runtime": "node18",
+    "case": "full",
+    "exitCode": 0,
+    "file": "node18-full-r3.log",
+    "sha256": "93fa4fae187159e806228365a13b5aa7bd755d95b5c3e816a79eea06b3466366"
+  },
+  {
+    "runtime": "node26",
+    "case": "base",
+    "exitCode": 0,
+    "file": "node26-base-r3.log",
+    "sha256": "fe84e3f9167ff2f3fec9c3ba9eee1a086c399798cc7a872bf2ce47edbe6d2e9f"
+  },
+  {
+    "runtime": "node26",
+    "case": "full",
+    "exitCode": 0,
+    "file": "node26-full-r3.log",
+    "sha256": "94515f5de65a6d09d4c515866812384e34bc975ecb81f5e56aeeabf4f740e499"
+  }
+]

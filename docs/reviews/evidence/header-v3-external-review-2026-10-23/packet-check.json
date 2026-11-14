@@ -1,0 +1,24 @@
+{
+  "status": "PASS_UNPACKED_REVIEW_PACKET",
+  "zipSha256": "146fbeddac59ae62654b258d4dba32f7bb772b3451a07eeeae5f991ece7bbb93",
+  "files": 42,
+  "manifestFilesChecked": 41,
+  "embeddedR4Integrity": {
+    "status": "PASS_PACKAGE_CHECKSUMS",
+    "files": 13,
+    "scope": "Integrity relative to this manifest, not publisher authentication."
+  },
+  "inlineSourceFilesChecked": 20,
+  "localMarkdownLinksChecked": 10,
+  "compilerOutputHashMatches": true,
+  "warningCount": 0,
+  "runtimeSizesBytes": {
+    "WujiHeaderIndex": 12234,
+    "RelayerRewards": 4660,
+    "FeeRouter": 1115,
+    "WujiAccounts": 23646,
+    "WujiAccountsFactory": 2425
+  },
+  "protectedFileNamesAbsent": true,
+  "scope": "Local packet consistency and saved compiler evidence; no new public fetch, full tests, or external acceptance."
+}

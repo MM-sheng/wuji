@@ -1,0 +1,30 @@
+[
+  {
+    "runtime": "node18",
+    "name": "base-test",
+    "exitCode": 0,
+    "log": "node18-base-test-after.log",
+    "logSha256": "48b2d736f70912666f354c21d54021b0ebdffb8676b05815b0673fb93b410d58"
+  },
+  {
+    "runtime": "node18",
+    "name": "full-test",
+    "exitCode": 0,
+    "log": "node18-full-test-after.log",
+    "logSha256": "dd6d50b29f1f7a469cb3a63ab67259015fe7ec20541d462902de78a5a7c87291"
+  },
+  {
+    "runtime": "node26",
+    "name": "base-test",
+    "exitCode": 0,
+    "log": "node26-base-test-after.log",
+    "logSha256": "b0561c25438e56124731d69616bbe92c7e006308861e92479ef160458651b864"
+  },
+  {
+    "runtime": "node26",
+    "name": "full-test",
+    "exitCode": 0,
+    "log": "node26-full-test-after.log",
+    "logSha256": "a19e3717f3005278aa38b8fd9b758e51d3f45e040d5f77682c4a23272a6fdc66"
+  }
+]

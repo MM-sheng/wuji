@@ -4,6 +4,11 @@
 附件 SHA-256：`5c2bc154938772e88a3eee116133ad16742d8ad9abd1c6d37ded84e80866272d`。
 [本轮交付与证明范围](tasks/EXTERNAL_VALIDATION_R4_2026-10-23.md)。
 
+如对方承接源码安全审阅，可另附 `wuji-header-v3-review-2026-10-23-v1.zip`，
+SHA-256 `146fbeddac59ae62654b258d4dba32f7bb772b3451a07eeeae5f991ece7bbb93`；
+按[外部任务书](tasks/EXTERNAL_REVIEW_ASSIGNMENT_2026-10-23.md)分开回传复算与审阅结论。
+该补充包已含原样 r4；它的摘要不能当作原 r4 ZIP 摘要。此说明仍是备稿，未发送。
+
 ---
 
 你好，想邀请你帮忙做一次 WUJI 的外部开发者验证。

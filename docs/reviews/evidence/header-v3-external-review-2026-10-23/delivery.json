@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-10-23T10:10:03.063918+00:00",
+  "revision": "header-v3-review-v1-20261023",
+  "archive": "/Users/m/Documents/Codex/2026-09-18/ni/wuji-deliverables/wuji-header-v3-review-2026-10-23-v1.zip",
+  "sha256": "146fbeddac59ae62654b258d4dba32f7bb772b3451a07eeeae5f991ece7bbb93",
+  "bytes": 149008,
+  "files": 42,
+  "soliditySources": 20,
+  "embeddedR4Files": 14,
+  "sourceCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc",
+  "zipMatchesStagingFiles": true,
+  "embeddedR4MatchesSourceCommit": true,
+  "sourceCompilation": "PASS_SOURCE_COMPILATION",
+  "externalAcceptance": "NOT_RUN",
+  "sentToAnyone": false,
+  "productionCodeModified": false,
+  "fullTestsRerun": false,
+  "publicDownloadRerun": false,
+  "stagingDirectory": "/var/folders/8y/pqx9h65139jcbbgdf2nt9hlm0000gn/T/wuji-review-source-20261023-d6c28zdl",
+  "packagingAttemptNote": "The first inline packaging script failed source decoding before execution. This ASCII-source retry succeeded; no contract or verifier change was needed."
+}

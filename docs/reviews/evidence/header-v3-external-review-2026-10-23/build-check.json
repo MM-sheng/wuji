@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-23T10:10:03.003086+00:00",
+  "status": "PASS_SOURCE_COMPILATION",
+  "compilerVersion": "solc, the solidity compiler commandline interface\nVersion: 0.8.28+commit.7893614a.Darwin.appleclang",
+  "compilerSha256": "81515b0e53deaa266d549545ccaac0a5a96e6d4e8201c77f673b2c710976d9ea",
+  "solcInputSha256": "82b9a3497297c0a9a1b87a6340b9fcd857b057f18d546f0a580d43b3a6141ab5",
+  "sourceFiles": 20,
+  "compilerErrors": 0,
+  "compilerWarnings": [],
+  "runtimeSizesBytes": {
+    "WujiHeaderIndex": 12234,
+    "RelayerRewards": 4660,
+    "FeeRouter": 1115,
+    "WujiAccounts": 23646,
+    "WujiAccountsFactory": 2425
+  },
+  "compilerOutputSha256": "0ccb30bfe8e0a305ccbe68cf581730dc87da78a3b35f36eb6f0e321e75a539dc",
+  "compilerStderr": "",
+  "coreContractOutputsPresent": true,
+  "scope": "Author compilation in a new temporary directory using inline sources and a locally installed native compiler; not bytecode attestation, security review, external acceptance, or full regression.",
+  "publicRequestsSent": 0,
+  "transactionsSent": 0,
+  "externalAcceptance": "NOT_RUN"
+}

@@ -1,0 +1,123 @@
+{
+  "revision": "header-v3-review-v1-20261023",
+  "purpose": "Offline source reading and compilation supplement; not an audited release or live bytecode proof.",
+  "sourceCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc",
+  "deploymentSourceCommit": "03f6256c2821e5a67a8b98739ee9b199a32da27a",
+  "projectSourceMatchesDeploymentCommit": true,
+  "openzeppelinCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3",
+  "coreContracts": [
+    "WujiHeaderIndex",
+    "RelayerRewards",
+    "FeeRouter",
+    "WujiAccounts",
+    "WujiAccountsFactory"
+  ],
+  "solcVersion": "0.8.28+commit.7893614a",
+  "solcInputSha256": "82b9a3497297c0a9a1b87a6340b9fcd857b057f18d546f0a580d43b3a6141ab5",
+  "files": [
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC1363.sol",
+      "sha256": "9c3a75a925a6dac9e88b03cddc58d42fe3131b0aaaad84408521f3f7af2f991b",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC165.sol",
+      "sha256": "dfb3f56fa928a7c6cae41a7ce2c86b9210fa18d33fa26389099d66a0fa790368",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC20.sol",
+      "sha256": "0158e2d3e0e28bedd99eec13dcf1a8aa3a70a5b7e4bb2ad709609c95fcc740d1",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol",
+      "sha256": "0ef8d844d8e066abd5c0d8cc1c550c89f2628a4ea9c9bb16c7593d4207800ca8",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol",
+      "sha256": "01b6f5c4fa45fd38822b286ecef6daf983d27306dd6362496fa71b3e4600b72c",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "sha256": "0b7132f17d14d1d84b41b0bb429be62dafdff00fd3470f68724d8018eb07f57a",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol",
+      "sha256": "93685e4e976be584a5e6abfc37376fe17c99bee53e07610efcc1ce51868e90d1",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/utils/Panic.sol",
+      "sha256": "270fc8401c1a13fae6a7a4a2dd6e381b95d658896701e51f0d3e2688acab3dec",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol",
+      "sha256": "94e409e8f6e3184236651a6cc2b1a6a3ea0f0a25eb85b71e524ad5791bb2fbc8",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol",
+      "sha256": "75704538dcb223239280c6726d9a31cf769a7816718517c997fc7d63bdb70778",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol",
+      "sha256": "9055c2994b37dea1a41b7b7926dcb510f05dbe2540b0aafc5fbee9558fffd0ca",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/utils/math/Math.sol",
+      "sha256": "bdfdbe133991c0c78042957ff5cd97167926fcaf6d15664f3835a076cb066457",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol",
+      "sha256": "5779bc848bde39f1ad7bc02b4f708a0040888e0083b1a33f119cd94639350134",
+      "gitCommit": "cab19933c33c2ad1d4c7a84864a3601dddfd16f3"
+    },
+    {
+      "path": "contracts/src/BitcoinRelay.sol",
+      "sha256": "694b0003ab7a70c21752bd81121e474fc0999b206cea1536991f468981c8413b",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    },
+    {
+      "path": "contracts/src/FeeRouter.sol",
+      "sha256": "204e511db39dbdfc1dd9a922a2a5f0b5515d45482fee1a630bad687ccca01a19",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    },
+    {
+      "path": "contracts/src/RelayerRewards.sol",
+      "sha256": "3f3084f12f30c8f5df2542d02122d1f28346a6099c33ec086620497f03f3892c",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    },
+    {
+      "path": "contracts/src/WujiAccounts.sol",
+      "sha256": "d49b916dcf6386628b5a9e39143bab65cab107c6030b627b51e471f52130e4f4",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    },
+    {
+      "path": "contracts/src/WujiAccountsFactory.sol",
+      "sha256": "4677bf782aeb099b3c0f64ca6ef9a2c5674b939edbd8f681b3eb29acf91f8039",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    },
+    {
+      "path": "contracts/src/WujiHeaderIndex.sol",
+      "sha256": "acf9d37ead2a17fd16b0edb7ce1818b8fd1fcd55ab92157da0244dc334190bc3",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    },
+    {
+      "path": "contracts/src/WujiIndex.sol",
+      "sha256": "19a0edb0fe5c91b3032de584ca1bac63a07c76fe4563c141be77c1a8d58c7214",
+      "gitCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc"
+    }
+  ],
+  "includedVerificationRevision": "header-v3-r4-20261023",
+  "externalAcceptance": "NOT_RUN",
+  "fullFoundryTestsIncluded": false,
+  "liveBytecodeAttestation": "NOT_RUN"
+}

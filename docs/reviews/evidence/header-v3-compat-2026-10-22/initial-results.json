@@ -1,0 +1,56 @@
+[
+  {
+    "name": "version",
+    "args": [
+      "--version"
+    ],
+    "exitCode": 0,
+    "logSha256": "142903036cbe048d759ce762e0139d3e149c6b49b487a0ec6f9b898470cd7cfc"
+  },
+  {
+    "name": "integrity",
+    "args": [
+      "verify.mjs",
+      "integrity"
+    ],
+    "exitCode": 0,
+    "logSha256": "4c28b827ea8abdc19a04361d18e9c03fc75adfdaf3f2d069f6a12933d1e974fa"
+  },
+  {
+    "name": "documented-base-test",
+    "args": [
+      "--test",
+      "verify.test.mjs"
+    ],
+    "exitCode": 9,
+    "logSha256": "5a4c5b3a7507646294f8ffa19f729a7be452f8511a95a8b2face4bd6bc8acc06"
+  },
+  {
+    "name": "full-test",
+    "args": [
+      "verify.test.mjs",
+      "/tmp/wuji-public-replay-1792683949427"
+    ],
+    "exitCode": 1,
+    "logSha256": "88767401572001a44ac94598ab6eaf9d6e1d5962f26e72d0b73322902858cc6f"
+  },
+  {
+    "name": "consumer",
+    "args": [
+      "consume.mjs",
+      "/tmp/wuji-public-replay-1792683949427"
+    ],
+    "exitCode": 0,
+    "logSha256": "8bea81c462de288c064933e11327cd8c745a324216f7206f8f34f325885e5908"
+  },
+  {
+    "name": "public-rpc",
+    "args": [
+      "--input-type=module",
+      "-e",
+      "import {readRpc,candidate} from './verify.mjs'; const e=await readRpc(candidate.defaults.rpc); console.log(JSON.stringify({chainId:e.chainId,block:e.blockBefore,reads:Object.keys(e.reads).length,rpc:e.rpc,observedAt:e.observedAt}));"
+    ],
+    "exitCode": 0,
+    "logSha256": "543dd99468b8b4ef133cc50088dca6a51ab82be58bd5bb4372a10f73da72dbb3"
+  }
+]

@@ -1,6 +1,11 @@
 # Mainnet deployment checklist
 
-**Current acceptance, 2026-10-22:** the current Sepolia header-v3 real MetaMask pair has completed entry,
+**Current entry, 2026-10-23:** use the [current gap/evidence table](tasks/MAINNET_GAPS_2026-10-23.md)
+and [external assignment](tasks/EXTERNAL_REVIEW_ASSIGNMENT_2026-10-23.md). The r4 developer kit is ready,
+but no external replay, security review or independent signing-operator acceptance has been returned.
+This phase prepares read-only handoffs; it does not authorize deployment, wallet tests or production changes.
+
+**Recorded acceptance, 2026-10-22:** the current Sepolia header-v3 real MetaMask pair has completed entry,
 exit and both claims, with exact token/fee reconciliation ([report](tasks/T13_WALLET_ROUNDTRIP_2026-10-22.md)).
 This clears that lifecycle only. Use the [current handoff](tasks/REVIEW_HANDOFF_2026-10-22.md) and
 [remaining gates](tasks/READINESS_2026-10-22.md); independent review, independent operation, full natural
@@ -13,8 +18,9 @@ two immutable creation-code data contracts. The entry/exit lifecycle subsequentl
 this is not mainnet acceptance. Complete the remaining gates and archive-recovery rehearsal before release.
 See [the source repair report](reviews/2026-10-12-security-fixes.md).
 
-Every item is required unless it is explicitly marked informational. Record links, hashes, addresses,
-and reviewer names in the release ticket; a checked box without evidence is insufficient.
+Every item applicable to the selected release stage/path is required unless explicitly informational.
+Old v2, relay and ZK evidence does not clear a current header-v3 gate or require restarting those deployments.
+Record links, hashes, addresses and reviewer names in the release ticket; a checked box without evidence is insufficient.
 
 **Mainnet path (decided 2026-10-02):** `WujiHeaderIndex` (the three T13 rules and nothing else; the ZK proof path stays in `ZkWujiIndex` for testnet research) — valid
 headers; a height counts only `CONFIRMATIONS = 100` deep; a branch that out-works the finalized chain by
@@ -34,7 +40,8 @@ immutable deployment. A fresh corrected deployment now exists; independent revie
   cross-call, reorg and canonical timestamp-window regressions, plus the 24-segment historical replay.
 - [x] Deploy and verify the corrected testnet index and three empty consumers; preserve the original anchor,
   replay 1,440 heights, and compare full continuity including chronological timestamps ([report](reviews/2026-10-12-sepolia-header-v2.md)).
-- [ ] Independently review the MTP fix and repeat the complete consumer entry/exit lifecycle on v2.
+- [ ] Independently review the MTP fix on the current header-v3 release candidate. Its recorded v3 consumer
+  round trip is linked above; the historical v2 checklist is not an instruction to repeat wallet tests on v2.
 
 **Target-chain gas observation (2026-10-12):** local Prague simulation materially underestimates current
 Sepolia contract creation gas. The first reserve deployment exhausted its limit; subsequent transactions used
@@ -42,9 +49,11 @@ live `eth_estimateGas` plus 20% margin and succeeded. The factory used 35,917,06
 the old 2^24 execution-gas cap as a universal total-gas cap for state creation, or reuse historical deployment
 gas figures. Recheck execution/state accounting and worst-case seal gas on the actual release chain.
 
-**Staged launch (decided 2026-10-04):** the index, its reserve and router go to Ethereum mainnet first, without a
-paid audit: they hold no user funds (the reserve starts at zero), and the worst outcome of a bug is a wrong S, fixed
-by redeploying from a new anchor. Before that launch the paid review below is replaced by the free evidence marked
+**Staged launch (decided 2026-10-04):** the index, its reserve and router are the first planned Ethereum mainnet
+stage, without user pool deposits and with the reserve initially zero. The original budget decision did not require
+a paid audit for this stage. An incorrect S can still harm downstream consumers; a new deployment cannot repair
+an immutable old address or migrate its consumers automatically. This staged plan is not a current release approval.
+Before that launch the paid review below is replaced by the evidence marked
 **[stage 1]**: a full-history replay, static analysis, a seal rehearsal, a public bug bounty and the live testnet round
 trip. The pools hold user funds and stay testnet-only (`DeployAccounts.s.sol` refuses mainnet) until the
 **[stage 2]** items, including an independent audit of the pools and a re-review of the index, are done.
@@ -56,13 +65,19 @@ and as the vaults' current binding; its items apply only if it ships.
 
 - [x] Decide the confirmation depth and seal rule (K = 100, Bitcoin's coinbase maturity; margin 144) and record why ([T13](tasks/T13_ZK_REORG_EXIT.md)).
 - [x] Implement rules 2 and 3, the seen-header record and the header-only keeper mode; test real forks on a test-only low-difficulty subclass (`test/ZkWujiReorg.t.sol`, threshold exact and fuzzed).
-- [x] Deploy the exact shape on a public testnet, compare runtime bytecode, and fold live headers ([sepolia-header.json](../contracts/deployments/sepolia-header.json); the earlier `ZkWujiIndex` shape: [sepolia-t13.json](../contracts/deployments/sepolia-t13.json)).
-- [x] Keep the mainnet contract minimal: `WujiHeaderIndex` carries only the three rules (10,104-byte runtime against 21,990 for `ZkWujiIndex`), with a differential test showing identical state to `ZkWujiIndex`'s header path over 1,000 real headers.
+- [x] Deploy and verify the corrected shape on a public testnet, compare runtime bytecode, and fold live
+  headers ([current v3 manifest](../contracts/deployments/sepolia-header-v3.json),
+  [build/binding verification](tasks/T13_RELEASE_INTEGRATION_2026-10-18.md)). Earlier header/ZK addresses are historical.
+- [x] Keep `WujiHeaderIndex` separate from the ZK proof/challenge path. The original 1,000-header differential
+  test is historical evidence; current source and runtime sizes are recorded in the v3 integration report above.
 - [x] **[stage 1]** Replay every Bitcoin mainnet header through `WujiHeaderIndex` and match S, work and tip hash against an independent computation: heights 11–969,692 (tip 969,792, hash cross-checked with mempool.space and blockstream.info), 24 segments, all pass; corrupted expectations, a flipped timestamp bit and a flipped difficulty bit each fail ([T13](tasks/T13_ZK_REORG_EXIT.md#全历史回放2026-10-04), `scripts/replay-history.mjs`, `test/FullHistoryReplay.t.sol`). Re-run on the release commit.
 - [x] **[stage 1]** Static analysis (Slither, Aderyn) of `WujiHeaderIndex`, `RelayerRewards`, `FeeRouter`; triage every result. Re-run on 2026-10-26 after the MTP fix and segmented reorgs, together with the capped pools ([2026-10-26 report](reviews/2026-10-26-static-analysis.md), superseding [2026-10-05](reviews/2026-10-05-static-analysis.md)): no vulnerability. Re-run on the release commit.
 - [x] **[stage 1]** Public bug bounty on the index, live before the mainnet deployment ([SECURITY.md](../SECURITY.md), 2026-10-05: private reporting via GitHub, USD 200 / 80 / 20, total budget USD 300).
 - [ ] **[stage 2]** Independent review of `WujiHeaderIndex`: `_apply`/`_replay`/`foldHeaders` against Bitcoin Core (compact bits, retarget clamp, MTP, future bound, work) and of `freezeOnReorg` (fork base from `committedAt`, same-chain exclusion, work threshold, difficulty changes inside a branch, gas of the worst real seal).
-- [ ] Confirm every transaction the system needs fits the 2^24 per-transaction gas cap (EIP-7825) with margin: folds ≤ 250 heights (≈ 6.4M gas), worst seal ≤ `MAX_REORG_HEADERS` (800, ≈ 15M gas). Re-measure on the target chain.
+- [ ] Measure every required transaction on the pinned release and target chain under its applicable execution
+  and state-gas rules: deployment, fold, single-call sealing, each segmented proof step/finalization, and pool
+  processing. Current source limits the single-call reorg proof to 800 headers and each segment to 256;
+  neither is a bound on the total reorg depth. Old gas estimates do not clear this release gate.
 - [ ] Choose the anchor near the tip at deployment, cross-check its hash and epoch-start time with two independent Bitcoin nodes, and verify `CONFIRMATIONS`, `REORG_MARGIN`, `GENESIS_HEIGHT`, `CHECKPOINT_INTERVAL`, `verifier() == 0` and `committedAt(anchor)` from deployed state.
 - [x] **[stage 1]** Rehearse a seal on a fork network: a real deep reorg (low-difficulty fork) seals; pools exit through `freezePool`; nothing advances afterwards. `scripts/seal-drill.mjs` (in CI): the production keeper folds a mined chain, a pool processes two entries, Bitcoin reorganizes 30 blocks below the finalized tip, the keeper waits while the branch is light, then seals by itself (284 headers, 4.33M gas), freezes the pool, and the three accounts are paid out to the last unit (one refunded in full). The keeper now saves every finalized state it sees and builds the seal (`indexer/seal.mjs`); before this, nothing off chain could seal. [T13](tasks/T13_ZK_REORG_EXIT.md#封存演练2026-10-05)
 - [ ] Observe at least one full 4320-height series on the testnet deployment, including pool entries and exits processed from headers.

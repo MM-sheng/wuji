@@ -1,0 +1,28 @@
+✔ public height 800000 vector pins raw/display order, R and integer increment (0.482125ms)
+✔ metadata encoding checks advertised block hash and malformed fields (0.770417ms)
+✔ Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors (3.414625ms)
+✔ compact targets reject sign, zero, overflow and excess target (0.190875ms)
+✔ signed ABI U is decoded exactly and truncated continuity fails (0.226792ms)
+✔ RPC rejects write methods and non-allowlisted calls before any network request (2.239416ms)
+✔ endpoint configuration excludes URL credentials and insecure remote transport (0.149083ms)
+✔ fixed-block RPC evidence checks every identity field (20.718542ms)
+✔ RPC refuses wrong chain, changed canonical block and wrong deployed code (23.549875ms)
+﹣ complete offline replay and header-rule counterexamples (0.094125ms) # SKIP
+﹣ offline recovery rejects missing page (0.03675ms) # SKIP
+﹣ offline recovery rejects changed header (0.025ms) # SKIP
+﹣ offline recovery rejects changed RPC state (0.017458ms) # SKIP
+﹣ offline recovery rejects changed consumer series (0.014042ms) # SKIP
+﹣ offline recovery rejects changed source RPC (0.01975ms) # SKIP
+﹣ offline recovery rejects changed evidence RPC (0.023042ms) # SKIP
+﹣ offline recovery rejects changed Bitcoin source (0.019625ms) # SKIP
+﹣ offline recovery rejects changed page URL (0.013875ms) # SKIP
+﹣ offline recovery rejects invalid observation (0.013917ms) # SKIP
+﹣ interrupted download resumes verified pages without overwriting a completed archive (0.0285ms) # SKIP
+ℹ tests 20
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 11
+ℹ todo 0
+ℹ duration_ms 55.734334

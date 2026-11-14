@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-23T09:48:46.682121+00:00",
+  "status": "PASS_DELIVERY_CONSISTENCY",
+  "revision": "header-v3-r4-20261023",
+  "sourceCommit": "e884e05a42fb72d91ca8cc996efe1da7fe2c7ffc",
+  "archive": "/Users/m/Documents/Codex/2026-09-18/ni/wuji-deliverables/wuji-header-v3-verification-2026-10-23-r4.zip",
+  "sha256": "5c2bc154938772e88a3eee116133ad16742d8ad9abd1c6d37ded84e80866272d",
+  "files": 14,
+  "bytes": 42017,
+  "sourceMatchesHeadAndZip": true,
+  "savedTestAndUnpackedEvidenceHashesMatch": true,
+  "invitationMatchesDelivery": true,
+  "savedTests": [
+    {
+      "node": "v18.0.0",
+      "base": {
+        "pass": 16,
+        "fail": 0,
+        "skipped": 12
+      },
+      "full": {
+        "pass": 28,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "node": "v26.8.1",
+      "base": {
+        "pass": 16,
+        "fail": 0,
+        "skipped": 12
+      },
+      "full": {
+        "pass": 28,
+        "fail": 0,
+        "skipped": 0
+      }
+    }
+  ],
+  "publicDownloadRerun": false,
+  "fullTestsRerun": false,
+  "externalAcceptance": "NOT_RUN",
+  "checkerCorrection": "Initial local check used an incorrect SELF_CHECK key (recovery); corrected to the existing r4Recovery field. No product failure or kit mutation."
+}

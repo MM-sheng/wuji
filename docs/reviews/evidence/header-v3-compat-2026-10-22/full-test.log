@@ -1,0 +1,76 @@
+(node:7201) ExperimentalWarning: The test runner is an experimental feature. This feature could change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+TAP version 13
+ok 1 - public height 800000 vector pins raw/display order, R and integer increment
+  ---
+  duration_ms: 0.001016541
+  ...
+ok 2 - metadata encoding checks advertised block hash and malformed fields
+  ---
+  duration_ms: 0.001101167
+  ...
+ok 3 - Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors
+  ---
+  duration_ms: 0.007764
+  ...
+ok 4 - compact targets reject sign, zero, overflow and excess target
+  ---
+  duration_ms: 0.000275042
+  ...
+ok 5 - signed ABI U is decoded exactly and truncated continuity fails
+  ---
+  duration_ms: 0.000259292
+  ...
+ok 6 - RPC rejects write methods and non-allowlisted calls before any network request
+  ---
+  duration_ms: 0.003141542
+  ...
+ok 7 - endpoint configuration excludes URL credentials and insecure remote transport
+  ---
+  duration_ms: 0.000228458
+  ...
+not ok 8 - fixed-block RPC evidence checks every identity field
+  ---
+  duration_ms: 0.028450916
+  failureType: 'testCodeFailure'
+  error: 'The "error/message" argument is ambiguous. The error message "S()" is identical to the message.'
+  code: ERR_AMBIGUOUS_ARGUMENT
+  stack: |-
+    new NodeError (node:internal/errors:372:5)
+    expectsError (node:assert:807:15)
+    Function.throws (node:assert:902:3)
+    TestContext.<anonymous> (file:///private/tmp/wuji-node18-compat-20261022/kit-before/verify.test.mjs:88:12)
+    async Test.run (node:internal/test_runner/test:333:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:146:7)
+  ...
+ok 9 - RPC refuses wrong chain, changed canonical block and wrong deployed code
+  ---
+  duration_ms: 0.048788375
+  ...
+ok 10 - complete offline replay and header-rule counterexamples
+  ---
+  duration_ms: 0.385627667
+  ...
+ok 11 - offline recovery rejects missing page
+  ---
+  duration_ms: 0.205301125
+  ...
+ok 12 - offline recovery rejects changed header
+  ---
+  duration_ms: 0.190403667
+  ...
+ok 13 - offline recovery rejects changed RPC state
+  ---
+  duration_ms: 0.088389667
+  ...
+ok 14 - offline recovery rejects changed consumer series
+  ---
+  duration_ms: 0.254657542
+  ...
+1..14
+# tests 14
+# pass 13
+# fail 1
+# skipped 0
+# todo 0
+# duration_ms 1.240208125

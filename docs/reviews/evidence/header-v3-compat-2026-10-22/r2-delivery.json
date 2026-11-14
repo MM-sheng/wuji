@@ -1,0 +1,16 @@
+{
+  "archive": "/Users/m/.codex/visualizations/2026/10/22/01a16412-cd6a-7720-8bbf-9099f8e624d2/wuji-header-v3-verification-2026-10-22-r2.zip",
+  "sha256": "7255e67c3a999ec4822ba939a7e7357a8da3e974e2d1b87e859bc3d981471bef",
+  "files": 14,
+  "bytes": 34944,
+  "extractedChecks": {
+    "r2-package-integrity": {
+      "exitCode": 0,
+      "sha256": "4c28b827ea8abdc19a04361d18e9c03fc75adfdaf3f2d069f6a12933d1e974fa"
+    },
+    "r2-consumer": {
+      "exitCode": 0,
+      "sha256": "8bea81c462de288c064933e11327cd8c745a324216f7206f8f34f325885e5908"
+    }
+  }
+}

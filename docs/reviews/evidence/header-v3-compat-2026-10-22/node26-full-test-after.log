@@ -1,0 +1,36 @@
+✔ public height 800000 vector pins raw/display order, R and integer increment (0.732041ms)
+✔ metadata encoding checks advertised block hash and malformed fields (0.874334ms)
+✔ Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors (3.312667ms)
+✔ compact targets reject sign, zero, overflow and excess target (0.143166ms)
+✔ signed ABI U is decoded exactly and truncated continuity fails (0.171292ms)
+✔ RPC rejects write methods and non-allowlisted calls before any network request (2.081416ms)
+✔ endpoint configuration excludes URL credentials and insecure remote transport (0.134834ms)
+✔ fixed-block RPC evidence checks every identity field (20.667084ms)
+✔ RPC refuses wrong chain, changed canonical block and wrong deployed code (22.932791ms)
+✔ complete offline replay and header-rule counterexamples (134.927417ms)
+✔ offline recovery rejects missing page (109.731875ms)
+✔ offline recovery rejects changed header (113.344583ms)
+✔ offline recovery rejects changed RPC state (60.026209ms)
+✔ offline recovery rejects changed consumer series (136.638958ms)
+Downloaded through Bitcoin height 972236; 25 pages verified.
+Downloaded through Bitcoin height 971861; 50 pages verified.
+Downloaded through Bitcoin height 971486; 75 pages verified.
+Downloaded through Bitcoin height 971111; 100 pages verified.
+Downloaded through Bitcoin height 970736; 125 pages verified.
+Downloaded through Bitcoin height 970361; 150 pages verified.
+Downloaded through Bitcoin height 969986; 175 pages verified.
+Downloaded through Bitcoin height 969611; 200 pages verified.
+Downloaded through Bitcoin height 969236; 225 pages verified.
+Downloaded through Bitcoin height 968861; 250 pages verified.
+Downloaded through Bitcoin height 968486; 275 pages verified.
+Downloaded through Bitcoin height 968111; 300 pages verified.
+Downloaded through Bitcoin height 967736; 325 pages verified.
+✔ interrupted download resumes verified pages without overwriting a completed archive (741.12325ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1351.49575

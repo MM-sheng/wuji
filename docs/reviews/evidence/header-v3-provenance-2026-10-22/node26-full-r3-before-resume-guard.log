@@ -1,0 +1,41 @@
+✔ public height 800000 vector pins raw/display order, R and integer increment (0.518834ms)
+✔ metadata encoding checks advertised block hash and malformed fields (0.8455ms)
+✔ Ethereum Keccak padding, ABI selectors and multi-block anchor commitment match fixed vectors (3.381166ms)
+✔ compact targets reject sign, zero, overflow and excess target (0.169458ms)
+✔ signed ABI U is decoded exactly and truncated continuity fails (0.200708ms)
+✔ RPC rejects write methods and non-allowlisted calls before any network request (2.245292ms)
+✔ endpoint configuration excludes URL credentials and insecure remote transport (0.267375ms)
+✔ fixed-block RPC evidence checks every identity field (20.13125ms)
+✔ RPC refuses wrong chain, changed canonical block and wrong deployed code (22.434834ms)
+✔ complete offline replay and header-rule counterexamples (135.755125ms)
+✔ offline recovery rejects missing page (112.563458ms)
+✔ offline recovery rejects changed header (115.31375ms)
+✔ offline recovery rejects changed RPC state (55.980625ms)
+✔ offline recovery rejects changed consumer series (133.638125ms)
+✔ offline recovery rejects changed source RPC (68.369333ms)
+✔ offline recovery rejects changed evidence RPC (55.939792ms)
+✔ offline recovery rejects changed Bitcoin source (56.8945ms)
+✔ offline recovery rejects changed page URL (57.396625ms)
+✔ offline recovery rejects invalid observation (56.184458ms)
+Downloaded through Bitcoin height 972236; 25 pages verified.
+Downloaded through Bitcoin height 971861; 50 pages verified.
+Downloaded through Bitcoin height 971486; 75 pages verified.
+Downloaded through Bitcoin height 971111; 100 pages verified.
+Downloaded through Bitcoin height 970736; 125 pages verified.
+Downloaded through Bitcoin height 970361; 150 pages verified.
+Downloaded through Bitcoin height 969986; 175 pages verified.
+Downloaded through Bitcoin height 969611; 200 pages verified.
+Downloaded through Bitcoin height 969236; 225 pages verified.
+Downloaded through Bitcoin height 968861; 250 pages verified.
+Downloaded through Bitcoin height 968486; 275 pages verified.
+Downloaded through Bitcoin height 968111; 300 pages verified.
+Downloaded through Bitcoin height 967736; 325 pages verified.
+✔ interrupted download resumes verified pages without overwriting a completed archive (754.1155ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1657.914125

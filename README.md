@@ -3,6 +3,14 @@
 > 无极生太极，太极生两仪。
 > A market about nothing. Verifiable. Heartbeat: Bitcoin.
 
+**Current external verification entry (2026-10-23, r4):** start with the self-contained
+[header-v3 developer verification kit](verification/header-v3/README.md). It explains the current
+Sepolia candidate and recomputes a fixed historical snapshot from public data with Node only—no wallet,
+private cache or deployment. The older relay/ZK/application descriptions below retain their own version
+scope. A replay PASS is not a live-health, independent-audit or financial-product acceptance.
+The [r4 delivery record](docs/tasks/EXTERNAL_VALIDATION_R4_2026-10-23.md) identifies the archive,
+cooldown/recovery fixes and saved author checks. External developer acceptance remains pending.
+
 **What this repository is.** Infrastructure without an owner or admin key for Bitcoin-header verification
 and a derived public index, under explicit checkpoint, input-visibility and liveness assumptions.
 Historical relay and ZK research implementations below are separate from the current header-v3 candidate:

@@ -1,0 +1,3 @@
+(node:7203) ExperimentalWarning: The Fetch API is an experimental feature. This feature could change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"chainId":"0xaa36a7","block":{"number":"0xb6a46d","hash":"0x72be42afcf3cd795f35d9f19051858f4fde77fd631353d47a262e572231c47d7","timestamp":"0x6ada0648"},"reads":17,"rpc":"https://ethereum-sepolia.publicnode.com","observedAt":"2026-10-22T16:19:08.001Z"}
