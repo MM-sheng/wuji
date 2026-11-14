@@ -124,11 +124,24 @@ export class HeaderChain {
     this.epochStart = 0;    // timestamp of the first block of the current 2016-block epoch
   }
   get height() { return this.headers.length - 1; }
+  medianTimePast() {
+    const n = Math.min(11, this.headers.length);
+    const times = [];
+    for (let i = this.headers.length - n; i < this.headers.length; i++) {
+      times.push(this.headers[i].readUInt32LE(68));
+    }
+    times.sort((a, b) => a - b);
+    return times[Math.floor(n / 2)];
+  }
   /// Append one header at `this.height + 1`, applying every consensus rule we can check from headers alone.
-  append(raw) {
+  append(raw, { maxTime = Math.floor(Date.now() / 1000) + 7200 } = {}) {
     if (raw.length !== 80) throw Error('header must be 80 bytes');
     const height = this.headers.length;
+    const version = raw.readInt32LE(0);
     const bits = raw.readUInt32LE(72), time = raw.readUInt32LE(68);
+    if ((height >= 227_931 && version < 2) || (height >= 363_725 && version < 3) || (height >= 388_381 && version < 4)) {
+      throw Error(`version ${version} at ${height}`);
+    }
     const internal = sha256d(raw);
     if (height === 0) {
       if (Buffer.from(internal).reverse().toString('hex') !== GENESIS_HASH) throw Error('wrong genesis');
@@ -141,6 +154,8 @@ export class HeaderChain {
         ? retarget(parentBits, this.epochStart, this.headers[height - 1].readUInt32LE(68))
         : parentBits;
       if (bits !== expected) throw Error(`difficulty at ${height}`);
+      if (time <= this.medianTimePast()) throw Error(`MTP at ${height}`);
+      if (maxTime !== null && time > maxTime) throw Error(`future time at ${height}`);
       if (height % RETARGET === 0) this.epochStart = time;
     }
     const target = targetOf(bits);
@@ -192,7 +207,7 @@ export class HeaderChain {
     if (!fs.existsSync(file)) return 0;
     const buf = fs.readFileSync(file);
     for (let o = 0; o + 80 <= buf.length; o += 80) {
-      try { this.append(buf.subarray(o, o + 80)); } catch { break; }   // stop at the first bad/partial header
+      try { this.append(buf.subarray(o, o + 80), { maxTime: null }); } catch { break; }   // stop at the first bad/partial header
     }
     return this.headers.length;
   }
@@ -319,8 +334,11 @@ export class BitcoinP2P {
       if (loaded) this.log(`headers: loaded ${loaded} from disk (tip ${this.chain.height})`);
       else this.chain.append(GENESIS_HEADER);
     }
-    let lastError;
-    for (const [host, port] of await this.peerList()) {
+    let lastError, responsive = 0;
+    const peers = await this.peerList();
+    const minPeers = Math.min(3, peers.length);
+    const initial = this.chain.height;
+    for (const [host, port] of peers) {
       const peer = new Peer(host, port, { timeout: this.peerTimeout });
       try {
         await peer.connect();
@@ -335,9 +353,12 @@ export class BitcoinP2P {
           if (last < MAX_HEADERS) break;
         }
         peer.close();
-        if (this.chain.height > before || this.chain.height > 0) {
-          if (this.chain.height > before) this.chain.save(this.file);
-          if (this.chain.height > before) this.log(`headers: tip ${this.chain.height} (+${this.chain.height - before}) via ${host}`);
+        responsive++;
+        if (this.chain.height > before) {
+          this.chain.save(this.file);
+          this.log(`headers: tip ${this.chain.height} (+${this.chain.height - before}) via ${host}`);
+        }
+        if (this.chain.height > initial || (this.chain.height > 0 && responsive >= minPeers)) {
           return this.chain.height;
         }
       } catch (e) {

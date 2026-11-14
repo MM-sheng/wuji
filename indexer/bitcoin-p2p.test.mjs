@@ -190,3 +190,92 @@ test('a reply from an unknown branch changes nothing', async () => {
   const r = await applyHeaders(chain, stranger, async () => []);
   assert.equal(r.added, 0); assert.equal(chain.height, 20);
 });
+
+test('HeaderChain enforces MTP, 2h future time, and buried BIP34/66/65 versions', async () => {
+  const { sha256d } = await import('./bitcoin.mjs');
+  const chain = new HeaderChain();
+  chain.append(GENESIS);
+
+  const child = Buffer.alloc(80);
+  child.writeInt32LE(1, 0);
+  sha256d(GENESIS).copy(child, 4);
+  child.writeUInt32LE(0x1d00ffff, 72);
+
+  // Timestamp <= Genesis timestamp violates MTP.
+  child.writeUInt32LE(GENESIS.readUInt32LE(68), 68);
+  assert.throws(() => chain.append(child, { maxTime: 2_000_000_000 }), /MTP at 1/);
+
+  // Timestamp > maxTime violates the 2-hour future window.
+  child.writeUInt32LE(2_000_000_001, 68);
+  assert.throws(() => chain.append(child, { maxTime: 2_000_000_000 }), /future time at 1/);
+
+  // Buried deployment version rules (BIP34 at 227931, BIP66 at 363725, BIP65 at 388381).
+  const vCheck = new HeaderChain();
+  vCheck.headers = new Array(388_381);
+  const badVer = Buffer.alloc(80);
+  badVer.writeInt32LE(3, 0);
+  badVer.writeUInt32LE(0x1d00ffff, 72);
+  assert.throws(() => vCheck.append(badVer), /version 3 at 388381/);
+});
+
+test('_sync continues past a lagging peer that returns zero headers when chain height > 0', async () => {
+  const net = await import('node:net');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { BitcoinP2P } = await import('./bitcoin-p2p.mjs');
+  const { sha256d } = await import('./bitcoin.mjs');
+
+  // Mine block 1 on top of a synthetic easy genesis in memory by using real block 1 from fixture/mainnet
+  const block1 = Buffer.from(
+    '010000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000982051fd1e4ba744bbbe680e'
+    + '1fee14677ba1a3c3540bf7b1cdb606e857233e0e61bc6649ffff001d01e36299', 'hex');
+  const block2 = Buffer.from(
+    '010000004860eb18bf1b1620e37e9490fc8a427514416fd75159ab86688e9a8300000000d5fdcc541e25de1c7a5added'
+    + 'f24858b8bb665c9f36ef744ee42c316022c90f9bb0bc6649ffff001d08d2bd61', 'hex');
+
+  const makePeer = headersToServe => net.createServer(socket => {
+    let buf = Buffer.alloc(0);
+    socket.on('data', chunk => {
+      buf = Buffer.concat([buf, chunk]);
+      while (buf.length >= 24) {
+        const len = buf.readUInt32LE(16);
+        if (buf.length < 24 + len) break;
+        const cmd = buf.subarray(4, 16).toString('ascii').replace(/\0+$/, '');
+        buf = buf.subarray(24 + len);
+        if (cmd === 'version') {
+          const ver = Buffer.alloc(86); ver.writeInt32LE(70016, 0);
+          socket.write(frame('version', ver));
+          socket.write(frame('verack', Buffer.alloc(0)));
+        } else if (cmd === 'getheaders') {
+          const parts = [varint(headersToServe.length)];
+          for (const h of headersToServe) parts.push(h, Buffer.from([0]));
+          socket.write(frame('headers', Buffer.concat(parts)));
+          headersToServe = [];
+        }
+      }
+    });
+  });
+
+  const stale = makePeer([]);        // behind our height 1: returns 0 headers
+  const fresh = makePeer([block2]);  // ahead at height 2: returns block 2
+  await new Promise(r => stale.listen(0, '127.0.0.1', r));
+  await new Promise(r => fresh.listen(0, '127.0.0.1', r));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wuji-p2p-quorum-'));
+  try {
+    const api = new BitcoinP2P({
+      peers: [`127.0.0.1:${stale.address().port}`, `127.0.0.1:${fresh.address().port}`],
+      dir,
+      peerTimeout: 1000,
+    });
+    api.chain.append(GENESIS, { maxTime: null });
+    api.chain.append(block1, { maxTime: null });
+    assert.equal(api.chain.height, 1);
+    const newTip = await api.sync({ force: true });
+    assert.equal(newTip, 2, 'queried the second peer after the first returned no headers');
+    assert.equal(sha256d(api.chain.headers[2]).reverse().toString('hex'),
+      '000000006a625f06636b8bb6ac7b960a8d03705d1ace08b1a19da3fdcc99ddbd');
+  } finally {
+    stale.close(); fresh.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
