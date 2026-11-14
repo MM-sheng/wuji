@@ -10,7 +10,7 @@ const owner='0x'+'aa'.repeat(20),hash='0x'+'bb'.repeat(32),w=n=>'0x'+BigInt(n).t
 function fixture(options={}){
  const rel={...registry[0],...registry[0].accountPools[1]},calls=[],sent=[],nodes=new Map();
  const get=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='pjPool'?rel.address:id==='pjAmt'?(options.amount??'0.00001'):id==='pjId'?'1':'',innerHTML:'',textContent:''});return nodes.get(id);};
- let ctx,chain=options.chain??11155111;
+ let ctx,chain=options.chain??11155111,allowance=options.allowance??0n;
  const provider={request:async({method,params})=>{
   calls.push({method,params});
   if(method==='eth_chainId')return '0x'+chain.toString(16);
@@ -21,7 +21,7 @@ function fixture(options={}){
   if(method==='eth_call'){
    const {to,data,from}=params[0],sig=data.slice(0,10);
    if(from){if(options.revert)throw Error('execution reverted: '+options.revert);return '0x';}
-   if(to.toLowerCase()===rel.asset.toLowerCase())return sig==='0x70a08231'?w(options.balance??100000000000000n):w(0);
+   if(to.toLowerCase()===rel.asset.toLowerCase())return sig==='0x70a08231'?w(options.balance??100000000000000n):w(allowance);
    const map={'0x38d52e0f':w(rel.asset),'0xa932492f':w(rel.k_wad),'0x2986c0e5':w(options.badIndex?'0x'+'12'.repeat(20):rel.index),
     '0xbf333f2c':w(rel.feeBps),'0x61d027b3':w(rel.treasury),'0x0438b0a4':w(100),'0xda980340':w(options.accepting===false?0:1)};
    assert.ok(map[sig],'unexpected call '+sig);return map[sig];
@@ -29,6 +29,7 @@ function fixture(options={}){
   if(method==='eth_sendTransaction'){
    if(options.reject)throw {code:4001,message:'User rejected transaction'};
    sent.push(params[0]);
+   if(params[0].to?.toLowerCase()===rel.asset.toLowerCase()&&params[0].data?.startsWith('0x095ea7b3'))allowance=BigInt('0x'+params[0].data.slice(74));
    if(options.changeAccount)ctx.api.W.acct='0x'+'dd'.repeat(20);
    if(options.changeChain)chain=97;
    return hash;
@@ -40,7 +41,7 @@ function fixture(options={}){
   WORD:/^0x[0-9a-f]{64}$/i,word:h=>{assert.match(h,/^0x[0-9a-f]{64}$/i);return BigInt(h);},addressWord:h=>'0x'+h.slice(-40),
   same:(a,b)=>String(a).toLowerCase()===String(b).toLowerCase(),$:get,short:x=>x,esc:x=>x,fmtW:x=>String(BigInt(x)/10n**18n),
   confirm:()=>true,lookAccount:()=>{},localStorage:{getItem:()=>null,setItem:()=>{}},renderWallet:()=>{}});
- vm.runInContext(prelude+amount+code+'\nrenderPerpWallet=()=>{}; W.acct="'+owner+'";this.api={W,perpForm,perpEnter,perpAction,cancelPerpExit,perpSend,verifyPerpRelease,releasedPool,PERP_RELEASES};',ctx);
+ vm.runInContext(prelude+amount+code+'\nrenderPerpWallet=()=>{}; W.acct="'+owner+'";this.api={W,perpForm,perpEnter,cancelPerpEnter,perpAction,cancelPerpExit,perpSend,verifyPerpRelease,releasedPool,PERP_RELEASES};',ctx);
  const sha=createHash('sha256').update(Buffer.from('6001','hex')).digest('hex');
  ctx.api.PERP_RELEASES[0].indexCodeSha256=sha;for(const p of ctx.api.PERP_RELEASES[0].accountPools)p.codeSha256=sha;
  return {...ctx.api,get,calls,sent,rel:ctx.api.releasedPool(rel.address)};
@@ -51,13 +52,43 @@ test('v3 registry contains exactly the deployed pools, index and fee router',()=
  assert.equal(registry[0].index,j.WujiHeaderIndex);assert.equal(registry[0].treasury,j.FeeRouter);
  assert.equal(registry[0].confirmations,100);assert.ok(registry[0].accountPools.every(p=>/^[0-9a-f]{64}$/.test(p.codeSha256)));
 });
-test('successful entry sends exact approval then chain-bound enter and pins verification reads',async()=>{
- const f=fixture();await f.perpEnter();assert.equal(f.sent.length,2);
+test('successful entry decouples exact approval from irreversible enter confirmation and pins verification reads',async()=>{
+ const f=fixture();
+ await f.perpEnter();
+ assert.equal(f.sent.length,1,'first click must only send ERC-20 approve, never auto-fire irreversible requestEnter');
  assert.equal(f.sent[0].data,'0x095ea7b3'+f.rel.address.slice(2).padStart(64,'0')+w(10000000000000n).slice(2));
+ assert.ok(f.perpForm.pendingEnter,'approval must arm explicit enter confirmation');
+ await f.perpEnter(f.perpForm.pendingEnter);
+ assert.equal(f.sent.length,2);
  assert.equal(f.sent[1].data.slice(0,10),'0x94386983');assert.equal(f.sent[1].chainId,'0xaa36a7');
  assert.ok(f.calls.filter(c=>c.method==='eth_getCode'&&c.params[0]!==owner).every(c=>c.params[1]==='0x64'));
  assert.equal(BigInt(f.sent[1].gas),1398218n);
+ assert.equal(f.perpForm.pendingEnter,null);
  assert.equal(f.perpForm.busy,false);assert.equal(f.perpForm.flowBusy,false);
+});
+test('existing allowance still requires explicit confirmation before irreversible enter; cancel never sends tx',async()=>{
+ const f=fixture({allowance:100000000000000n});
+ await f.perpEnter();
+ assert.equal(f.sent.length,0);
+ assert.ok(f.perpForm.pendingEnter);
+ const pending=f.perpForm.pendingEnter;
+ f.cancelPerpEnter();
+ assert.equal(f.perpForm.pendingEnter,null);
+ await f.perpEnter(pending);
+ assert.equal(f.sent.length,0);
+});
+for(const change of ['side','amount','pool','account','chain'])test('enter confirmation rejects changed '+change,async()=>{
+ const f=fixture({allowance:100000000000000n});await f.perpEnter();const pending=f.perpForm.pendingEnter;
+ if(change==='side')f.perpForm.side='yin';
+ if(change==='amount')f.get('pjAmt').value='0.00002';
+ if(change==='pool')f.get('pjPool').value=registry[0].accountPools[0].address;
+ if(change==='account')f.W.acct='0x'+'dd'.repeat(20);
+ if(change==='chain')f.W.chainId=97;
+ await f.perpEnter(pending);assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/改变/);
+});
+test('duplicate confirmation clicks cannot submit two entries',async()=>{
+ const f=fixture({allowance:100000000000000n});await f.perpEnter();const pending=f.perpForm.pendingEnter;
+ await Promise.all([f.perpEnter(pending),f.perpEnter(pending)]);assert.equal(f.sent.length,1);
 });
 for(const amount of ['0','abc','-1'])test('invalid amount '+amount+' never requests a signature',async()=>{const f=fixture({amount});await f.perpEnter();assert.equal(f.sent.length,0);assert.match(f.perpForm.msg,/数量|输入/);});
 for(const [options,error] of [[{balance:0n},/余额不足/],[{chain:97},/切换/],[{stale:true},/过期/],
@@ -92,11 +123,12 @@ test('duplicate confirmation clicks cannot submit two exits',async()=>{
  await Promise.all([f.perpAction('exit',pending),f.perpAction('exit',pending)]);assert.equal(f.sent.length,1);
 });
 test('a second click during entry preflight cannot duplicate approvals or entries',async()=>{
- const f=fixture();await Promise.all([f.perpEnter(),f.perpEnter()]);assert.equal(f.sent.length,2);assert.equal(f.perpForm.flowBusy,false);
+ const f=fixture();await Promise.all([f.perpEnter(),f.perpEnter()]);assert.equal(f.sent.length,1);assert.equal(f.perpForm.flowBusy,false);
+ const pending=f.perpForm.pendingEnter;await Promise.all([f.perpEnter(pending),f.perpEnter(pending)]);assert.equal(f.sent.length,2);assert.equal(f.perpForm.flowBusy,false);
 });
 
 test('delegated wallet gets an explicit budget for wrapper hooks before signing',async()=>{
- const f=fixture({delegated:true});await f.perpEnter();assert.equal(f.sent.length,2);
+ const f=fixture({delegated:true});await f.perpEnter();await f.perpEnter(f.perpForm.pendingEnter);assert.equal(f.sent.length,2);
  assert.ok(f.sent.every(tx=>BigInt(tx.gas)===2737148n));
 });
 test('unbounded gas estimates stop before wallet submission',async()=>{
