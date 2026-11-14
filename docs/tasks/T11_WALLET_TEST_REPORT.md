@@ -7,6 +7,46 @@ Sepolia header v3 的专用测试钱包完整协议往返已于 10 月 15 日完
 这不覆盖下文旧 BSC v4 的 MetaMask 真人界面验收；后者仍未完成。勿按下方旧清单启动历史 keeper。
 
 
+## Task C checkpoint — 2026-10-28, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 1.10 ETH.**
+Both historical 0.15 ETH targets remain complete; maintenance receipts are distinct from remaining balance.
+
+Checked today's log before one free Google Cloud Web3 request after the latest receipt's 24-hour cooldown
+and scheduled margin. Used the existing login session; no CAPTCHA, new login, terms acceptance or payment
+was presented. Google displayed `Transaction complete! Check your wallet address`.
+
+Transaction `0xdda97ad0846e2a60272d42e0d50543fada92b361471eb4784f1d24d4732af72e`
+was verified via public Sepolia RPC: chain 11155111, status 0x1, authorized recipient,
+value 50000000000000000 wei, canonical block `0xb74add` (hash checked twice).
+Balance at that block: **0.958153500591317708 ETH**. Block time: 2026-10-28T12:15:48.000Z.
+[Raw transaction, receipt and balance](../../contracts/deployments/t11-sepolia-fuel-2026-10-28.json);
+[completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-28.png).
+
+Do not submit another October 28 request. Next attempt: October 29 after 20:25 Asia/Shanghai
+(19:25 Asia/Jakarta), at least 24 hours after this receipt with a margin.
+No outgoing transfer, deployment or Task A signature.
+
+## Task C checkpoint — 2026-10-27, upkeep collection complete
+
+**Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 1.05 ETH.**
+Both historical 0.15 ETH targets remain complete; maintenance receipts are distinct from remaining balance.
+
+Checked today's log before one free Google Cloud Web3 request after the latest receipt's 24-hour cooldown
+and scheduled margin. Used the existing login session; no CAPTCHA, new login, terms acceptance or payment
+was presented. Google displayed the receipt for the authorized address.
+
+Transaction `0x52b4903b86e539f36f35c5f77fe1cb5e9b4bb82facf479d95df7d3d968405823`
+was verified via public Sepolia RPC: chain 11155111, status 0x1, authorized recipient,
+value 50000000000000000 wei, canonical block `0xb72e80` (hash checked twice).
+Balance at that block: **0.908153500591317708 ETH**. Block time: 2026-10-27T12:01:48.000Z.
+[Raw transaction, receipt and balance](../../contracts/deployments/t11-sepolia-fuel-2026-10-27.json);
+[completion screenshot](../../contracts/deployments/t11-sepolia-fuel-2026-10-27.png).
+
+Do not submit another October 27 request. Next attempt: October 28 after 20:10 Asia/Shanghai
+(19:10 Asia/Jakarta), at least 24 hours after this receipt with a margin.
+No outgoing transfer, deployment or Task A signature.
+
 ## Task C checkpoint — 2026-10-26, upkeep collection complete
 
 **Today's 0.05 Sepolia ETH was received. Recorded post-round-2 upkeep receipts now total 1.00 ETH.**
@@ -463,6 +503,8 @@ Raw setup receipt, balances, UI observations and faucet attempts: [t11-v4-wallet
 | 2026-10-24, approximately 19:35 | Google Cloud Web3 | 0.05 ETH | `0x19938e3d5610cf94e4051d87477cbef32d400503710aa9a9dca72b40d21ec3d3` | 0.758153500591317708 ETH at block 0xb6daaa; recorded upkeep receipts 0.90 ETH |
 | 2026-10-25, approximately 19:44 | Google Cloud Web3 | 0.05 ETH | `0x0e905355f3f2a57d98035b778172b419cba881e8143c8b856f51dbcfd994876f` | 0.808153500591317708 ETH at block 0xb6f679; recorded upkeep receipts 0.95 ETH |
 | 2026-10-26, after 19:51 | Google Cloud Web3 | 0.05 ETH | `0x24dd0c8ead11acdbbe610225c8482bd80d997e9baee08c20a85635a1eb6c12b7` | 0.858153500591317708 ETH at block 0xb7126f; recorded upkeep receipts 1.00 ETH |
+| 2026-10-27, after 20:00 | Google Cloud Web3 | 0.05 ETH | `0x52b4903b86e539f36f35c5f77fe1cb5e9b4bb82facf479d95df7d3d968405823` | 0.908153500591317708 ETH at block 0xb72e80; recorded upkeep receipts 1.05 ETH |
+| 2026-10-28, after 20:10 | Google Cloud Web3 | 0.05 ETH | `0xdda97ad0846e2a60272d42e0d50543fada92b361471eb4784f1d24d4732af72e` | 0.958153500591317708 ETH at block 0xb74add; recorded upkeep receipts 1.10 ETH |
 
 ## Historical report — 2026-09-26, v3
 
