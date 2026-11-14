@@ -60,8 +60,9 @@ contract ZkWujiGroth16Test is Test {
 
     function test_realGroth16ProofAdvancesTheIndexLikeTheHeaderPath() public {
         ZkWujiIndex viaProof = _deploy(ISP1Verifier(address(verifier)), VKEY);
+        uint256 bond = viaProof.DISPUTE_BOND();
         uint256 g = gasleft();
-        viaProof.foldProof(proof, journal, new address[](0));
+        viaProof.foldProof{value: bond}(proof, journal, new address[](0));
         uint256 used = g - gasleft();
         vm.warp(block.timestamp + 6 hours);
         g = gasleft();
@@ -93,23 +94,26 @@ contract ZkWujiGroth16Test is Test {
 
     function test_tamperedJournalIsRejected() public {
         ZkWujiIndex idx = _deploy(ISP1Verifier(address(verifier)), VKEY);
+        uint256 bond = idx.DISPUTE_BOND();
         bytes memory bad = journal;
         bad[bad.length - 1] = bytes1(uint8(bad[bad.length - 1]) ^ 1);
         vm.expectRevert();
-        idx.foldProof(proof, bad, new address[](0));
+        idx.foldProof{value: bond}(proof, bad, new address[](0));
     }
 
     function test_wrongProgramKeyIsRejected() public {
         ZkWujiIndex idx = _deploy(ISP1Verifier(address(verifier)), bytes32(uint256(VKEY) ^ 1));
+        uint256 bond = idx.DISPUTE_BOND();
         vm.expectRevert();
-        idx.foldProof(proof, journal, new address[](0));
+        idx.foldProof{value: bond}(proof, journal, new address[](0));
     }
 
     function test_tamperedProofIsRejected() public {
         ZkWujiIndex idx = _deploy(ISP1Verifier(address(verifier)), VKEY);
+        uint256 bond = idx.DISPUTE_BOND();
         bytes memory bad = proof;
         bad[100] = bytes1(uint8(bad[100]) ^ 1);
         vm.expectRevert();
-        idx.foldProof(bad, journal, new address[](0));
+        idx.foldProof{value: bond}(bad, journal, new address[](0));
     }
 }

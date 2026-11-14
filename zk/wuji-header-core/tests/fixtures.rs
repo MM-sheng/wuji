@@ -164,6 +164,19 @@ fn rejects_tampered_and_out_of_order_headers() {
         verify_batch::<8>(start, &headers[..6 * HEADER_LEN], u32::MAX, genesis, 4320, 6),
         Err(Error::NotEnoughConfirmations)
     );
+
+    // Buried BIP34/66/65 signed nVersion enforcement (L1-05).
+    let mut bad_ver = short.to_vec();
+    bad_ver[0..4].copy_from_slice(&3i32.to_le_bytes());
+    assert_eq!(run(&bad_ver), Err(Error::BadVersion));
+    bad_ver[0..4].copy_from_slice(&i32::MIN.to_le_bytes());
+    assert_eq!(run(&bad_ver), Err(Error::BadVersion));
+
+    // Exceeding MAX_CHECKPOINTS returns an explicit error instead of silently dropping boundaries (L1-07).
+    assert_eq!(
+        verify_batch::<1>(start, &headers[..300 * HEADER_LEN], u32::MAX, genesis, 100, 6),
+        Err(Error::TooManyCheckpoints)
+    );
 }
 
 #[test]

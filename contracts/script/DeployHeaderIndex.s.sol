@@ -32,6 +32,12 @@ contract DeployHeaderIndex is Script {
                 times[i] = uint32(t[i]);
             }
         }
+        require(
+            times[10]
+                == uint32(uint8(anchor[68])) | uint32(uint8(anchor[69])) << 8 | uint32(uint8(anchor[70])) << 16
+                    | uint32(uint8(anchor[71])) << 24,
+            "last ancestor time is the anchor's"
+        );
         uint64 confirmations = uint64(vm.envOr("CONFIRMATIONS", uint256(100)));
         require(block.chainid != 1 || confirmations == 100, "mainnet: CONFIRMATIONS is 100");
         address sender = msg.sender;

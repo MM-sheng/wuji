@@ -330,4 +330,57 @@ contract ZkWujiReorgTest is Test {
         local.freezeOnReorg(base, branch);
         assertTrue(local.frozen());
     }
+
+    /// L1-02 regression: a single privately mined trailing orphan block stamped +30 hours ahead of a lagging
+    /// chain cannot jump seenTime to `now + 2h` and wake a halted pool or collapse seenMargin to 40.
+    function test_singleFutureOrphanCannotJumpSeenTimePastMtpLead() public {
+        bytes memory main = _chain(anchorHeader, ANCHOR + 1, 6, 1_000_000);
+        // Trailing 7th block is a privately mined orphan stamped 30 hours after the 6th block.
+        uint32 orphanTime = T0 + 6 * 600 + 30 hours;
+        vm.warp(orphanTime - 1 hours);
+        bytes memory orphan = _mine(_hash(_last(main)), orphanTime, 999_999);
+        idx.foldHeaders(bytes.concat(main, orphan), new address[](0));
+        assertEq(idx.seenHeight(), ANCHOR + 7);
+        assertLt(idx.seenTime(), orphanTime, "seenTime must be capped below the 1-block +30h jump");
+        // MTP of the 11-block window ending at ANCHOR+7 is T0 + 2*600; seenTime <= MTP + 3 hours.
+        assertEq(idx.seenTime(), T0 + 2 * 600 + 3 hours);
+    }
+
+    /// L1-05 regression: ZkWujiIndex supports segmented reorg sealing beyond MAX_REORG_HEADERS (800).
+    function test_segment801HeadersSealDeepReorgOnZkIndex() public {
+        EasyZkIndex deep = new EasyZkIndex(anchorHeader, ANCHOR, anchorTimes, 100);
+        (ZkWujiIndex.Continuity memory c, uint32[11] memory t, uint256 w) = deep.continuity();
+        bytes memory base = abi.encode(c, t, w);
+        bytes memory main = _chain(anchorHeader, ANCHOR + 1, 657, 1_000_000);
+        bytes memory b1 = new bytes(350 * 80);
+        bytes memory b2 = new bytes(350 * 80);
+        bytes memory b3 = new bytes(157 * 80);
+        for (uint256 i; i < b1.length; ++i) b1[i] = main[i];
+        for (uint256 i; i < b2.length; ++i) b2[i] = main[250 * 80 + i];
+        for (uint256 i; i < b3.length; ++i) b3[i] = main[500 * 80 + i];
+        deep.foldHeaders(b1, new address[](0));
+        deep.foldHeaders(b2, new address[](0));
+        deep.foldHeaders(b3, new address[](0));
+
+        bytes memory branch = _chain(anchorHeader, ANCHOR + 1, 801, 7_000_000);
+        vm.expectRevert(ZkWujiIndex.TooManyHeaders.selector);
+        deep.freezeOnReorg(base, branch);
+
+        bytes memory s1 = new bytes(256 * 80);
+        bytes memory s2 = new bytes(256 * 80);
+        bytes memory s3 = new bytes(256 * 80);
+        bytes memory s4 = new bytes(33 * 80);
+        for (uint256 i; i < s1.length; ++i) s1[i] = branch[i];
+        for (uint256 i; i < s2.length; ++i) s2[i] = branch[256 * 80 + i];
+        for (uint256 i; i < s3.length; ++i) s3[i] = branch[512 * 80 + i];
+        for (uint256 i; i < s4.length; ++i) s4[i] = branch[768 * 80 + i];
+
+        bytes memory proof = deep.beginReorg(base, s1);
+        proof = deep.extendReorg(proof, s2);
+        proof = deep.extendReorg(proof, s3);
+        proof = deep.extendReorg(proof, s4);
+        assertTrue(deep.isReorgProof(proof));
+        deep.freezeReorg(proof);
+        assertTrue(deep.frozen());
+    }
 }

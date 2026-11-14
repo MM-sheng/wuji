@@ -145,6 +145,7 @@ export async function round(source) {
     maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
     maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
     headerOnly: (await optional('verifier()', 0n)) === 0n,
+    bond: await optional('DISPUTE_BOND()', 0n),
     margin: Number(await optional('REORG_MARGIN()', 144n)),
     maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
     maxReorgSegmentHeaders: Number(await optional('MAX_REORG_SEGMENT_HEADERS()', 0n)),
@@ -156,10 +157,17 @@ export async function round(source) {
     return { action: 'frozen' };
   }
   // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
-  const pending = Number(await optional('pendingCount()', 0n));
+  let pending = Number(await optional('pendingCount()', 0n));
   if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
     const tx = await send('finalize(uint256)', 1_500_000, '8');
     log(`finalize gas ${tx.gas} ${tx.hash}`);
+    pending = Number(await optional('pendingCount()', 0n));
+    const worker = chain.senderAddress();
+    const owed = BigInt(await call(sel('owed(address)') + uint(BigInt(worker))));
+    if (owed > 0n) {
+      const wtx = await send('withdraw()', 200_000);
+      log(`withdraw prover bond ${owed} gas ${wtx.gas} ${wtx.hash}`);
+    }
   }
   // Never prove on top of a pending batch that does not match the chain: that proof would be removed with
   // it. (A forgery claiming a real hash with a wrong U still links, so the header check below cannot tell.)
@@ -240,6 +248,16 @@ export async function round(source) {
     return { action: 'headers', ...tx, headers: n };
   }
   if (available <= immut.confirmations || (available < MIN_BATCH && waited < MAX_WAIT_MIN)) {
+    if (!immut.headerOnly && pending === 0 && available > 0) {
+      const seenTime = Number(await optional('seenTime()', 0n));
+      if (seenTime > 0 && Math.floor(Date.now() / 1000) - seenTime > 12 * 3600) {
+        const tailCount = Math.min(available, immut.maxHeaders);
+        const tail = await fetchHeaders(tailCount);
+        const tx = await send('refreshSeen(bytes)', headerGas(tailCount), '0x' + tail.join(''));
+        log(`refreshSeen ${tailCount} headers gas ${tx.gas} ${tx.hash}`);
+        return { action: 'refresh-seen', ...tx, headers: tailCount };
+      }
+    }
     return { action: 'wait', height: start.height, available };
   }
   const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders);
@@ -257,7 +275,7 @@ export async function round(source) {
   try {
     const p = await prove(inFile, outFile);
     log(`proved in ${p.seconds.toFixed(0)} s, folds to ${p.newHeight}`);
-    const tx = await send('foldProof(bytes,bytes,address[])', 1_500_000, p.proof, p.journal, tokens);
+    const tx = await chain.send('foldProof(bytes,bytes,address[])', 1_500_000, [p.proof, p.journal, tokens], immut.bond);
     log(`foldProof ${tag} gas ${tx.gas} ${tx.hash}`);
     return { action: 'proof', ...tx, headers: count, newHeight: p.newHeight };
   } catch (e) {

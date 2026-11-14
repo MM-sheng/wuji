@@ -163,6 +163,26 @@ contract WujiHeaderIndexTest is Test {
         _deploy(0, 4320);
         vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
         _deploy(6, 0);
+        vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
+        _deploy(512, 4320);
+        vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
+        new WujiHeaderIndex(
+            RelayerRewards(address(0)), anchor, anchorHeight, uint32(vm.parseJsonUint(meta, ".epochStartTime")),
+            times, 0, genesis + 1, 4320, 6
+        );
+        // genesis (798336) is a retarget boundary (798336 % 2016 == 0): anchorEpochStart must equal header time
+        bytes memory boundaryAnchor = _slice(0, 1);
+        vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
+        new WujiHeaderIndex(
+            RelayerRewards(address(0)), boundaryAnchor, genesis, 123456,
+            times, 0, genesis + 1, 4320, 6
+        );
+    }
+
+    function test_u32MaxTimestampDoesNotWrapFutureTimeBound() public {
+        vm.warp(type(uint32).max - 100);
+        idx.foldHeaders(_slice(0, 40), new address[](0));
+        assertEq(idx.lastHeight(), genesis + 33);
     }
 
     /// The rule code was carried over from ZkWujiIndex unchanged: both must reach identical state.

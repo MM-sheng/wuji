@@ -70,8 +70,11 @@ contract RelayerRewardsTest is Test {
         list[0]=address(2);list[1]=address(1);expectBadWork("tokens not sorted unique",1,list);
         expectBadWork("tokens not sorted unique",1,one(address(0)));
         expectBadWork("token limit",1,new address[](9));
-        expectBadWork("height limit",257,one(address(token)));
-        vm.expectRevert("height limit");rewards.quote(address(token),257);assertEq(rewards.lastHeight(),999);
+        expectBadWork("height limit",513,one(address(token)));
+        vm.expectRevert("height limit");rewards.quote(address(token),513);assertEq(rewards.lastHeight(),999);
+        fund(10_000_000);
+        work(ALICE,512,one(address(token)));
+        assertEq(rewards.lastHeight(),1511);
     }
     function test_tinyReservePaysZeroAndPreservesEveryUnit() public {
         fund(1);assertEq(token.balanceOf(address(router)),0);assertEq(token.balanceOf(DEAD),0);
