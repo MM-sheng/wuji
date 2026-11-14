@@ -279,3 +279,47 @@ test('_sync continues past a lagging peer that returns zero headers when chain h
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('BitcoinP2P rejects truncated varints, deep genesis-fork DoS, bad frames, and consults minPeers past 1-block minority peer', async () => {
+  assert.throws(() => readVarint(Buffer.alloc(0), 0), /truncated/);
+  assert.throws(() => readVarint(Buffer.from([0xfd, 0x01]), 0), /truncated/);
+  assert.throws(() => readVarint(Buffer.from([0xfe, 0x01, 0x02]), 0), /truncated/);
+  assert.throws(() => readVarint(Buffer.from([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]), 0), /MAX_SAFE_INTEGER/);
+
+  // Deep fork below maxForkDepth is rejected immediately without cloning/extending unbounded candidate chains
+  const { chain, branch, applyHeaders } = await forkChoice();
+  await assert.rejects(
+    applyHeaders(chain, branch(chain.headers[0], 5, 1, 777), async () => [], () => {}, { maxForkDepth: 10 }),
+    /exceeds max depth 10/,
+  );
+  // Bounded fork rounds prevent an endless low-work stream
+  const chunk2000 = branch(chain.headers[15], 2000, 0, 8888);
+  await assert.rejects(
+    applyHeaders(chain, chunk2000, async () => branch(chunk2000.at(-1), 2000, 0, 9999), () => {}, { maxRounds: 2 }),
+    /exceeded 2 header batches/,
+  );
+
+  // Bad checksum / abrupt socket reset rejects immediately (<200ms) instead of hanging peerTimeout (5000ms)
+  const net = await import('node:net');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { BitcoinP2P } = await import('./bitcoin-p2p.mjs');
+  const badPeer = net.createServer(socket => {
+    socket.once('data', () => {
+      const f = frame('version', Buffer.alloc(86));
+      f[20] ^= 0xff; // corrupt checksum
+      socket.write(f);
+    });
+  });
+  await new Promise(r => badPeer.listen(0, '127.0.0.1', r));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wuji-p2p-bad-'));
+  try {
+    const api = new BitcoinP2P({ peers: [`127.0.0.1:${badPeer.address().port}`], dir, peerTimeout: 5000 });
+    const t0 = Date.now();
+    await assert.rejects(() => api.sync({ force: true }), /checksum mismatch|closed/);
+    assert.ok(Date.now() - t0 < 1000, 'corrupt frame must abort immediately without waiting 5s timeout');
+  } finally {
+    badPeer.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

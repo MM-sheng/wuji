@@ -41,11 +41,21 @@ export function varint(n) {
   const b = Buffer.alloc(9); b[0] = 0xff; b.writeBigUInt64LE(BigInt(n), 1); return b;
 }
 export function readVarint(buf, offset) {
+  if (offset < 0 || offset >= buf.length) throw Error('truncated varint');
   const first = buf[offset];
   if (first < 0xfd) return [first, offset + 1];
-  if (first === 0xfd) return [buf.readUInt16LE(offset + 1), offset + 3];
-  if (first === 0xfe) return [buf.readUInt32LE(offset + 1), offset + 5];
-  return [Number(buf.readBigUInt64LE(offset + 1)), offset + 9];
+  if (first === 0xfd) {
+    if (offset + 3 > buf.length) throw Error('truncated varint16');
+    return [buf.readUInt16LE(offset + 1), offset + 3];
+  }
+  if (first === 0xfe) {
+    if (offset + 5 > buf.length) throw Error('truncated varint32');
+    return [buf.readUInt32LE(offset + 1), offset + 5];
+  }
+  if (offset + 9 > buf.length) throw Error('truncated varint64');
+  const v = buf.readBigUInt64LE(offset + 1);
+  if (v > BigInt(Number.MAX_SAFE_INTEGER)) throw Error('varint64 exceeds MAX_SAFE_INTEGER');
+  return [Number(v), offset + 9];
 }
 export function frame(command, payload = Buffer.alloc(0)) {
   const head = Buffer.alloc(24);
@@ -86,7 +96,13 @@ const hashValue = internal => BigInt('0x' + Buffer.from(internal).reverse().toSt
 /// validated headers (2026-10-01: a minority branch from 961632 made every keeper rewind ~8,200 headers,
 /// fail at 961640 and re-download them, hundreds of times a day). Throws on an invalid header; for a fork,
 /// this chain is untouched when it does. Returns { added, last } (`last`: length of the last reply).
-export async function applyHeaders(chain, batch, more, log = () => {}) {
+const MAX_FORK_DEPTH = 10_000;            // > 2 months of Bitcoin blocks; blocks genesis-fork memory exhaustion
+const MAX_FORK_ROUNDS = 32;               // <= 64,000 candidate headers per fork sync
+const MAX_FRAME_BYTES = 4 * 1024 * 1024;  // 2,000 headers = ~162 KB; reject oversized P2P payloads early
+const MAGIC_BYTES = (() => { const b = Buffer.alloc(4); b.writeUInt32LE(MAGIC, 0); return b; })();
+
+export async function applyHeaders(chain, batch, more, log = () => {}, { maxForkDepth = MAX_FORK_DEPTH, maxRounds = MAX_FORK_ROUNDS } = {}) {
+  if (!batch.length) return { added: 0, last: 0 };
   const parent = Buffer.from(batch[0].subarray(4, 36)).reverse().toString('hex');
   if (chain.hashes[chain.height] === parent) {
     for (const raw of batch) chain.append(raw);
@@ -94,9 +110,13 @@ export async function applyHeaders(chain, batch, more, log = () => {}) {
   }
   const at = chain.hashes.lastIndexOf(parent);
   if (at < 0) return { added: 0, last: batch.length };            // an unrelated branch: nothing to compare
+  if (chain.height - at > maxForkDepth) {
+    throw Error(`fork from ${at} exceeds max depth ${maxForkDepth} below tip ${chain.height}`);
+  }
   const candidate = chain.fork(at);
   let reply = batch;
-  for (;;) {
+  for (let rounds = 0; ; rounds++) {
+    if (rounds >= maxRounds) throw Error(`fork from ${at} exceeded ${maxRounds} header batches`);
     for (const raw of reply) candidate.append(raw);
     if (candidate.work > chain.work || reply.length < MAX_HEADERS) break;
     reply = await more(candidate.locator());
@@ -217,40 +237,69 @@ export class HeaderChain {
 class Peer {
   constructor(host, port = PORT, { timeout = 20000 } = {}) {
     this.host = host; this.port = port; this.timeout = timeout;
-    this.buffer = Buffer.alloc(0); this.waiters = new Map();
+    this.buffer = Buffer.alloc(0); this.waiters = new Map(); this.closed = false;
+  }
+  _abort(reason) {
+    const err = reason instanceof Error ? reason : Error(String(reason || 'peer disconnected'));
+    for (const [, w] of this.waiters) { clearTimeout(w.timer); w.reject(err); }
+    this.waiters.clear();
+    if (!this.closed) { this.closed = true; this.socket?.destroy(); }
   }
   connect() {
     return new Promise((resolve, reject) => {
+      let connected = false;
       this.socket = net.createConnection({ host: this.host, port: this.port, timeout: this.timeout });
-      const fail = e => { this.socket.destroy(); reject(e instanceof Error ? e : Error('peer timeout')); };
-      this.socket.once('error', fail);
-      this.socket.once('timeout', fail);
-      this.socket.on('data', chunk => this._consume(chunk));
-      this.socket.once('connect', () => { this.socket.setTimeout(this.timeout); resolve(); });
+      const onError = e => {
+        const err = e instanceof Error ? e : Error('peer socket error');
+        this._abort(err);
+        if (!connected) reject(err);
+      };
+      this.socket.on('error', onError);
+      this.socket.on('timeout', () => onError(Error('peer timeout')));
+      this.socket.on('close', () => this._abort(Error('peer closed connection')));
+      this.socket.on('end', () => this._abort(Error('peer ended connection')));
+      this.socket.on('data', chunk => {
+        try { this._consume(chunk); } catch (e) { this._abort(e); }
+      });
+      this.socket.once('connect', () => { connected = true; this.socket.setTimeout(this.timeout); resolve(); });
     });
   }
   _consume(chunk) {
+    if (this.closed) return;
+    if (this.buffer.length + chunk.length > MAX_FRAME_BYTES + 4096) {
+      this._abort(Error('peer receive buffer exceeded limit')); return;
+    }
     this.buffer = Buffer.concat([this.buffer, chunk]);
     for (;;) {
       if (this.buffer.length < 24) return;
-      if (this.buffer.readUInt32LE(0) !== MAGIC) { this.buffer = this.buffer.subarray(1); continue; }
+      if (this.buffer.readUInt32LE(0) !== MAGIC) {
+        const idx = this.buffer.indexOf(MAGIC_BYTES, 1);
+        if (idx < 0) { this.buffer = this.buffer.subarray(Math.max(0, this.buffer.length - 3)); return; }
+        this.buffer = this.buffer.subarray(idx);
+        if (this.buffer.length < 24) return;
+      }
       const length = this.buffer.readUInt32LE(16);
-      if (length > 32 * 1024 * 1024) { this.socket.destroy(); return; }
+      if (length > MAX_FRAME_BYTES) { this._abort(Error(`peer frame too large (${length} bytes)`)); return; }
       if (this.buffer.length < 24 + length) return;
       const command = this.buffer.subarray(4, 16).toString('ascii').replace(/\0+$/, '');
       const payload = this.buffer.subarray(24, 24 + length);
-      if (!sha256d(payload).subarray(0, 4).equals(this.buffer.subarray(20, 24))) { this.socket.destroy(); return; }
+      if (!sha256d(payload).subarray(0, 4).equals(this.buffer.subarray(20, 24))) {
+        this._abort(Error('peer frame checksum mismatch')); return;
+      }
       this.buffer = this.buffer.subarray(24 + length);
       if (command === 'ping') this.send('pong', Buffer.from(payload));
       const waiter = this.waiters.get(command);
-      if (waiter) { this.waiters.delete(command); waiter(Buffer.from(payload)); }
+      if (waiter) { this.waiters.delete(command); clearTimeout(waiter.timer); waiter.resolve(Buffer.from(payload)); }
     }
   }
-  send(command, payload) { this.socket.write(frame(command, payload)); }
+  send(command, payload) { if (!this.closed) this.socket.write(frame(command, payload)); }
   expect(command, timeout = this.timeout) {
+    if (this.closed) return Promise.reject(Error(`no ${command} from closed peer`));
+    const prev = this.waiters.get(command);
+    if (prev) { clearTimeout(prev.timer); prev.reject(Error(`superseded ${command} waiter`)); }
     const pending = new Promise((resolve, reject) => {
       const timer = setTimeout(() => { this.waiters.delete(command); reject(Error(`no ${command} from peer`)); }, timeout);
-      this.waiters.set(command, payload => { clearTimeout(timer); resolve(payload); });
+      this.waiters.set(command, { resolve, reject, timer });
     });
     // A handshake creates the `verack` waiter before awaiting `version`; if `version` times out first,
     // nothing ever awaits `verack` and its rejection would take the whole process down. Mark it handled
@@ -288,16 +337,19 @@ class Peer {
     this.send('getheaders', payload);
     const body = await answer;
     const [count, start] = readVarint(body, 0);
+    if (count > MAX_HEADERS) throw Error(`headers count ${count} exceeds ${MAX_HEADERS}`);
     const out = [];
     let o = start;
     for (let i = 0; i < count; i++) {
+      if (o + 80 > body.length) throw Error('truncated header in headers payload');
       out.push(Buffer.from(body.subarray(o, o + 80)));
-      const [, next] = readVarint(body, o + 80);                  // tx_count, always 0 in a headers message
+      const [txCount, next] = readVarint(body, o + 80);             // tx_count, always 0 in a headers message
+      if (txCount !== 0) throw Error('non-zero tx_count in headers payload');
       o = next;
     }
     return out;
   }
-  close() { this.socket?.destroy(); }
+  close() { this._abort(Error('peer closed')); }
 }
 
 /// Drop-in replacement for BitcoinAPI backed by the P2P network.
@@ -337,13 +389,12 @@ export class BitcoinP2P {
     let lastError, responsive = 0;
     const peers = await this.peerList();
     const minPeers = Math.min(3, peers.length);
-    const initial = this.chain.height;
     for (const [host, port] of peers) {
       const peer = new Peer(host, port, { timeout: this.peerTimeout });
       try {
         await peer.connect();
         await peer.handshake(Math.max(0, this.chain.height));
-        const before = this.chain.height;
+        const before = this.chain.height, beforeHash = this.chain.hashes[before];
         for (;;) {
           const batch = await peer.getheaders(this.chain.locator());
           if (!batch.length) break;
@@ -354,11 +405,12 @@ export class BitcoinP2P {
         }
         peer.close();
         responsive++;
-        if (this.chain.height > before) {
+        if (this.chain.height > before || this.chain.hashes[this.chain.height] !== beforeHash) {
           this.chain.save(this.file);
-          this.log(`headers: tip ${this.chain.height} (+${this.chain.height - before}) via ${host}`);
+          this.log(`headers: tip ${this.chain.height} (${this.chain.height >= before ? '+' : ''}${this.chain.height - before}) via ${host}`);
         }
-        if (this.chain.height > initial || (this.chain.height > 0 && responsive >= minPeers)) {
+        // Consult at least minPeers responsive peers so a 1-block minority/Sybil peer cannot short-circuit quorum.
+        if (this.chain.height > 0 && responsive >= minPeers) {
           return this.chain.height;
         }
       } catch (e) {
