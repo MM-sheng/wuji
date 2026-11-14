@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>μ · WUJI</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230e1116%27/%3E%3Ctext x=%2716%27 y=%2723%27 text-anchor=%27middle%27 font-family=%27IBM Plex Mono,monospace%27 font-size=%2720%27 fill=%27%23f5b342%27%3Eμ%3C/text%3E%3C/svg%3E">
@@ -630,7 +631,13 @@ function exitActionAllowed(state, action) {
     h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909);
     return ((h2>>>0)*4294967296+(h1>>>0))/18446744073709551616;}
 
-  function appendPX(buf){ const add=new Float32Array(buf); if(PXN+add.length>PX.length){const nx=new Float32Array(Math.max(PX.length*2,PXN+add.length+86400));nx.set(PX.subarray(0,PXN));PX=nx;} PX.set(add,PXN); PXN+=add.length; }
+  function appendPX(buf){
+    if(!buf||typeof buf.byteLength!=='number'||buf.byteLength%4!==0)throw Error('Invalid /seconds buffer');
+    const add=new Float32Array(buf);
+    for(let i=0;i<add.length;i++){const v=add[i];if(!Number.isFinite(v)||v<=0||v>1e12)throw Error('Invalid /seconds price sample');}
+    if(PXN+add.length>PX.length){const nx=new Float32Array(Math.max(PX.length*2,PXN+add.length+86400));nx.set(PX.subarray(0,PXN));PX=nx;}
+    PX.set(add,PXN); PXN+=add.length;
+  }
   async function fetchSeconds(fromTs,toTs){ for(let a=fromTs;a<=toTs;a+=7*86400){ const b=Math.min(toTs,a+7*86400-1); const r=await fetchTimed(`${API}/seconds?from=${a}&to=${b}`); if(!r.ok)throw new Error('seconds '+r.status); appendPX(await r.arrayBuffer()); } }
   async function pollHead(){
     if(!API)throw Error('Configure an indexer in 数据源');
@@ -805,7 +812,7 @@ function exitActionAllowed(state, action) {
       ctx.strokeStyle=css('--muted');ctx.globalAlpha=.6;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(cx,pad.t);ctx.lineTo(cx,volTop+volH);ctx.moveTo(pad.l,cy);ctx.lineTo(pad.l+gw,cy);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
       ctx.font='10px "IBM Plex Mono",monospace';
       if(mouse.y<=pad.t+gh){ctx.fillStyle=css('--line2');ctx.fillRect(pad.l+gw+1,cy-7,pad.r-2,14);ctx.fillStyle=css('--ink');ctx.textAlign='left';ctx.fillText(mp.toFixed(2),pad.l+gw+8,cy+3);}
-      hoverT=hc?hc.t1:Math.round(mt); const bj=blockCache.get(GENESIS+hoverT); if(!bj){blockAtTick(hoverT).then(()=>{if(mouse)draw();}).catch(()=>{});} hoverBlock=bj&&bj.block?bj.block:null;
+      hoverT=hc?hc.t1:Math.round(mt); const bj=blockCache.get(GENESIS+hoverT); if(!bj){blockAtTick(hoverT).then(()=>{if(mouse)draw();}).catch(()=>{});} hoverBlock=bj&&Number.isSafeInteger(bj.block)&&bj.block>=0?bj.block:null;
       const tl=utc(Math.round(hc?hc.t0:mt)), tw=ctx.measureText(tl).width+10; ctx.fillStyle=css('--line2');ctx.fillRect(cx-tw/2,H-16,tw,14);ctx.fillStyle=css('--ink');ctx.textAlign='center';ctx.fillText(tl,cx,H-6);
     }
     $('legend').innerHTML=`<span>O <b>${fmt(last.o)}</b></span><span>H <b>${fmt(last.h)}</b></span><span>L <b>${fmt(last.l)}</b></span><span>C <b class="${last.c>=last.o?'up':'dn'}">${fmt(last.c)}</b></span><span>Vol <b>${Math.round(last.v)}</b></span>${last!==cs[cs.length-1]?`<span>Δ <b class="${last.c>=last.o?'up':'dn'}">${sgn(last.c/last.o*100-100)}${fmt(last.c/last.o*100-100)}%</b></span><span style="color:var(--dim)">${utc(last.t0)}</span>`:''}${mouse&&hoverBlock?`<span style="color:var(--acc)">BLOCK #${hoverBlock.toLocaleString()} · click → ${HEAD.source==='bitcoin'?'mempool.space':'BscScan'}</span>`:''}`;
@@ -985,14 +992,60 @@ function exitActionAllowed(state, action) {
       <div class="kv"><span>手续费 · 账户数</span><b>${p.feeBps/100}% · ${p.accountsCreated}</b></div>
       <div class="kv"><span>池子</span><b>${p.insolvent?'已按固定比例终止 · ':p.frozen?'已冻结 · ':''}${curVault()?.explorer?`<a href="${curVault().explorer}/address/${p.address}" target="_blank">${short(p.address)}</a>`:short(p.address)}</b></div></div>`;}).join('');
   }
+  async function readPerpAccountOnChain(rpc,pool,id){
+    const block=await rpc('eth_getBlockByNumber',['latest',false]);
+    if(!block?.number||!WORD.test(block.hash))throw Error('RPC 区块不可用');
+    const at=block.number,call=(to,data)=>rpc('eth_call',[{to,data},at]);
+    const opt=(p,fb)=>p.catch(e=>{if(e?.isRevert||/revert/i.test(String(e?.message||'')))return fb;throw e;});
+    const wid=BigInt(id).toString(16).padStart(64,'0');
+    const [raw,val,rawVal]=await Promise.all([call(pool,'0xf2a40db8'+wid),call(pool,'0xcadf338f'+wid),call(pool,'0xb68f590f'+wid)]);
+    if(!/^0x[0-9a-f]{320,}$/i.test(raw))throw Error('Invalid account ABI');
+    const sl=i=>'0x'+raw.slice(2+64*i,66+64*i),owner=addressWord(sl(0));
+    if(/^0x0{40}$/.test(owner)){
+      if((await rpc('eth_getBlockByNumber',[at,false]))?.hash!==block.hash)throw Error('读取期间发生区块重组，请重试');
+      return {id,closed:true,block:Number(BigInt(at)),direct:true};
+    }
+    const enterEpoch=word(sl(2)),exitEpoch=word(sl(3)),principal=word(sl(4));
+    const we=enterEpoch.toString(16).padStart(64,'0'),wx=exitEpoch.toString(16).padStart(64,'0');
+    const [entered,exited,fr,payable,refunded]=await Promise.all([
+      call(pool,'0xa2e04c67'+we),exitEpoch?call(pool,'0xa2e04c67'+wx):null,
+      call(pool,'0x054f7d9c').then(x=>word(x)===1n),
+      opt(call(pool,'0x513bed12'+wid).then(word),null),
+      opt(call(pool,'0xf9f3de7e'+we).then(x=>word('0x'+x.slice(66,130))===1n),false)
+    ]);
+    if((await rpc('eth_getBlockByNumber',[at,false]))?.hash!==block.hash)throw Error('读取期间发生区块重组，请重试');
+    const proc=x=>x!==null&&/^0x[0-9a-f]{192,}$/i.test(x)&&word('0x'+x.slice(130,194))===1n;
+    const claimable=fr||(proc(entered)&&refunded)||(exitEpoch!==0n&&proc(exited));
+    const v=claimable&&payable!==null?payable:word(val),rv=BigInt(signedWord(rawVal));
+    return {id,owner,side:word(sl(1))===1n?'yang':'yin',principal_wad:principal.toString(),
+      enterEpoch:Number(enterEpoch),exitEpoch:exitEpoch?Number(exitEpoch):null,
+      status:claimable?'claimable':!proc(entered)?'entering':exitEpoch&&!proc(exited)?'exiting':exitEpoch?'claimable':'open',
+      value_wad:v.toString(),pnl_wad:(v-(proc(entered)?principal:v)).toString(),
+      atFloor:!claimable&&proc(entered)&&v===0n,overshoot_wad:(rv<0n?-rv:0n).toString(),
+      multiple:principal?Number(v*10000n/principal)/10000:0,block:Number(BigInt(at)),direct:true};
+  }
+  function perpPoolRPC(rel){
+    if(W.acct&&eth()&&W.chainId===rel.chainId)return (method,params)=>eth().request({method,params});
+    const known=Object.entries(RELEASES).find(([,d])=>d.chainId===rel.chainId);
+    const url=known?(rpcURLs[known[0]]||known[1].rpc):(rel.chainId===ZK_RELEASE.chainId?ZK_RELEASE.rpc:walletNetworks[rel.chainId]?.rpcUrls?.[0]);
+    return url?exitRPC(url):null;
+  }
   async function lookAccount(){
     const pool=$('pjPool').value,id=+$('pjId').value;if(!pool||!id)return;
     const el=$('pjAcct');el.textContent='读取中…';
     try{
       if(!ADDRESS.test(pool)||!Number.isSafeInteger(id)||id<1)throw Error('invalid input');
-      const raw=await (await fetch(API+'/account/'+pool+'/'+id)).json();
-      if(raw.error)throw Error(esc(String(raw.error)));
-      const a=validateAccount(raw);
+      const rel=releasedPool(pool),rpc=rel&&perpPoolRPC(rel);
+      let a;
+      if(rel&&rpc){
+        if(Number(BigInt(await rpc('eth_chainId',[])))!==rel.chainId)throw Error('RPC 链 ID 不匹配');
+        a=validateAccount(await readPerpAccountOnChain(rpc,rel.address,id));
+      }else{
+        if(!API)throw Error('没有可用 RPC 或索引器');
+        const raw=await (await fetchTimed(API+'/account/'+pool+'/'+id)).json();
+        if(raw.error)throw Error(esc(String(raw.error)));
+        a=validateAccount(raw);
+      }
       if(a.closed){el.innerHTML='<div class="msg2">账户 #'+id+' 不存在或已结清。</div>';return;}
       const st={entering:'等待进场定价',open:'持有中',exiting:'等待退出定价',claimable:'可领取'}[a.status];
       const valueCell=a.status==='entering'?'<b>尚未定价 · 本金 '+fmtW(a.principal_wad)+' 等待进场</b>':`<b class="${cls(wad(a.pnl_wad))}">${fmtW(a.value_wad)} · ${a.multiple.toFixed(4)}×</b>`;
@@ -1001,6 +1054,7 @@ function exitActionAllowed(state, action) {
       <div class="kv"><span>当前价值</span>${valueCell}</div>
       <div class="kv"><span>进场高度${a.exitEpoch?' · 退出高度':''}</span><b>#${a.enterEpoch}${a.exitEpoch?' · #'+a.exitEpoch:''}</b></div>
       <div class="kv"><span>持有人</span><b>${short(a.owner)}</b></div>
+      <div class="kv"><span>核验来源</span><b class="${a.direct?'ok':'warnv'}">${a.direct?'RPC 直读 · 区块 #'+a.block.toLocaleString():'仅索引器返回（未经 RPC 直读核验）'}</b></div>
       ${a.atFloor?'<div class="msg2">已触底，任何人都可以清退这个账户。</div>':''}`;
     }catch(e){el.textContent='读取失败：'+e.message;}
   }
@@ -1258,14 +1312,21 @@ function exitActionAllowed(state, action) {
     if(W.chainId!==expected)throw Error('Switch wallet to '+(walletNetworks[expected]?.chainName||expected));
   }
   const pad=(h)=>h.replace(/^0x/,'').padStart(64,'0');
-  const toWad=n=>BigInt(Math.round(n*1e6))*10n**12n;
+  function parseDecimalWad(raw){
+    const text=String(raw??'').trim();
+    if(!/^(0|[1-9]\d*)(\.\d{1,18})?$/.test(text))throw Error('Invalid amount: enter up to 18 decimals');
+    const [whole,fraction='']=text.split('.');
+    const n=BigInt(whole)*10n**18n+BigInt(fraction.padEnd(18,'0'));
+    if(n<=0n||n>=2n**128n)throw Error('Amount must be positive');
+    return n;
+  }
   const hex=(b)=>'0x'+b.toString(16);
   const eth=()=>selectedWallet||window.ethereum;
   async function ethCall(to,data){return eth().request({method:'eth_call',params:[{to,data},'latest']});}
   async function refreshWallet(){ const c=HEAD.chain; const v=curVault(); if(!W.acct||!c||!v)return; W.bal={}; await requireWalletChain(v.chainId); const account=W.acct, me=pad(account);
     const [u,y,n,al]=await Promise.all([ethCall(v.asset,'0x70a08231'+me),ethCall(v.yang,'0x70a08231'+me),ethCall(v.yin,'0x70a08231'+me),ethCall(v.asset,'0xdd62ed3e'+me+pad(v.address))]);
     await requireWalletChain(v.chainId); if(W.acct!==account||curVault()?.address!==v.address)return;
-    W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18}; renderWallet(); }
+    W.bal={usdt:Number(BigInt(u))/1e18,yang:Number(BigInt(y))/1e18,yin:Number(BigInt(n))/1e18,allow:Number(BigInt(al))/1e18,allowWad:BigInt(al)}; renderWallet(); }
   async function connect(target){
     if(W.connecting)return;
     W.connecting=true;W.msg='正在检测钱包…';renderWallet();renderPerpWallet();
@@ -1295,11 +1356,22 @@ function exitActionAllowed(state, action) {
     }catch(e){ W.msg='✗ '+(e.shortMessage||e.message||String(e)).slice(0,120); }
     W.busy=false;try{await refreshWallet();}catch(e){W.bal={};}renderWallet();return success; }
   const walletContext=v=>({account:W.acct,vault:v.address,chainId:v.chainId});
-  async function doMint(){ const v=curVault(), context=walletContext(v), pairs=Math.max(0.01,+$('wPairs').value||1), need=pairs*v.notional*1.0005;
-    if(!(W.bal.allow>=need)&&!await send(v.asset,'0x095ea7b3'+pad(v.address)+pad((2n**256n-1n).toString(16)),'approve '+(v.symbol||'collateral'),context))return;
-    await send(v.address,'0xa0712d68'+pad(toWad(pairs).toString(16)),`mint ${pairs} pair`,context); }
-  async function doRedeem(){ const v=curVault(), pairs=Math.max(0.01,+$('wPairs').value||1);
-    await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(toWad(pairs).toString(16)),`redeem ${pairs} pair`,walletContext(v)); }
+  async function doMint(){ const v=curVault(), context=walletContext(v);
+    let pairsWad,needWad,raw;
+    try{
+      raw=String($('wPairs').value??'1').trim();
+      pairsWad=parseDecimalWad(raw);
+      const notionalWad=v.notional_wad?BigInt(v.notional_wad):parseDecimalWad(String(v.notional));
+      const collateralWad=(pairsWad*notionalWad+10n**18n-1n)/10n**18n;
+      needWad=collateralWad+(collateralWad*5n+9999n)/10000n;
+    }catch(e){W.msg='✗ '+(e.message||String(e));renderWallet();return;}
+    const hasAllow=W.bal?.allowWad!==undefined?W.bal.allowWad>=needWad:(W.bal?.allow||0)*1e18>=Number(needWad);
+    if(!hasAllow&&!await send(v.asset,'0x095ea7b3'+pad(v.address)+pad(needWad.toString(16)),'approve '+(v.symbol||'collateral'),context))return;
+    await send(v.address,'0xa0712d68'+pad(pairsWad.toString(16)),`mint ${raw} pair`,context); }
+  async function doRedeem(){ const v=curVault();
+    let pairsWad,raw;
+    try{raw=String($('wPairs').value??'1').trim();pairsWad=parseDecimalWad(raw);}catch(e){W.msg='✗ '+(e.message||String(e));renderWallet();return;}
+    await send(v.address,'0xd54b7506'+pad(v.seriesId.toString(16))+pad(pairsWad.toString(16)),`redeem ${raw} pair`,walletContext(v)); }
   function renderWallet(){ const el=$('tjWallet'); const c=HEAD.chain; const vv=curVault(); if(!c||!vv){el.innerHTML='<div class="msg2">no vault on this chain</div>';return;}
     if(!W.acct){ el.innerHTML=`<button id="wConnect">CONNECT WALLET</button><div class="msg2">${esc(W.msg)||'MetaMask / any EIP-1193 wallet · '+(vv.networkName||vv.chainId)}</div>`; $('wConnect').onclick=connect; return; }
     const v=vv, b=W.bal, wrong=W.chainId!==v.chainId||!walletVerified(v), inactive=checkResult?.closed||checkResult?.frozenExit?.frozen||checkResult?.frozenExit?.historyConsistent===false;
@@ -1330,15 +1402,19 @@ function exitActionAllowed(state, action) {
       const rpc=exitRPC(ZK_RELEASE.rpc);
       if(Number(await rpc('eth_chainId',[]))!==ZK_RELEASE.chainId)throw Error('RPC 不是 Sepolia');
       const block=await rpc('eth_getBlockByNumber',['latest',false]);
+      if(!block?.number||!WORD.test(block.hash))throw Error('RPC 区块不可用');
       // Every value comes from one block, so a batch cannot appear both pending and finalized.
       const call=sel=>rpc('eth_call',[{to:ZK_RELEASE.index,data:sel},block.number]);
-      // WujiHeaderIndex (the mainnet shape) has no proof queue: its missing views read as zero.
-      const opt=sel=>call(sel).catch(()=>'0x'+'0'.repeat(64));
+      // WujiHeaderIndex (the mainnet shape) has no proof queue: all three optional views revert together.
+      // Network/rate-limit errors must never be mistaken for an empty proof queue.
+      let optCount=0;
+      const opt=sel=>call(sel).catch(e=>{if(!e?.isRevert)throw e;optCount++;return '0x'+'0'.repeat(64);});
       const wd=(hex,i)=>BigInt('0x'+hex.slice(2+64*i,66+64*i));
       const sg=(v,bits)=>v>=1n<<BigInt(bits-1)?v-(1n<<BigInt(bits)):v;
       const pad=n=>BigInt(n).toString(16).padStart(64,'0');
       const [tip,S,first,next,win,sh,st,fr,cf]=await Promise.all([call(ZK_SEL.tip),call(ZK_SEL.S),opt(ZK_SEL.firstPending),opt(ZK_SEL.nextBatch),opt(ZK_SEL.window),
         call(ZK_SEL.seenHeight),call(ZK_SEL.seenTime),call(ZK_SEL.frozen),call(ZK_SEL.conf)]);
+      if(optCount!==0&&optCount!==3)throw Error('证明队列视图部分缺失，状态不一致');
       const z={block:Number(block.number),now:Number(block.timestamp),height:Number(wd(tip,1)),time:Number(wd(tip,3)),
         S:sg(wd(S,0),256),first:Number(wd(first,0)),next:Number(wd(next,0)),window:Number(wd(win,0)),batches:[],
         seenHeight:Number(wd(sh,0)),seenTime:Number(wd(st,0)),frozen:wd(fr,0)===1n,conf:Number(wd(cf,0))};
@@ -1351,6 +1427,7 @@ function exitActionAllowed(state, action) {
           respondBy:Number(f(23)),backed:f(24)!==0n,prover:'0x'+f(20).toString(16).padStart(40,'0')});
         from=to;
       }
+      if((await rpc('eth_getBlockByNumber',[block.number,false]))?.hash!==block.hash)throw Error('读取期间发生区块重组，请重试');
       ZK=z;zkError=null;
     }catch(e){zkError=e.message||String(e);}
     finally{zkBusy=false;renderZk();}
@@ -1385,7 +1462,8 @@ function exitActionAllowed(state, action) {
   }
   function exitRPC(url){let id=0;return async(method,params)=>{
     const n=++id,j=await(await fetchTimed(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:n,method,params})})).json();
-    if(j.error||j.id!==n||j.result===undefined)throw Error(j.error?.message||'Invalid RPC response');return j.result;
+    if(j.error||j.id!==n||j.result===undefined){const err=Error(j.error?.message||'Invalid RPC response');err.rpcCode=j.error?.code;err.isRevert=j.error?.code===3||/execution reverted|revert|invalid opcode|VM Exception/i.test(String(j.error?.message||''));throw err;}
+    return j.result;
   };}
   async function doExit(action){
     if(W.busy||!W.acct)return;
@@ -1511,7 +1589,14 @@ function exitActionAllowed(state, action) {
   document.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(e.target.tagName))return;const k=e.key.toLowerCase();if(k==='b')doLong();else if(k==='s')doShort();else if(k==='f')doFlat();});
   cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse={x:e.clientX-r.left,y:e.clientY-r.top};cv.parentElement.classList.add('hover');draw();});
   let blockCache=new Map();
-  async function blockAtTick(t){ const ts=GENESIS+t; if(blockCache.has(ts))return blockCache.get(ts); const r=await fetchTimed(`${API}/blockAt?ts=${ts}`); const j=await r.json(); blockCache.set(ts,j); if(blockCache.size>2000)blockCache.delete(blockCache.keys().next().value); return j; }
+  async function blockAtTick(t){
+    const ts=GENESIS+t; if(blockCache.has(ts))return blockCache.get(ts);
+    const r=await fetchTimed(`${API}/blockAt?ts=${ts}`); const raw=await r.json();
+    if(raw?.error)return {error:esc(String(raw.error))};
+    if(!Number.isSafeInteger(raw?.block)||raw.block<0||(raw.hash!==undefined&&!/^[0-9a-f]{64}$/i.test(raw.hash)))throw Error('Invalid blockAt payload');
+    const j={block:raw.block,hash:raw.hash?raw.hash.toLowerCase():undefined,ts:Number.isSafeInteger(raw.ts)?raw.ts:undefined};
+    blockCache.set(ts,j); if(blockCache.size>2000)blockCache.delete(blockCache.keys().next().value); return j;
+  }
   cv.addEventListener('click',async e=>{ if(!chartMap)return; const r=cv.getBoundingClientRect(),x=e.clientX-r.left; const t=Math.round(chartMap.tStart+(x-chartMap.pad.l)/chartMap.gw*chartMap.span); if(t<0||t>nowTick())return;
     try{const j=await blockAtTick(t);if(Number.isSafeInteger(j.block)){const url=HEAD.source==='bitcoin'&&/^[0-9a-f]{64}$/i.test(j.hash)?'https://mempool.space/block/'+j.hash:`https://${HEAD.chain?.vault?.chainId===97?'testnet.':''}bscscan.com/block/${j.block}`;window.open(url,'_blank','noopener');}}catch{} });
   cv.addEventListener('mouseleave',()=>{mouse=null;cv.parentElement.classList.remove('hover');draw();});

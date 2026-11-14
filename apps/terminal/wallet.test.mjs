@@ -12,8 +12,8 @@ function wallet({chain=11155111,approve=false,verified=true}={}){
   throw Error('Unexpected wallet method '+method);
  }};
  const ctx=vm.createContext({window:{ethereum:provider},HEAD:{chain:{}},curVault:()=>v,$:()=>({value:'1'}),short:x=>x,setTimeout,assertVerifiedWallet:()=>{if(!verified)throw Error("RPC verification required");}});
- vm.runInContext(source+'\nrenderWallet=()=>{}; W.acct="0x'+'55'.repeat(20)+'"; W.bal={allow:0};this.api={W,doMint,send,refreshWallet,walletContext,walletNetworks};',ctx);
- return {...ctx.api,sent,v};
+ vm.runInContext(source+'\nrenderWallet=()=>{}; W.acct="0x'+'55'.repeat(20)+'"; W.bal={allow:0};this.api={W,doMint,doRedeem,send,refreshWallet,walletContext,walletNetworks};',ctx);
+ return {...ctx.api,sent,v,ctx};
 }
 test('Sepolia has ETH metadata and the correct chain id',()=>{const w=wallet();assert.equal(w.walletNetworks[11155111].chainId,'0xaa36a7');assert.equal(w.walletNetworks[11155111].nativeCurrency.symbol,'ETH');});
 test('wrong network cannot send approval or mint',async()=>{const w=wallet({chain:97});await w.doMint();assert.equal(w.sent.length,0);assert.match(w.W.msg,/Switch wallet/);});
@@ -22,3 +22,20 @@ test('successful approval is followed by a chain-bound mint',async()=>{const w=w
 test('account changes between steps abort the transaction',async()=>{const w=wallet({approve:true}),context=w.walletContext(w.v);w.W.acct='0x'+'66'.repeat(20);assert.equal(await w.send(w.v.address,'0x','mint',context),false);assert.equal(w.sent.length,0);});
 
 test("unverified source cannot send an approval or mint",async()=>{const w=wallet({verified:false});await w.doMint();assert.equal(w.sent.length,0);assert.match(w.W.msg,/verification required/);});
+test("doMint approves exact collateral+fee (never infinite uint256) and preserves 18-decimal precision",async()=>{
+ const w=wallet({approve:true});w.v.seriesId=3;
+ w.ctx.$=()=>({value:'1.123456789012345678'});
+ await w.doMint();
+ assert.equal(w.sent.length,2);
+ const approved=BigInt('0x'+w.sent[0].data.slice(74));
+ assert.ok(approved<2n**128n,'must never request infinite MAX_UINT256 approval');
+ // ceil(1.123456789012345678e18 * 1e15 / 1e18) = 1123456789012346; + ceil(*5/10000) = +561728394507 = 1124018517406853
+ assert.equal(approved,1124018517406853n);
+ assert.equal(BigInt('0x'+w.sent[1].data.slice(10)),1123456789012345678n);
+ await w.doRedeem();
+ assert.equal(BigInt('0x'+w.sent[2].data.slice(74)),1123456789012345678n);
+ w.ctx.$=()=>({value:'0'});
+ await w.doMint();
+ assert.equal(w.sent.length,3);
+ assert.match(w.W.msg,/positive/);
+});
