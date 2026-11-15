@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {estimateKeeperGas} from './keeper-gas.mjs';
+import {estimateKeeperGas,EIP_7825_TX_GAS_CAP} from './keeper-gas.mjs';
 const from='0x'+'11'.repeat(20),to='0x'+'22'.repeat(20);
 function fixture(estimate,blockGas=200_000_000){const calls=[];return {calls,rpc:async(method,args)=>{calls.push({method,args});if(method==='eth_getBlockByNumber')return{gasLimit:'0x'+blockGas.toString(16)};if(estimate instanceof Error)throw estimate;return '0x'+estimate.toString(16);},from,to,data:'0x1234',fallbackGas:8_000_000,maxGas:50_000_000};}
 test('live state creation can exceed the old fixed execution estimate',async()=>{
@@ -15,4 +15,8 @@ test('operator and block ceilings reject before broadcasting',async()=>{
 test('reverts and invalid estimates cannot degrade to a fixed gas fallback',async()=>{
  await assert.rejects(estimateKeeperGas(fixture(Error('execution reverted'))),/execution reverted/);
  await assert.rejects(estimateKeeperGas(fixture(0)),/invalid/);
+ // Default maxGas enforces EIP-7825 2^24 (16,777,216) transaction ceiling when maxGas is omitted
+ const f=fixture(14_000_000);delete f.maxGas;
+ await assert.rejects(estimateKeeperGas(f),/ceiling/);
+ assert.equal(EIP_7825_TX_GAS_CAP,16_777_216);
 });

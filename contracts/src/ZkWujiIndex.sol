@@ -31,6 +31,7 @@ interface ISP1Verifier {
 contract ZkWujiIndex {
     uint256 public constant POW_LIMIT = 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     uint256 public constant MAX_FUTURE_BLOCK_TIME = 2 hours;
+    uint256 public constant MAX_SEEN_MTP_LEAD = 3 hours;
     uint64 public constant RETARGET_INTERVAL = 2016;
     uint32 public constant TARGET_TIMESPAN = 14 days;
     int256 public constant UNIT = 1.2e13;
@@ -40,6 +41,8 @@ contract ZkWujiIndex {
     uint64 public constant REORG_MARGIN = 144;
     /// @notice Cap on headers in one `freezeOnReorg` (≈ 15M gas, inside the 2^24 per-transaction cap).
     uint256 public constant MAX_REORG_HEADERS = 800;
+    /// @notice Per-call limit for an arbitrarily long, incrementally authenticated reorg branch.
+    uint256 public constant MAX_REORG_SEGMENT_HEADERS = 256;
     /// @notice Cap on headers per `foldHeaders` call, so the escape hatch cannot be given an unbounded batch.
     uint256 public constant MAX_HEADERS = 512;
     /// @notice Cap on headers behind one proof (folded heights + CONFIRMATIONS), so backing it with raw
@@ -121,6 +124,16 @@ contract ZkWujiIndex {
     /// @notice Commitment to the finalized state after every advance (and the anchor), by height: the only
     ///         places a branch may fork from in `freezeOnReorg`. Written once per height, never changed.
     mapping(uint64 => bytes32) public committedAt;
+    /// @notice Authenticated reorg continuations. Only hashes are stored; complete proofs are public in events.
+    mapping(bytes32 => bool) public reorgProofs;
+    struct ReorgProof {
+        uint64 forkBase;
+        uint64 targetHeight;
+        bytes32 targetHash;
+        Continuity branch;
+        uint32[11] times;
+        uint256 work;
+    }
     /// @notice The highest header ever validated by the rules here, folded or not (it may be among the last
     ///         CONFIRMATIONS of a fold). A lower bound on the Bitcoin tip, for consumers that must schedule at a
     ///         height that cannot exist yet. Never counted in S.
@@ -136,12 +149,14 @@ contract ZkWujiIndex {
     event Backed(uint256 indexed id, address indexed backer);
     event Rejected(uint256 indexed id, uint256 removed, address indexed disputer);
     event Frozen(uint64 indexed lastHeight, bytes32 lastHash, int256 S, uint64 forkBase, uint64 branchHeight);
+    event ReorgProgress(bytes32 indexed commitment, bytes proof);
 
     error BadLength();
     error Linkage();
     error Difficulty();
     error MedianTimePast();
     error FutureTime();
+    error BadVersion();
     error BadWork();
     error NotEnoughConfirmations();
     error Discontinuous();
@@ -162,6 +177,7 @@ contract ZkWujiIndex {
     error NotForged();
     error TransferFailed();
     error IndexFrozen();
+    error NotFrozen();
     error NoReorg();
 
     /// @param anchorHeader the 80-byte header at `anchorHeight`; an immutable, publicly auditable starting point
@@ -179,13 +195,19 @@ contract ZkWujiIndex {
         Challenge memory challenge
     ) {
         if (anchorHeader.length != 80) revert BadLength();
-        if (schedule.checkpointInterval == 0 || schedule.genesisHeight == 0 || schedule.confirmations == 0) {
+        if (
+            schedule.checkpointInterval == 0 || schedule.genesisHeight == 0 || schedule.confirmations == 0
+                || schedule.confirmations >= MAX_HEADERS || anchorHeight + 1 != schedule.genesisHeight
+        ) {
             revert ConfigMismatch();
         }
         // A proof path without a window, a response time or a bond would let any dispute (or none) decide.
         if (
             address(verifier_) != address(0)
-                && (challenge.window == 0 || challenge.responseWindow == 0 || challenge.bond == 0)
+                && (
+                    challenge.window == 0 || challenge.responseWindow == 0 || challenge.bond == 0
+                        || schedule.confirmations >= MAX_PROOF_HEADERS
+                )
         ) revert ConfigMismatch();
         // A verifier with no code would make `verifyProof` succeed silently: Solidity only emits an
         // extcodesize check before external calls that expect return data, and this one returns none.
@@ -210,6 +232,8 @@ contract ZkWujiIndex {
 
         uint32 bits = _read32(anchorHeader, 72);
         uint32 time = _read32(anchorHeader, 68);
+        if (anchorHeight % RETARGET_INTERVAL == 0 && anchorEpochStart != time) revert ConfigMismatch();
+        _checkVersion(int32(_read32(anchorHeader, 0)), anchorHeight);
         if (_pow(anchorHeader) > targetOf(bits)) revert BadWork();
         tip = Continuity({
             hash: sha256(abi.encodePacked(sha256(anchorHeader))),
@@ -270,17 +294,7 @@ contract ZkWujiIndex {
     }
 
     function medianTimePast() public view returns (uint32) {
-        uint32[11] memory t = recentTimes;
-        for (uint256 i = 1; i < 11; ++i) {
-            uint32 key = t[i];
-            uint256 j = i;
-            while (j > 0 && t[j - 1] > key) {
-                t[j] = t[j - 1];
-                --j;
-            }
-            t[j] = key;
-        }
-        return t[5];
+        return _median(recentTimes);
     }
 
     // ------------------------------------------------------------------ escape hatch: raw headers
@@ -297,7 +311,7 @@ contract ZkWujiIndex {
         uint256 committedWork;
         uint64 from;
         uint64 foldTarget;
-        uint32 maxTime;
+        uint256 maxTime;
         uint256 count;
     }
 
@@ -310,7 +324,33 @@ contract ZkWujiIndex {
         w.times = recentTimes;
         w.work = chainWork;
         (uint64[] memory heights, int64[] memory us) = _replay(w, headers);
-        folded = _commitReplay(w, heights, us, rewardTokens);
+        folded = _commitReplay(w, heights, us, msg.sender, rewardTokens);
+    }
+
+    /// @notice Validate up to MAX_HEADERS raw headers on top of the finalized tip without folding S, refreshing
+    ///         `seenHeight` and `seenTime` in proof mode where finalized journals stop `CONFIRMATIONS` short of tip.
+    function refreshSeen(bytes calldata headers) external {
+        if (frozen) revert IndexFrozen();
+        if (firstPending != nextBatch) revert BatchesPending();
+        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
+        uint256 count = headers.length / 80;
+        if (count > MAX_HEADERS) revert TooManyHeaders();
+        Continuity memory state = tip;
+        uint32[11] memory times = recentTimes;
+        uint256 work = chainWork;
+        uint256 maxTime = block.timestamp + MAX_FUTURE_BLOCK_TIME;
+        for (uint256 i = 0; i < count; ++i) {
+            work = _apply(state, times, work, headers[i * 80:(i + 1) * 80], maxTime);
+        }
+        _noteSeen(state.height, state.time, times);
+    }
+
+    function _noteSeen(uint64 height, uint32 time, uint32[11] memory times) internal {
+        if (height > seenHeight) {
+            seenHeight = height;
+            uint256 cap = uint256(_median(times)) + MAX_SEEN_MTP_LEAD;
+            seenTime = uint256(time) > cap ? uint32(cap) : time;
+        }
     }
 
     /// @dev Make a replay from the finalized state the new finalized state, as the header path always has.
@@ -318,7 +358,8 @@ contract ZkWujiIndex {
         Working memory w,
         uint64[] memory heights,
         int64[] memory us,
-        address[] calldata rewardTokens
+        address worker,
+        address[] memory rewardTokens
     ) internal returns (uint64 folded) {
         for (uint256 i = 0; i < heights.length; ++i) {
             _recordCheckpoint(heights[i], int256(us[i]) * UNIT);
@@ -327,13 +368,9 @@ contract ZkWujiIndex {
         recentTimes = w.committedTimes;
         chainWork = w.committedWork;
         committedAt[w.committed.height] = _commitment(w.committed, w.committedTimes, w.committedWork);
-        // After a replay `w.state` is the last header validated: the newest Bitcoin block this contract has seen.
-        if (w.state.height > seenHeight) {
-            seenHeight = w.state.height;
-            seenTime = w.state.time;
-        }
+        _noteSeen(w.state.height, w.state.time, w.times);
         folded = w.committed.height - w.from + 1;
-        if (address(rewards) != address(0)) rewards.credit(msg.sender, w.from, w.committed.height, rewardTokens);
+        if (address(rewards) != address(0)) rewards.credit(worker, w.from, w.committed.height, rewardTokens);
         emit Fold(w.from, w.committed.height, int256(w.committed.u) * UNIT, false);
     }
 
@@ -351,7 +388,7 @@ contract ZkWujiIndex {
         _snapshot(w);
         w.from = w.state.height + 1;
         w.foldTarget = w.state.height + uint64(w.count) - CONFIRMATIONS;
-        w.maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        w.maxTime = block.timestamp + MAX_FUTURE_BLOCK_TIME;
 
         uint256 n = _boundariesUpTo(w.foldTarget) - _boundariesUpTo(w.state.height);
         heights = new uint64[](n);
@@ -414,11 +451,12 @@ contract ZkWujiIndex {
         int64[] checkpointU;
     }
 
-    /// @notice Verify one proof for a whole batch and queue it as pending. Anyone may call.
+    /// @notice Verify one proof for a whole batch and queue it as pending, posting `DISPUTE_BOND`. Anyone may call.
     /// @param rewardTokens the relayer-bounty tokens credited to the caller when the batch finalizes; fixed
     ///        now so whoever calls `finalize` cannot choose them.
     function foldProof(bytes calldata proof, bytes calldata publicValues, address[] calldata rewardTokens)
         external
+        payable
         returns (uint256 id)
     {
         if (frozen) revert IndexFrozen();
@@ -430,7 +468,7 @@ contract ZkWujiIndex {
             j.genesisHeight != GENESIS_HEIGHT || j.checkpointInterval != CHECKPOINT_INTERVAL
                 || j.confirmations != CONFIRMATIONS
         ) revert ConfigMismatch();
-        if (j.maxTime > block.timestamp + MAX_FUTURE_BLOCK_TIME) revert FutureTime();
+        if (uint256(j.maxTime) > block.timestamp + MAX_FUTURE_BLOCK_TIME) revert FutureTime();
 
         id = nextBatch;
         if (id - firstPending >= MAX_PENDING) revert QueueFull();
@@ -447,6 +485,7 @@ contract ZkWujiIndex {
         if (j.newHeight - state.height + CONFIRMATIONS > MAX_PROOF_HEADERS) revert TooManyHeaders();
         _checkBoundaries(state.height, j.newHeight, j.checkpointHeights, j.checkpointU.length);
         _checkTokens(rewardTokens);
+        if (msg.value != DISPUTE_BOND) revert WrongBond();
 
         verifier.verifyProof(programVKey, publicValues, proof);
 
@@ -487,23 +526,21 @@ contract ZkWujiIndex {
             chainWork = b.toWork;
             committedAt[b.to.height] = _commitment(b.to, b.toTimes, b.toWork);
             // A journal carries no header past the folded tip, so the proof path can only vouch for that one.
-            if (b.to.height > seenHeight) {
-                seenHeight = b.to.height;
-                seenTime = b.to.time;
-            }
+            _noteSeen(b.to.height, b.to.time, b.toTimes);
             for (uint256 i = 0; i < b.checkpointHeights.length; ++i) {
                 _recordCheckpoint(b.checkpointHeights[i], int256(b.checkpointU[i]) * UNIT);
             }
+            owed[b.prover] += DISPUTE_BOND;
             if (address(rewards) != address(0)) rewards.credit(b.prover, from, b.to.height, b.proverTokens);
             emit Fold(from, b.to.height, int256(b.to.u) * UNIT, true);
-            delete batches[id];
+            _deleteBatch(id);
             firstPending = id + 1;
             ++done;
         }
     }
 
     /// @notice Object to a pending batch before its window closes, posting `DISPUTE_BOND`.
-    /// @param rewardTokens the relayer-reserve tokens the disputer is paid in if the batch is rejected.
+    /// @param rewardTokens the relayer-reserve tokens the disputer is paid in if the oldest batch is refuted.
     function dispute(uint256 id, address[] calldata rewardTokens) external payable {
         if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
@@ -521,6 +558,7 @@ contract ZkWujiIndex {
     ///         They are checked by the same Solidity rules as `foldHeaders`, from the batch's starting
     ///         state, and must reproduce the claimed end state exactly. The caller earns the bond.
     function back(uint256 id, bytes calldata headers) external {
+        if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         if (block.timestamp > b.respondBy) revert WindowClosed();
@@ -537,23 +575,36 @@ contract ZkWujiIndex {
     }
 
     /// @notice Remove a disputed batch nobody backed in time, and every pending batch after it (they were
-    ///         built on it). Disputers get their bonds back. No bounty: an unbacked batch is not shown to be
-    ///         forged, and paying for it would let anyone dispute honest batches for profit whenever backing
-    ///         costs more gas than the bond is worth. Proven forgeries are paid through `refute`.
+    ///         built on it). The disputer of `id` receives their bond back plus `id`'s slashed prover bond;
+    ///         later batches have their prover and open disputer bonds refunded.
     function reject(uint256 id) external {
+        if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
         if (block.timestamp <= b.respondBy) revert WindowOpen();
-        _reject(id, false);
+        _reject(id);
+    }
+
+    /// @notice Refund locked prover and open disputer bonds once a deep reorg has sealed the index.
+    ///         Anyone may drain up to `maxBatches` orphaned pending batches; recipients pull via `withdraw`.
+    function cancelFrozen(uint256 maxBatches) external returns (uint256 done) {
+        if (!frozen) revert NotFrozen();
+        while (done < maxBatches && firstPending < nextBatch) {
+            uint256 id = firstPending;
+            _refundBatch(batches[id]);
+            _deleteBatch(id);
+            firstPending = id + 1;
+            ++done;
+        }
+        if (done > 0) emit Rejected(firstPending - done, done, address(0));
     }
 
     /// @notice Prove a disputed batch false at once, instead of waiting out the response window: the real
     ///         headers over the batch's range, replayed by the Solidity rules from its starting state, reach a
-    ///         different end state. The batch and everything after it go as in `reject`, and the disputer is
-    ///         paid the relayer bounty the batch would have earned. For the oldest batch
-    ///         the replayed state is then folded exactly as `foldHeaders` would fold it, so a stream of forged
-    ///         proofs holding the head of the queue cannot hold the index: the header path stays live.
-    /// @dev Same trust as `foldHeaders`: any branch with valid proof of work and CONFIRMATIONS descendants.
+    ///         different end state. The batch and everything after it go as in `reject` (slashing `id`'s prover
+    ///         bond to its disputer). For the oldest batch, the replayed state is folded once into `tip` and
+    ///         credited once in `RelayerRewards` (to `msg.sender` if `rewardTokens` is non-empty, else to the
+    ///         disputer's chosen `disputerTokens`), advancing `lastHeight` so no height can ever be paid twice.
     function refute(uint256 id, bytes calldata headers, address[] calldata rewardTokens)
         external
         returns (uint64 folded)
@@ -561,38 +612,42 @@ contract ZkWujiIndex {
         if (frozen) revert IndexFrozen();
         Batch storage b = _pending(id);
         if (b.disputer == address(0) || b.backed) revert NotDisputed();
+        _checkTokens(rewardTokens);
         Working memory w;
         (w.state, w.times, w.work) = _stateBefore(id);
         if (headers.length != (uint256(b.to.height - w.state.height) + CONFIRMATIONS) * 80) revert BadLength();
         (uint64[] memory heights, int64[] memory us) = _replay(w, headers);
         if (_matches(w, b, us)) revert NotForged();
         bool oldest = id == firstPending;
-        _reject(id, true);
-        if (oldest) folded = _commitReplay(w, heights, us, rewardTokens);
+        address worker = rewardTokens.length > 0 ? msg.sender : b.disputer;
+        address[] memory toks;
+        if (rewardTokens.length > 0) toks = rewardTokens;
+        else toks = b.disputerTokens;
+        _reject(id);
+        if (oldest) folded = _commitReplay(w, heights, us, worker, toks);
     }
 
-    /// @param proven whether the batch was shown to differ from real headers (`refute`); only then is the
-    ///        disputer paid a bounty.
-    function _reject(uint256 id, bool proven) internal {
-        Batch storage b = batches[id];
-        address disputer = b.disputer;
-        address[] memory tokens = b.disputerTokens;
-        (Continuity memory from,,) = _stateBefore(id);
-        uint256 heights = b.to.height - from.height;
-
+    function _reject(uint256 id) internal {
+        address disputer = batches[id].disputer;
         uint256 removed = nextBatch - id;
         for (uint256 k = nextBatch; k > id;) {
             --k;
             Batch storage later = batches[k];
-            if (later.disputer != address(0) && !later.backed) owed[later.disputer] += DISPUTE_BOND;
-            delete batches[k];
+            if (k == id) owed[later.disputer] += 2 * DISPUTE_BOND;
+            else _refundBatch(later);
+            _deleteBatch(k);
         }
         nextBatch = id;
-        // The bounty is a reward, never a condition: a failing reserve must not keep a forged batch queued.
-        if (proven && address(rewards) != address(0)) {
-            try rewards.award(disputer, heights, tokens) {} catch {}
-        }
         emit Rejected(id, removed, disputer);
+    }
+
+    function _refundBatch(Batch storage b) internal {
+        owed[b.prover] += DISPUTE_BOND;
+        if (b.disputer != address(0) && !b.backed) owed[b.disputer] += DISPUTE_BOND;
+    }
+
+    function _deleteBatch(uint256 id) internal {
+        delete batches[id];
     }
 
     function withdraw() external returns (uint256 amount) {
@@ -670,28 +725,70 @@ contract ZkWujiIndex {
     ///      CONFIRMATIONS + 144 privately mined blocks, more than the finalized chain had.
     /// @param base `abi.encode(Continuity, uint32[11] times, uint256 work)` of a state recorded in `committedAt`
     function freezeOnReorg(bytes calldata base, bytes calldata headers) external {
+        ReorgProof memory p = _initReorg(base);
+        _extendReorg(p, headers, MAX_REORG_HEADERS);
+        _sealReorg(p);
+    }
+
+    /// @notice Authenticate the first bounded segment from a recorded finalized state below the current tip.
+    function beginReorg(bytes calldata base, bytes calldata headers) external returns (bytes memory proof) {
+        ReorgProof memory p = _initReorg(base);
+        _extendReorg(p, headers, MAX_REORG_SEGMENT_HEADERS);
+        return _recordReorg(p);
+    }
+
+    /// @notice Authenticate another bounded segment without resubmitting earlier headers.
+    function extendReorg(bytes calldata proof, bytes calldata headers) external returns (bytes memory next) {
         if (frozen) revert IndexFrozen();
-        (Continuity memory state, uint32[11] memory times, uint256 work) =
-            abi.decode(base, (Continuity, uint32[11], uint256));
-        uint64 tipHeight = tip.height;
-        if (state.height >= tipHeight) revert NoReorg();
-        if (committedAt[state.height] != keccak256(base)) revert Discontinuous();
-        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
-        if (headers.length / 80 > MAX_REORG_HEADERS) revert TooManyHeaders();
+        if (!reorgProofs[keccak256(proof)]) revert Discontinuous();
+        ReorgProof memory p = abi.decode(proof, (ReorgProof));
+        _extendReorg(p, headers, MAX_REORG_SEGMENT_HEADERS);
+        return _recordReorg(p);
+    }
 
-        uint64 forkBase = state.height;
-        bytes32 tipHash = tip.hash;
-        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
-        for (uint256 i = 0; i < headers.length; i += 80) {
-            work = _apply(state, times, work, headers[i:i + 80], maxTime);
-            // Through the finalized tip means the same chain: that is an extension, not a reorg.
-            if (state.height == tipHeight && state.hash == tipHash) revert NoReorg();
-        }
-        if (state.height <= tipHeight) revert NoReorg();
-        if (work < chainWork + uint256(CONFIRMATIONS + REORG_MARGIN) * workOf(targetOf(tip.bits))) revert NoReorg();
+    function isReorgProof(bytes calldata proof) external view returns (bool) {
+        return reorgProofs[keccak256(proof)];
+    }
 
+    /// @notice Seal from an authenticated continuation, using the CURRENT finalized tip and difficulty.
+    function freezeReorg(bytes calldata proof) external {
+        if (frozen) revert IndexFrozen();
+        if (!reorgProofs[keccak256(proof)]) revert Discontinuous();
+        _sealReorg(abi.decode(proof, (ReorgProof)));
+    }
+
+    function _initReorg(bytes calldata base) internal view returns (ReorgProof memory p) {
+        if (frozen) revert IndexFrozen();
+        (p.branch, p.times, p.work) = abi.decode(base, (Continuity, uint32[11], uint256));
+        if (p.branch.height >= tip.height) revert NoReorg();
+        if (committedAt[p.branch.height] != keccak256(base)) revert Discontinuous();
+        p.forkBase = p.branch.height;
+        p.targetHeight = tip.height;
+        p.targetHash = tip.hash;
+    }
+
+    function _sealReorg(ReorgProof memory p) internal {
+        if (p.branch.height <= tip.height) revert NoReorg();
+        if (p.work < chainWork + uint256(CONFIRMATIONS + REORG_MARGIN) * workOf(targetOf(tip.bits))) revert NoReorg();
         frozen = true;
-        emit Frozen(tipHeight, tipHash, S(), forkBase, state.height);
+        emit Frozen(tip.height, tip.hash, S(), p.forkBase, p.branch.height);
+    }
+
+    function _extendReorg(ReorgProof memory p, bytes calldata headers, uint256 limit) internal view {
+        if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
+        if (headers.length / 80 > limit) revert TooManyHeaders();
+        uint256 maxTime = block.timestamp + MAX_FUTURE_BLOCK_TIME;
+        for (uint256 i; i < headers.length; i += 80) {
+            p.work = _apply(p.branch, p.times, p.work, headers[i:i + 80], maxTime);
+            if (p.branch.height == p.targetHeight && p.branch.hash == p.targetHash) revert NoReorg();
+        }
+    }
+
+    function _recordReorg(ReorgProof memory p) internal returns (bytes memory proof) {
+        proof = abi.encode(p);
+        bytes32 commitment = keccak256(proof);
+        reorgProofs[commitment] = true;
+        emit ReorgProgress(commitment, proof);
     }
 
     function _commitment(Continuity memory c, uint32[11] memory times, uint256 work) internal pure returns (bytes32) {
@@ -701,7 +798,7 @@ contract ZkWujiIndex {
     // ------------------------------------------------------------------ rules (identical to the guest)
 
     /// @dev Mutates `state` and `times` in place (they are memory references) and returns the new work.
-    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint32 maxTime)
+    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint256 maxTime)
         internal
         pure
         returns (uint256)
@@ -715,7 +812,8 @@ contract ZkWujiIndex {
             height % RETARGET_INTERVAL == 0 ? retarget(state.bits, state.epochStart, state.time) : state.bits;
         if (bits != expected) revert Difficulty();
         if (time <= _median(times)) revert MedianTimePast();
-        if (time > maxTime) revert FutureTime();
+        if (uint256(time) > maxTime) revert FutureTime();
+        _checkVersion(int32(_read32c(raw, 0)), height);
 
         uint256 target = targetOf(bits);
         bytes32 hash = sha256(abi.encodePacked(sha256(raw)));
@@ -823,6 +921,14 @@ contract ZkWujiIndex {
 
     function _pow(bytes memory h) internal pure returns (uint256) {
         return uint256(reverse(sha256(abi.encodePacked(sha256(h)))));
+    }
+
+    function _checkVersion(int32 version, uint64 height) internal pure {
+        // Mainnet buried deployments in Bitcoin Core (BIP34, BIP66, BIP65; signed 32-bit nVersion).
+        if ((height >= 227_931 && version < 2) || (height >= 363_725 && version < 3) || (height >= 388_381 && version < 4))
+        {
+            revert BadVersion();
+        }
     }
 
     function _read32(bytes memory h, uint256 at) internal pure returns (uint32) {

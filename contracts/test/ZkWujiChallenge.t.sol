@@ -97,7 +97,7 @@ abstract contract ZkChallengeBase is Test {
     }
 
     function _propose(ZkWujiIndex target, ZkWujiIndex.Journal memory j) internal returns (uint256) {
-        return target.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        return target.foldProof{value: BOND}(hex"c0ffee", abi.encode(j), new address[](0));
     }
 }
 
@@ -224,7 +224,7 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         unsorted[1] = address(1);
         ZkWujiIndex.Journal memory j = _honest(idx, 40);
         vm.expectRevert(ZkWujiIndex.BadTokens.selector);
-        idx.foldProof(hex"c0ffee", abi.encode(j), unsorted);
+        idx.foldProof{value: BOND}(hex"c0ffee", abi.encode(j), unsorted);
         _propose(idx, j);
         vm.prank(WATCHER);
         vm.expectRevert(ZkWujiIndex.BadTokens.selector);
@@ -280,7 +280,8 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         vm.prank(BACKER);
         idx.withdraw();
         assertEq(BACKER.balance - before, BOND);
-        assertEq(address(idx).balance, 0);
+        assertEq(idx.owed(address(this)), BOND, "prover bond refunded on finalize");
+        assertEq(address(idx).balance, BOND);
     }
 
     function test_backingStartsFromThePreviousPendingBatch() public {
@@ -374,9 +375,10 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         assertEq(idx.pendingCount(), 0);
         assertEq(idx.nextBatch(), 0, "the next proof reuses the id");
         assertEq(idx.lastHeight(), anchorHeight, "the forgery never touched the index");
-        assertEq(idx.owed(WATCHER), BOND, "disputer refunded");
+        assertEq(idx.owed(WATCHER), 2 * BOND, "disputer refunded plus slashed prover bond");
         assertEq(idx.owed(second), BOND, "a disputer of a removed later batch is refunded too");
-        assertEq(address(idx).balance, 2 * BOND, "bonds conserved");
+        assertEq(idx.owed(address(this)), BOND, "later batch prover bond refunded");
+        assertEq(address(idx).balance, 4 * BOND, "bonds conserved");
 
         // the honest batch can now be proved from the finalized state
         _propose(idx, honest);
@@ -399,7 +401,7 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
         assertEq(idx.pendingCount(), 0, "the forgery is gone without waiting for the response window");
         assertEq(idx.lastHash(), honest.newHash, "and the real state is folded in its place");
         assertEq(idx.S(), int256(honest.newU) * idx.UNIT());
-        assertEq(idx.owed(WATCHER), BOND, "the disputer was right and gets the bond back");
+        assertEq(idx.owed(WATCHER), 2 * BOND, "the disputer gets their bond back plus the slashed prover bond");
     }
 
     /// Why `refute` cannot require "strictly more work" (docs/reviews/2026-10-02-T12-refute-work.md): the
@@ -472,7 +474,13 @@ contract ZkWujiChallengeTest is ZkChallengeBase {
 
     function test_aProofPathNeedsAWindowAResponseAndABond() public {
         bytes memory anchor = vm.parseBytes(string.concat("0x", vm.parseJsonString(meta, ".checkpointHeader")));
+        bytes memory ancestors = vm.parseBytes(vm.readFile("test/fixtures/bitcoin-timestamps-ancestors.hex"));
         uint32[11] memory times;
+        for (uint256 i = 0; i < 11; i++) {
+            uint256 at = i * 80 + 68;
+            times[i] = uint32(uint8(ancestors[at])) | uint32(uint8(ancestors[at + 1])) << 8
+                | uint32(uint8(ancestors[at + 2])) << 16 | uint32(uint8(ancestors[at + 3])) << 24;
+        }
         ZkWujiIndex.Challenge[3] memory bad = [
             ZkWujiIndex.Challenge({window: 0, responseWindow: R, bond: BOND}),
             ZkWujiIndex.Challenge({window: W, responseWindow: 0, bond: BOND}),
@@ -512,7 +520,8 @@ contract ZkWujiChallengeRewardsTest is ZkChallengeBase {
         token.mint(address(this), 1_000_000_000);
         token.approve(address(rewards), type(uint256).max);
         rewards.fund(address(token), 1_000_000_000);
-        vm.deal(WATCHER, 1 ether);
+        vm.deal(PROVER, 10 ether);
+        vm.deal(WATCHER, 10 ether);
     }
 
     function _one() internal view returns (address[] memory list) {
@@ -523,7 +532,7 @@ contract ZkWujiChallengeRewardsTest is ZkChallengeBase {
     function test_theProverChoosesTokensAndIsPaidOnlyOnFinalize() public {
         ZkWujiIndex.Journal memory j = _honest(idx, 40);
         vm.prank(PROVER);
-        idx.foldProof(hex"c0ffee", abi.encode(j), _one());
+        idx.foldProof{value: BOND}(hex"c0ffee", abi.encode(j), _one());
         assertEq(rewards.claimable(address(token), PROVER), 0, "nothing while pending");
         vm.warp(block.timestamp + W);
         idx.finalize(1); // called by someone else, who cannot change the prover's token list
@@ -532,31 +541,54 @@ contract ZkWujiChallengeRewardsTest is ZkChallengeBase {
         assertEq(rewards.lastHeight(), j.newHeight);
     }
 
-    /// Only a proven forgery pays: `refute` shows the batch differs from real headers.
+    /// Only a proven forgery at the head of the queue folds real heights and pays the bounty once.
     function test_aRefutedBatchPaysItsBountyToTheDisputer() public {
         ZkWujiIndex.Journal memory j = _forge(_honest(idx, 40));
         vm.prank(PROVER);
-        idx.foldProof(hex"c0ffee", abi.encode(j), _one());
+        idx.foldProof{value: BOND}(hex"c0ffee", abi.encode(j), _one());
         vm.prank(WATCHER);
         idx.dispute{value: BOND}(0, _one());
         idx.refute(0, _headers(anchorHeight, 40), new address[](0));
         uint256 heights = j.newHeight - j.prevHeight;
         assertEq(rewards.claimable(address(token), WATCHER), _bountyFor(1_000_000_000, heights));
         assertEq(rewards.claimable(address(token), PROVER), 0);
+        assertEq(idx.owed(WATCHER), 2 * BOND);
     }
 
-    /// An unbacked batch is not shown to be forged: `reject` returns the bond and pays nothing, so disputing an
-    /// honest batch never profits even when backing it costs more gas than the bond.
+    /// L1-01 regression: refuting a non-oldest batch must NOT pay from RelayerRewards (which would allow
+    /// infinite reserve draining without advancing lastHeight), and foldProof must require DISPUTE_BOND.
+    function test_nonOldestRefuteCannotDrainRelayerRewardsAndRequiresProverBond() public {
+        ZkWujiIndex.Journal memory first = _honest(idx, 40);
+        vm.prank(PROVER);
+        vm.expectRevert(ZkWujiIndex.WrongBond.selector);
+        idx.foldProof(hex"c0ffee", abi.encode(first), _one());
+
+        vm.prank(PROVER);
+        idx.foldProof{value: BOND}(hex"c0ffee", abi.encode(first), _one());
+
+        ZkWujiIndex.Journal memory second = _forge(_honest(idx, 40));
+        vm.prank(PROVER);
+        idx.foldProof{value: BOND}(hex"bad0", abi.encode(second), _one());
+        vm.prank(WATCHER);
+        idx.dispute{value: BOND}(1, _one());
+        idx.refute(1, _headers(first.newHeight, 40), _one());
+
+        assertEq(rewards.claimable(address(token), WATCHER), 0, "non-oldest refute pays zero reserve tokens");
+        assertEq(rewards.reserve(address(token)), 1_000_000_000, "RelayerRewards reserve untouched");
+        assertEq(idx.owed(WATCHER), 2 * BOND, "watcher slashes prover bond instead");
+    }
+
+    /// An unbacked batch slashes the prover bond to the disputer and pays no reserve bounty.
     function test_aRejectedBatchPaysNoBounty() public {
         ZkWujiIndex.Journal memory j = _honest(idx, 40); // honest, but nobody backs it in time
         vm.prank(PROVER);
-        idx.foldProof(hex"c0ffee", abi.encode(j), _one());
+        idx.foldProof{value: BOND}(hex"c0ffee", abi.encode(j), _one());
         vm.prank(WATCHER);
         idx.dispute{value: BOND}(0, _one());
         vm.warp(block.timestamp + R + 1);
         idx.reject(0);
         assertEq(rewards.claimable(address(token), WATCHER), 0, "no bounty for an unproven batch");
-        assertEq(idx.owed(WATCHER), BOND, "the bond comes back");
+        assertEq(idx.owed(WATCHER), 2 * BOND, "disputer gets their bond back plus slashed prover bond");
         assertEq(rewards.lastHeight(), genesis - 1, "the heights stay payable to whoever folds them");
     }
 

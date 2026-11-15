@@ -91,3 +91,148 @@ test('the keeper does not prove on top of a pending batch that does not match th
     assert.equal(r.action, 'blocked');
   } finally { globalThis.fetch = rpcStub; }
 });
+
+test('keeper clamps fold size to on-chain RelayerRewards.MAX_HEIGHTS when reward tokens are set', async () => {
+  const { encodeContinuity, fixture, header, journal, w } = await import('./zk-test-helpers.mjs');
+  const { sel } = await import('./zk-challenge.mjs');
+  const { step } = await import('./bitcoin.mjs');
+  const j = journal(fixture('zk-journal.hex'));
+  const rewardsAddr = '0x' + 'aa'.repeat(20);
+  const oldFold = process.env.ZK_MAX_FOLD, oldTok = process.env.ZK_REWARD_TOKENS, oldWork = process.env.ZK_WORK_DIR;
+  process.env.ZK_MAX_FOLD = '80';
+  process.env.ZK_REWARD_TOKENS = '0x' + 'bb'.repeat(20);
+  process.env.ZK_WORK_DIR = (await import('node:fs')).mkdtempSync((await import('node:path')).join((await import('node:os')).tmpdir(), 'wuji-keeper-cap-'));
+  const views = {
+    [sel('rewards()')]: w(BigInt(rewardsAddr)),
+    [sel('GENESIS_HEIGHT()')]: w(j.genesisHeight), [sel('CHECKPOINT_INTERVAL()')]: w(4320), [sel('CONFIRMATIONS()')]: w(6),
+    [sel('MAX_HEADERS()')]: w(512), [sel('MAX_PROOF_HEADERS()')]: w(0), [sel('verifier()')]: w(0),
+    [sel('DISPUTE_BOND()')]: w(0), [sel('REORG_MARGIN()')]: w(144), [sel('MAX_REORG_HEADERS()')]: w(800),
+    [sel('MAX_REORG_SEGMENT_HEADERS()')]: w(0), [sel('frozen()')]: w(0), [sel('pendingCount()')]: w(0),
+  };
+  const h0 = header(0), s0 = step(h0);
+  const startCont = { ...j.prev, height: j.prev.height + 1, hash: '0x' + s0.internalHash };
+  let maxRequestedHeight = 0;
+  const rpcStub = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const { method, params, id } = JSON.parse(init.body);
+    let result;
+    if (method === 'eth_chainId') result = '0x7a69';
+    else {
+      const to = (params[0].to || '').toLowerCase(), s = params[0].data.slice(0, 10);
+      if (to === rewardsAddr && s === sel('MAX_HEIGHTS()')) result = '0x' + w(40); // on-chain cap < ZK_MAX_FOLD (80)
+      else if (to === rewardsAddr && s === sel('claimable(address,address)')) result = '0x' + w(0);
+      else if (s === sel('continuity()')) result = encodeContinuity(startCont);
+      else result = '0x' + views[s];
+    }
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id, result }));
+  };
+  try {
+    const { round } = await import('./zk-keeper.mjs?reward-cap');
+    // Let all 46 headers (6 confirmations + 40 on-chain MAX_HEIGHTS) succeed; fail if header 47..86 is requested.
+    const source = {
+      tip: async () => startCont.height + 90,
+      at: async h => {
+        if (h === startCont.height) return { height: h, header: h0, hash: s0.hash };
+        const idx = h - startCont.height;
+        maxRequestedHeight = Math.max(maxRequestedHeight, idx);
+        if (idx > 46) throw Error(`exceeded-reward-cap:${idx}`);
+        const x = header(idx);
+        return { height: h, header: x, hash: step(x).hash };
+      },
+    };
+    await assert.rejects(round(source), e => {
+      if (/exceeded-reward-cap/.test(e.message)) return false;
+      return true;
+    });
+    assert.equal(maxRequestedHeight, 46);
+  } finally {
+    globalThis.fetch = rpcStub;
+    if (oldFold === undefined) delete process.env.ZK_MAX_FOLD; else process.env.ZK_MAX_FOLD = oldFold;
+    if (oldTok === undefined) delete process.env.ZK_REWARD_TOKENS; else process.env.ZK_REWARD_TOKENS = oldTok;
+    if (oldWork === undefined) delete process.env.ZK_WORK_DIR; else process.env.ZK_WORK_DIR = oldWork;
+  }
+});
+
+test('frozen proof-mode keeper drains a full 32-batch queue in 16-batch chunks with simulation and safe gas', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { fixture, journal, w } = await import('./zk-test-helpers.mjs');
+  const { sel } = await import('./zk-challenge.mjs');
+  const j = journal(fixture('zk-journal.hex'));
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wuji-keeper-frozen32-'));
+  const logFile = path.join(tmp, 'cast-calls.jsonl');
+  const stateFile = path.join(tmp, 'pending.txt');
+  const mockCast = path.join(tmp, 'mock-cast');
+  fs.writeFileSync(stateFile, '32');
+  fs.writeFileSync(mockCast, `#!${process.execPath}
+import fs from 'node:fs';
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(logFile)}, JSON.stringify(args) + '\\n');
+if (args[0] === 'call') {
+  process.stdout.write((args[2].startsWith('cancelFrozen') ? args[3] : '50000000000000000') + '\\n');
+} else if (args[0] === 'send') {
+  if (args[2] === 'cancelFrozen(uint256)') {
+    const cur = Number(fs.readFileSync(${JSON.stringify(stateFile)}, 'utf8'));
+    fs.writeFileSync(${JSON.stringify(stateFile)}, String(Math.max(0, cur - Number(args[3]))));
+  }
+  process.stdout.write(JSON.stringify({ status: '0x1', transactionHash: '0x' + 'cc'.repeat(32), gasUsed: '0x118c30' }));
+}
+`);
+  fs.chmodSync(mockCast, 0o755);
+
+  const oldCast = process.env.CAST, oldWork = process.env.ZK_WORK_DIR;
+  process.env.CAST = mockCast;
+  process.env.ZK_WORK_DIR = tmp;
+
+  const views = {
+    [sel('GENESIS_HEIGHT()')]: w(j.genesisHeight), [sel('CHECKPOINT_INTERVAL()')]: w(4320), [sel('CONFIRMATIONS()')]: w(6),
+    [sel('MAX_HEADERS()')]: w(512), [sel('MAX_PROOF_HEADERS()')]: w(250), [sel('verifier()')]: w(0x5f1),
+    [sel('DISPUTE_BOND()')]: w(5n * 10n ** 16n), [sel('REORG_MARGIN()')]: w(144), [sel('MAX_REORG_HEADERS()')]: w(800),
+    [sel('MAX_REORG_SEGMENT_HEADERS()')]: w(256), [sel('frozen()')]: w(1),
+    [sel('owed(address)')]: w(5n * 10n ** 16n),
+  };
+  const rpcStub = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const { method, params, id } = JSON.parse(init.body);
+    let result;
+    if (method === 'eth_chainId') result = '0x7a69';
+    else {
+      const s = params[0].data.slice(0, 10);
+      if (s === sel('pendingCount()')) result = '0x' + w(Number(fs.readFileSync(stateFile, 'utf8')));
+      else result = '0x' + views[s];
+    }
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id, result }));
+  };
+
+  try {
+    const { round, CANCEL_FROZEN_BATCH, cancelFrozenGas } = await import('./zk-keeper.mjs?frozen-full-32');
+    assert.equal(CANCEL_FROZEN_BATCH, 16);
+    assert.equal(cancelFrozenGas(16), 4_500_000);
+    assert.equal(cancelFrozenGas(32), 8_500_000);
+
+    const r = await round({ tip: async () => 0, at: async () => { throw Error('unused'); } });
+    assert.equal(r.action, 'frozen');
+    assert.equal(fs.readFileSync(stateFile, 'utf8'), '0');
+
+    const calls = fs.readFileSync(logFile, 'utf8').trim().split('\n').map(l => JSON.parse(l));
+    assert.equal(calls.length, 6, '2x (simulate + send cancelFrozen(16)) + 1x (simulate + send withdraw)');
+    assert.deepEqual(calls.map(c => [c[0], c[2], c[3]]), [
+      ['call', 'cancelFrozen(uint256)(uint256)', '16'],
+      ['send', 'cancelFrozen(uint256)', '16'],
+      ['call', 'cancelFrozen(uint256)(uint256)', '16'],
+      ['send', 'cancelFrozen(uint256)', '16'],
+      ['call', 'withdraw()(uint256)', '--rpc-url'],
+      ['send', 'withdraw()', '--rpc-url'],
+    ]);
+    for (const sendCall of [calls[1], calls[3]]) {
+      const gasIdx = sendCall.indexOf('--gas-limit');
+      assert.equal(sendCall[gasIdx + 1], '4500000', '16-batch cancelFrozen uses 4.5M gas (>1.5M spare above worst-case pre-refund)');
+    }
+  } finally {
+    globalThis.fetch = rpcStub;
+    if (oldCast === undefined) delete process.env.CAST; else process.env.CAST = oldCast;
+    if (oldWork === undefined) delete process.env.ZK_WORK_DIR; else process.env.ZK_WORK_DIR = oldWork;
+  }
+});

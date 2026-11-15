@@ -110,6 +110,9 @@ contract BitcoinRelay {
                 if(parent == tip) main[height] = hash;
                 else {
                     ++reorgCount;
+                    if(height < tipHeight) {
+                        for(uint64 cl = height + 1; cl <= tipHeight; ++cl) delete main[cl];
+                    }
                     bytes32 cursor = hash; uint64 at = height;
                     while(main[at] != cursor) {
                         main[at] = cursor;

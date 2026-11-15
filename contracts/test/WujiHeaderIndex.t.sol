@@ -158,11 +158,33 @@ contract WujiHeaderIndexTest is Test {
         assertFalse(small.checkpointed(genesis + 199), "a boundary inside the confirmation margin waits");
     }
 
+    function _tryDeploy(bytes memory anch, uint64 anchH, uint32 epStart, uint64 gen, uint64 interval, uint64 conf)
+        external
+        returns (WujiHeaderIndex)
+    {
+        return new WujiHeaderIndex(RelayerRewards(address(0)), anch, anchH, epStart, times, 0, gen, interval, conf);
+    }
+
     function test_rejectsBadConfiguration() public {
+        uint32 ep = uint32(vm.parseJsonUint(meta, ".epochStartTime"));
         vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
-        _deploy(0, 4320);
+        this._tryDeploy(anchor, anchorHeight, ep, genesis, 4320, 0);
         vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
-        _deploy(6, 0);
+        this._tryDeploy(anchor, anchorHeight, ep, genesis, 0, 6);
+        vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
+        this._tryDeploy(anchor, anchorHeight, ep, genesis, 4320, 512);
+        vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
+        this._tryDeploy(anchor, anchorHeight, ep, genesis + 1, 4320, 6);
+        // genesis (798336) is a retarget boundary (798336 % 2016 == 0): anchorEpochStart must equal header time
+        bytes memory boundaryAnchor = _slice(0, 1);
+        vm.expectRevert(WujiHeaderIndex.ConfigMismatch.selector);
+        this._tryDeploy(boundaryAnchor, genesis, 123456, genesis + 1, 4320, 6);
+    }
+
+    function test_u32MaxTimestampDoesNotWrapFutureTimeBound() public {
+        vm.warp(type(uint32).max - 100);
+        idx.foldHeaders(_slice(0, 40), new address[](0));
+        assertEq(idx.lastHeight(), genesis + 33);
     }
 
     /// The rule code was carried over from ZkWujiIndex unchanged: both must reach identical state.

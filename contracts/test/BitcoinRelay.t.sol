@@ -135,6 +135,14 @@ contract BitcoinRelayTest is Test {
         fork=synthetic(r,fork,harder,time+601,6);
         assertGt(r.chainWork(fork),oldWork);assertEq(r.bestHash(),fork);assertEq(r.bestHeight(),2016);
         assertEq(r.headerAt(2018),bytes32(0));
+        // L1-03 regression: if branch A later overtakes branch B again, stale main[2017..2018] must not
+        // stop the reorg walk early and leave 2015..2016 pointing at branch B (chimeric chain).
+        for(uint256 k=0;k<30;++k) {
+            tip=synthetic(r,tip,easier,time+3*1209600+uint32(2400+k*600),10+k);
+        }
+        assertEq(r.bestHash(),tip);
+        assertEq(r.headerAt(2015),bytes32(uint256(1)<<248),"2015 must belong to branch A, not branch B");
+        assertTrue(r.headerAt(2016)!=fork,"2016 must belong to branch A, not branch B");
     }
     function test_gasTableAndRealVaultSettlement() public {
         WujiIndex idx=new WujiIndex(relay,798336,12, RelayerRewards(address(0)));

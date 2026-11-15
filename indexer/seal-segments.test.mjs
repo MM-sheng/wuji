@@ -101,8 +101,9 @@ test('state cache retains its earliest known anchor as recent states rotate', ()
     const file = path.join(dir, 'states.json');
     for (let h = 100; h < 200; h++) saveState(file, state(main, h));
     const saved = loadStates(file);
-    assert.equal(Object.keys(saved).length, 65);
+    assert.equal(Object.keys(saved).length, 66); // 64 recent (136..199) + earliest anchor (100) + sparse landmark (127)
     assert.equal(saved[100], state(main, 100));
+    assert.equal(saved[127], state(main, 127));
     assert.equal(saved[199], state(main, 199));
   } finally { fs.rmSync(dir, { recursive: true }); }
 });

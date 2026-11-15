@@ -8,6 +8,10 @@ import {WujiIndex} from "../src/WujiIndex.sol";
 import {WujiAccounts} from "../src/WujiAccounts.sol";
 import {MockUSDT} from "./mocks/MockUSDT.sol";
 
+contract AcceptAllReorgVerifier is ISP1Verifier {
+    function verifyProof(bytes32, bytes calldata, bytes calldata) external pure {}
+}
+
 /// Test-only: the production index with its difficulty floor removed, so real competing branches can be mined
 /// inside a test (as T9 does with a low-difficulty relay). Every other rule is the production code.
 contract EasyZkIndex is ZkWujiIndex {
@@ -23,6 +27,36 @@ contract EasyZkIndex is ZkWujiIndex {
             0,
             Schedule(anchorHeight + 1, 4320, confirmations),
             Challenge(0, 0, 0)
+        )
+    {}
+
+    function targetOf(uint32 bits) public pure virtual override returns (uint256 target) {
+        uint256 size = bits >> 24;
+        uint256 word = bits & 0x007fffff;
+        target = size <= 3 ? word >> (8 * (3 - size)) : word << (8 * (size - 3));
+    }
+}
+
+contract ChallengeEasyZkIndex is ZkWujiIndex {
+    constructor(
+        ISP1Verifier v,
+        bytes memory anchor,
+        uint64 anchorHeight,
+        uint32[11] memory times,
+        uint64 confirmations,
+        uint256 bond
+    )
+        ZkWujiIndex(
+            v,
+            bytes32(uint256(1)),
+            RelayerRewards(address(0)),
+            anchor,
+            anchorHeight,
+            0,
+            times,
+            0,
+            Schedule(anchorHeight + 1, 4320, confirmations),
+            Challenge(1 hours, 1 hours, bond)
         )
     {}
 
@@ -329,5 +363,256 @@ contract ZkWujiReorgTest is Test {
         }
         local.freezeOnReorg(base, branch);
         assertTrue(local.frozen());
+    }
+
+    /// L1-02 regression: a single privately mined trailing orphan block stamped +30 hours ahead of a lagging
+    /// chain cannot jump seenTime to `now + 2h` and wake a halted pool or collapse seenMargin to 40.
+    function test_singleFutureOrphanCannotJumpSeenTimePastMtpLead() public {
+        bytes memory main = _chain(anchorHeader, ANCHOR + 1, 6, 1_000_000);
+        // Trailing 7th block is a privately mined orphan stamped 30 hours after the 6th block.
+        uint32 orphanTime = T0 + 6 * 600 + 30 hours;
+        vm.warp(orphanTime - 1 hours);
+        bytes memory orphan = _mine(_hash(_last(main)), orphanTime, 999_999);
+        idx.foldHeaders(bytes.concat(main, orphan), new address[](0));
+        assertEq(idx.seenHeight(), ANCHOR + 7);
+        assertLt(idx.seenTime(), orphanTime, "seenTime must be capped below the 1-block +30h jump");
+        // MTP of the 11-block window ending at ANCHOR+7 is T0 + 2*600; seenTime <= MTP + 3 hours.
+        assertEq(idx.seenTime(), T0 + 2 * 600 + 3 hours);
+    }
+
+    /// L1-05 regression: ZkWujiIndex supports segmented reorg sealing beyond MAX_REORG_HEADERS (800).
+    function test_segment801HeadersSealDeepReorgOnZkIndex() public {
+        EasyZkIndex deep = new EasyZkIndex(anchorHeader, ANCHOR, anchorTimes, 100);
+        (ZkWujiIndex.Continuity memory c, uint32[11] memory t, uint256 w) = deep.continuity();
+        bytes memory base = abi.encode(c, t, w);
+        bytes memory main = _chain(anchorHeader, ANCHOR + 1, 657, 1_000_000);
+        bytes memory b1 = new bytes(350 * 80);
+        bytes memory b2 = new bytes(350 * 80);
+        bytes memory b3 = new bytes(157 * 80);
+        for (uint256 i; i < b1.length; ++i) b1[i] = main[i];
+        for (uint256 i; i < b2.length; ++i) b2[i] = main[250 * 80 + i];
+        for (uint256 i; i < b3.length; ++i) b3[i] = main[500 * 80 + i];
+        deep.foldHeaders(b1, new address[](0));
+        deep.foldHeaders(b2, new address[](0));
+        deep.foldHeaders(b3, new address[](0));
+
+        bytes memory branch = _chain(anchorHeader, ANCHOR + 1, 801, 7_000_000);
+        vm.expectRevert(ZkWujiIndex.TooManyHeaders.selector);
+        deep.freezeOnReorg(base, branch);
+
+        bytes memory s1 = new bytes(256 * 80);
+        bytes memory s2 = new bytes(256 * 80);
+        bytes memory s3 = new bytes(256 * 80);
+        bytes memory s4 = new bytes(33 * 80);
+        for (uint256 i; i < s1.length; ++i) s1[i] = branch[i];
+        for (uint256 i; i < s2.length; ++i) s2[i] = branch[256 * 80 + i];
+        for (uint256 i; i < s3.length; ++i) s3[i] = branch[512 * 80 + i];
+        for (uint256 i; i < s4.length; ++i) s4[i] = branch[768 * 80 + i];
+
+        bytes memory proof = deep.beginReorg(base, s1);
+        proof = deep.extendReorg(proof, s2);
+        proof = deep.extendReorg(proof, s3);
+        proof = deep.extendReorg(proof, s4);
+        assertTrue(deep.isReorgProof(proof));
+        deep.freezeReorg(proof);
+        assertTrue(deep.frozen());
+    }
+
+    function _queueSealBatches(ChallengeEasyZkIndex pIdx, bytes memory main, uint256 bond)
+        internal
+        returns (bytes memory batch0Headers)
+    {
+        AcceptAllReorgVerifier v = AcceptAllReorgVerifier(address(pIdx.verifier()));
+        ChallengeEasyZkIndex ref = new ChallengeEasyZkIndex(v, anchorHeader, ANCHOR, anchorTimes, K, bond);
+        ref.foldHeaders(main, new address[](0));
+
+        // Honest headers for batch 0 (6 overlap headers from main + 10 new headers -> folds to ANCHOR + 64).
+        bytes memory extra = _chain(_last(main), ANCHOR + 61, 10, 2_222_000);
+        batch0Headers = new bytes(16 * 80);
+        for (uint256 i = 0; i < 6 * 80; ++i) batch0Headers[i] = main[54 * 80 + i];
+        for (uint256 i = 0; i < 10 * 80; ++i) batch0Headers[6 * 80 + i] = extra[i];
+        ref.foldHeaders(batch0Headers, new address[](0));
+
+        (ZkWujiIndex.Continuity memory s0, uint32[11] memory st0, uint256 sw0) = pIdx.continuity();
+        (ZkWujiIndex.Continuity memory s1, uint32[11] memory st1, uint256 sw1) = ref.continuity();
+
+        // Batch 0: proposed by 0x1001, disputed by 0x2001, backed by 0x3001 before freeze.
+        ZkWujiIndex.Journal memory j = ZkWujiIndex.Journal({
+            prevHash: s0.hash, prevHeight: s0.height, prevBits: s0.bits, prevTime: s0.time,
+            prevEpochStart: s0.epochStart, prevTimes: st0, prevU: s0.u, prevWork: sw0,
+            maxTime: uint32(block.timestamp), genesisHeight: ANCHOR + 1, checkpointInterval: 4320, confirmations: K,
+            newHash: s1.hash, newHeight: s1.height, newBits: s1.bits, newTime: s1.time,
+            newEpochStart: s1.epochStart, newTimes: st1, newU: s1.u, newWork: sw1,
+            checkpointHeights: new uint64[](0), checkpointU: new int64[](0)
+        });
+        vm.deal(address(0x1001), bond);
+        vm.prank(address(0x1001));
+        pIdx.foldProof{value: bond}(hex"00", abi.encode(j), new address[](0));
+        vm.deal(address(0x2001), bond);
+        vm.prank(address(0x2001));
+        pIdx.dispute{value: bond}(0, new address[](0));
+        vm.prank(address(0x3001));
+        pIdx.back(0, batch0Headers);
+
+        // Batch 1: proposed by 0x1002, disputed by 0x2002, left unbacked.
+        j.prevHash = s1.hash; j.prevHeight = s1.height; j.prevBits = s1.bits; j.prevTime = s1.time;
+        j.prevEpochStart = s1.epochStart; j.prevTimes = st1; j.prevU = s1.u; j.prevWork = sw1;
+        j.newHash = bytes32(uint256(0xB1)); j.newHeight = s1.height + 10; j.newTime = s1.time + 6000;
+        j.newU = s1.u + 5; j.newWork = sw1 + 10;
+        vm.deal(address(0x1002), bond);
+        vm.prank(address(0x1002));
+        pIdx.foldProof{value: bond}(hex"01", abi.encode(j), new address[](0));
+        vm.deal(address(0x2002), bond);
+        vm.prank(address(0x2002));
+        pIdx.dispute{value: bond}(1, new address[](0));
+
+        // Batch 2: proposed by 0x1003, undisputed.
+        j.prevHash = j.newHash; j.prevHeight = j.newHeight; j.prevTime = j.newTime;
+        j.prevU = j.newU; j.prevWork = j.newWork;
+        j.newHash = bytes32(uint256(0xB2)); j.newHeight += 10; j.newTime += 6000;
+        j.newU -= 3; j.newWork += 10;
+        vm.deal(address(0x1003), bond);
+        vm.prank(address(0x1003));
+        pIdx.foldProof{value: bond}(hex"02", abi.encode(j), new address[](0));
+    }
+
+    /// Cross-review regression: when a deep reorg seals ZkWujiIndex while pending batches exist (backed, disputed
+    /// unbacked, and undisputed), post-seal slashing paths are closed and cancelFrozen refunds every locked bond.
+    function test_sealWithPendingBatchesRefundsAllProverAndOpenDisputerBonds() public {
+        uint256 bond = 0.1 ether;
+        ChallengeEasyZkIndex pIdx =
+            new ChallengeEasyZkIndex(new AcceptAllReorgVerifier(), anchorHeader, ANCHOR, anchorTimes, K, bond);
+        (ZkWujiIndex.Continuity memory c0, uint32[11] memory t0, uint256 w0) = pIdx.continuity();
+        bytes memory anchorBase = abi.encode(c0, t0, w0);
+
+        bytes memory main = _chain(anchorHeader, ANCHOR + 1, 60, 1_000_000);
+        pIdx.foldHeaders(main, new address[](0));
+        assertEq(pIdx.lastHeight(), ANCHOR + 54);
+
+        vm.expectRevert(ZkWujiIndex.NotFrozen.selector);
+        pIdx.cancelFrozen(1);
+
+        bytes memory batch0Headers = _queueSealBatches(pIdx, main, bond);
+        assertEq(pIdx.owed(address(0x3001)), bond, "backer earned d1's bond before freeze");
+        assertEq(pIdx.pendingCount(), 3);
+        assertEq(address(pIdx).balance, 5 * bond);
+
+        // Deep reorg from anchor seals pIdx while all 3 pending batches are in the queue.
+        bytes memory branch = _chain(anchorHeader, ANCHOR + 1, 210, 7_000_000);
+        pIdx.freezeOnReorg(anchorBase, branch);
+        assertTrue(pIdx.frozen());
+
+        // Neither finalize nor post-seal dispute/back/reject/refute can slash or advance orphaned batches.
+        vm.warp(block.timestamp + 2 hours);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.finalize(3);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.back(1, batch0Headers);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.reject(1);
+        vm.expectRevert(ZkWujiIndex.IndexFrozen.selector);
+        pIdx.refute(1, batch0Headers, new address[](0));
+
+        // Drain the pending queue in bounded steps (1 + remainder).
+        assertEq(pIdx.cancelFrozen(1), 1);
+        assertEq(pIdx.pendingCount(), 2);
+        assertEq(pIdx.cancelFrozen(10), 2);
+        assertEq(pIdx.pendingCount(), 0);
+        assertEq(pIdx.cancelFrozen(10), 0);
+
+        // Continuity returns the finalized frozen state, and every locked bond is accounted for to the wei.
+        (ZkWujiIndex.Continuity memory endState,,) = pIdx.continuity();
+        assertEq(endState.height, ANCHOR + 54);
+        assertEq(pIdx.owed(address(0x3001)), bond);
+        assertEq(pIdx.owed(address(0x1001)), bond);
+        assertEq(pIdx.owed(address(0x2001)), 0);
+        assertEq(pIdx.owed(address(0x1002)), bond);
+        assertEq(pIdx.owed(address(0x2002)), bond);
+        assertEq(pIdx.owed(address(0x1003)), bond);
+
+        address[5] memory payees = [address(0x3001), address(0x1001), address(0x1002), address(0x2002), address(0x1003)];
+        for (uint256 i = 0; i < payees.length; ++i) {
+            vm.prank(payees[i]);
+            assertEq(pIdx.withdraw(), bond);
+        }
+        assertEq(address(pIdx).balance, 0, "zero bond ETH left locked in frozen contract");
+    }
+
+    function _fillMaxPendingBatches(ChallengeEasyZkIndex pIdx, uint256 bond) internal {
+        address[] memory toks = new address[](8);
+        for (uint256 t = 0; t < 8; ++t) {
+            toks[t] = address(uint160(0x9001 + t));
+        }
+        (ZkWujiIndex.Continuity memory s, uint32[11] memory st, uint256 sw) = pIdx.continuity();
+        ZkWujiIndex.Journal memory j = ZkWujiIndex.Journal({
+            prevHash: s.hash, prevHeight: s.height, prevBits: s.bits, prevTime: s.time,
+            prevEpochStart: s.epochStart, prevTimes: st, prevU: s.u, prevWork: sw,
+            maxTime: uint32(block.timestamp + 1 hours), genesisHeight: ANCHOR + 1, checkpointInterval: 4320,
+            confirmations: K, newHash: s.hash, newHeight: s.height, newBits: s.bits, newTime: s.time,
+            newEpochStart: s.epochStart, newTimes: st, newU: s.u, newWork: sw,
+            checkpointHeights: new uint64[](0), checkpointU: new int64[](0)
+        });
+        for (uint256 i = 0; i < 32; ++i) {
+            j.prevHash = j.newHash; j.prevHeight = j.newHeight; j.prevTime = j.newTime;
+            j.prevU = j.newU; j.prevWork = j.newWork;
+            j.newHash = bytes32(uint256(0xC000 + i)); j.newHeight += 10; j.newTime += 600;
+            j.newU += 1; j.newWork += 10;
+            vm.deal(address(uint160(0x4000 + i)), bond);
+            vm.prank(address(uint160(0x4000 + i)));
+            pIdx.foldProof{value: bond}(hex"00", abi.encode(j), toks);
+            vm.deal(address(uint160(0x5000 + i)), bond);
+            vm.prank(address(uint160(0x5000 + i)));
+            pIdx.dispute{value: bond}(i, toks);
+        }
+        j.prevHash = j.newHash; j.prevHeight = j.newHeight; j.prevTime = j.newTime;
+        j.prevU = j.newU; j.prevWork = j.newWork;
+        j.newHash = bytes32(uint256(0xDEAD)); j.newHeight += 10; j.newTime += 600;
+        bytes memory overflowJournal = abi.encode(j);
+        vm.deal(address(0x4999), bond);
+        vm.prank(address(0x4999));
+        vm.expectRevert(ZkWujiIndex.QueueFull.selector);
+        pIdx.foldProof{value: bond}(hex"00", overflowJournal, toks);
+    }
+
+    /// Round-2 cross-review regression: a completely full MAX_PENDING (32) queue with 32 distinct cold provers,
+    /// 32 distinct cold open disputers, and maximum 8-token reward lists drains safely in two 16-batch keeper calls
+    /// well within cancelFrozenGas(16) = 4,500,000 pre-refund gas per transaction, leaving 0 wei locked.
+    function test_sealWithFull32BatchQueueDrainsWithinKeeperGasBudget() public {
+        uint256 bond = 0.1 ether;
+        ChallengeEasyZkIndex pIdx =
+            new ChallengeEasyZkIndex(new AcceptAllReorgVerifier(), anchorHeader, ANCHOR, anchorTimes, K, bond);
+        (ZkWujiIndex.Continuity memory c0, uint32[11] memory t0, uint256 w0) = pIdx.continuity();
+        bytes memory anchorBase = abi.encode(c0, t0, w0);
+
+        pIdx.foldHeaders(_chain(anchorHeader, ANCHOR + 1, 60, 1_000_000), new address[](0));
+        _fillMaxPendingBatches(pIdx, bond);
+        assertEq(pIdx.pendingCount(), 32);
+        assertEq(address(pIdx).balance, 64 * bond);
+
+        // Seal the index via deep reorg while all 32 batches (64 locked bonds) sit in the queue.
+        pIdx.freezeOnReorg(anchorBase, _chain(anchorHeader, ANCHOR + 1, 210, 7_000_000));
+        assertTrue(pIdx.frozen());
+
+        // Drain in two 16-batch chunks matching zk-keeper CANCEL_FROZEN_BATCH = 16, cancelFrozenGas(16) = 4,500,000.
+        uint256 keeperGasBudget = 500_000 + 250_000 * 16; // 4,500,000 (>1.5M spare above 2.88M pre-refund + 21k intrinsic)
+        uint256 g0 = gasleft();
+        assertEq(pIdx.cancelFrozen(16), 16);
+        uint256 usedFirst16 = g0 - gasleft();
+        assertEq(pIdx.pendingCount(), 16);
+        assertLt(usedFirst16 + 1_500_000, keeperGasBudget, "first 16-batch drain retains >1.5M pre-refund gas headroom");
+
+        uint256 g1 = gasleft();
+        assertEq(pIdx.cancelFrozen(16), 16);
+        uint256 usedSecond16 = g1 - gasleft();
+        assertEq(pIdx.pendingCount(), 0);
+        assertLt(usedSecond16 + 1_500_000, keeperGasBudget, "second 16-batch drain retains >1.5M pre-refund gas headroom");
+
+        for (uint256 i = 0; i < 32; ++i) {
+            vm.prank(address(uint160(0x4000 + i)));
+            assertEq(pIdx.withdraw(), bond);
+            vm.prank(address(uint160(0x5000 + i)));
+            assertEq(pIdx.withdraw(), bond);
+        }
+        assertEq(address(pIdx).balance, 0, "all 64 bonds withdrawn to 0 wei");
     }
 }

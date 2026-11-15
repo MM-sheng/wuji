@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { step } from './bitcoin.mjs';
 import { markFromHeaders } from './accounts.mjs';
-import { HeaderHistory, headersFromFoldCalldata, recoverFoldTransaction } from './header-history.mjs';
+import { HeaderHistory, headersFromFoldCalldata, recoverFoldTransaction, recoverFoldLogs, FOLD_EVENT_TOPICS } from './header-history.mjs';
 
 // Synthetic headers test hash authentication and branch choice; production PoW is the index's responsibility.
 function branch(salt, prefix = []) {
@@ -161,4 +161,22 @@ test('real mainnet fixture headers are restored byte for byte from an authentica
   history.putBatch(headers);
   const neverFetch = { at: async () => { throw Error('source has reorganized'); } };
   assert.equal(await history.headersFor(neverFetch, 798340, 798347, '0x' + step(headers[11]).internalHash), '0x' + headers.slice(4).join(''));
+});
+
+test('recoverFoldLogs automatically scans Fold logs and restores orphan headers without manual tx hashes', async t => {
+  const history = archive(t), input = calldata(concat(old, 1, 20));
+  const txHash = '0x' + 'ab'.repeat(32), index = '0x' + 'cd'.repeat(20);
+  const rpc = async (method, args) => {
+    if (method === 'eth_blockNumber') return '0x100';
+    if (method === 'eth_getLogs') return [{
+      transactionHash: txHash,
+      topics: [FOLD_EVENT_TOPICS[0], '0x' + w(1), '0x' + w(14)],
+    }];
+    if (method === 'eth_getTransactionByHash') return { hash: txHash, to: index, input };
+    if (method === 'eth_getTransactionReceipt') return { transactionHash: txHash, status: '0x1' };
+    throw Error('unexpected ' + method);
+  };
+  const n = await recoverFoldLogs({ history, rpc, index, minHeight: 5, maxHeight: 10, lookbackBlocks: 500, chunkBlocks: 300 });
+  assert.equal(n, 20);
+  assert.equal(await history.headersFor(source(replacement), 5, 10, anchor(old, 10)), concat(old, 5, 10));
 });

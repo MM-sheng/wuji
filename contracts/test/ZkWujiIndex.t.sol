@@ -59,7 +59,8 @@ contract ZkWujiIndexTest is Test {
 
     /// Submit a proof and let its challenge window pass undisputed.
     function _proveAndFinalize(ZkWujiIndex target, ZkWujiIndex.Journal memory j) internal {
-        target.foldProof(hex"c0ffee", abi.encode(j), new address[](0));
+        uint256 bond = target.DISPUTE_BOND();
+        target.foldProof{value: bond}(hex"c0ffee", abi.encode(j), new address[](0));
         vm.warp(block.timestamp + target.CHALLENGE_WINDOW());
         target.finalize(type(uint256).max);
     }
@@ -253,8 +254,9 @@ contract ZkWujiIndexTest is Test {
     function test_aFailingVerifierCannotAdvanceTheIndex() public {
         ZkWujiIndex strict = _deploy(new RejectingVerifier());
         ZkWujiIndex.Journal memory j = _journal(strict, 0, 100);
+        uint256 bond = strict.DISPUTE_BOND();
         vm.expectRevert("bad proof");
-        strict.foldProof(hex"00", abi.encode(j), new address[](0));
+        strict.foldProof{value: bond}(hex"00", abi.encode(j), new address[](0));
         assertEq(strict.lastHeight(), anchorHeight, "state unchanged");
         // the escape hatch still works with a broken prover
         strict.foldHeaders(_slice(0, 100), new address[](0));
@@ -341,8 +343,9 @@ contract ZkWujiIndexTest is Test {
         ZkWujiIndex proofIdx = _deploy(new AcceptingVerifier());
         ZkWujiIndex.Journal memory j = _journal(proofIdx, 0, 250);
         bytes memory pv = abi.encode(j);
+        uint256 bond = proofIdx.DISPUTE_BOND();
         g = gasleft();
-        proofIdx.foldProof(hex"c0ffee", pv, new address[](0));
+        proofIdx.foldProof{value: bond}(hex"c0ffee", pv, new address[](0));
         uint256 proofPath = g - gasleft();
         vm.warp(block.timestamp + proofIdx.CHALLENGE_WINDOW());
         g = gasleft();
@@ -351,5 +354,19 @@ contract ZkWujiIndexTest is Test {
         emit log_named_uint("foldProof gas for the same 244 heights (verifier excluded)", proofPath);
         emit log_named_uint("finalize gas after the window", finalizeGas);
         assertLt(proofPath + finalizeGas, headerPath / 4, "the proof path must be far cheaper");
+    }
+
+    function test_rejectsBadVersionAndSupportsRefreshSeen() public {
+        bytes memory v3 = _slice(0, 40);
+        v3[0] = 0x03; v3[1] = 0; v3[2] = 0; v3[3] = 0;
+        vm.expectRevert(ZkWujiIndex.BadVersion.selector);
+        idx.foldHeaders(v3, new address[](0));
+
+        ZkWujiIndex viaProof = _deploy(new AcceptingVerifier());
+        ZkWujiIndex.Journal memory j = _journal(viaProof, 0, 100);
+        _proveAndFinalize(viaProof, j);
+        assertEq(viaProof.seenHeight(), genesis + 93, "proof journal stops at folded height");
+        viaProof.refreshSeen(_slice(94, 6));
+        assertEq(viaProof.seenHeight(), genesis + 99, "refreshSeen advances seenHeight to live tip");
     }
 }

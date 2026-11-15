@@ -24,7 +24,7 @@ import { watch } from './zk-watcher.mjs';
 import { maintainPool } from './accounts.mjs';
 import { loadStates, planSeal, saveState } from './seal.mjs';
 import { decodeReorgProof, planSegmentedSeal, submitReorgStep } from './seal-segments.mjs';
-import { HeaderHistory, recoverFoldTransaction } from './header-history.mjs';
+import { HeaderHistory, recoverFoldTransaction, recoverFoldLogs } from './header-history.mjs';
 import { keeperHealth, keeperCycle } from './keeper-health.mjs';
 export { decodeContinuity };
 
@@ -49,15 +49,22 @@ const MIN_FOLD = Number(env.ZK_MIN_FOLD || 36);
 const MAX_FOLD = Number(env.ZK_MAX_FOLD || 250);
 // Every transaction must stay under the 2^24 per-transaction gas cap (EIP-7825); ≈ 18.7k gas per header.
 const headerGas = n => Math.min(16_000_000, 200_000 + 22_000 * n);
+// Draining MAX_PENDING (32) frozen batches uses up to ~180k pre-refund gas/batch when 8-token lists and cold
+// owed[] slots are populated; unwind in 16-batch chunks with 250k gas/batch + 500k base (4.5M for 16).
+export const CANCEL_FROZEN_BATCH = 16;
+export const cancelFrozenGas = n => Math.min(16_000_000, 500_000 + 250_000 * n);
 // Relayer-bounty tokens (sorted, unique, ≤ 8) credited to this keeper for every height it folds.
 const REWARD_TOKENS = (env.ZK_REWARD_TOKENS || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean).sort();
 if (REWARD_TOKENS.some(t => !/^0x[0-9a-f]{40}$/.test(t)) || new Set(REWARD_TOKENS).size !== REWARD_TOKENS.length || REWARD_TOKENS.length > 8) {
   throw Error('ZK_REWARD_TOKENS must be up to 8 distinct token addresses');
 }
 const tokens = `[${REWARD_TOKENS.join(',')}]`;
-// RelayerRewards.credit refuses more than MAX_HEIGHTS (256) heights per call when tokens are listed, which would
-// revert the whole fold: fail at start rather than on every fold.
-if (REWARD_TOKENS.length && MAX_FOLD > 256) throw Error('ZK_MAX_FOLD above 256 cannot collect bounties (RelayerRewards.MAX_HEIGHTS)');
+// RelayerRewards.credit refuses more than MAX_HEIGHTS heights per call when tokens are listed; cap default fold size.
+if (REWARD_TOKENS.length && MAX_FOLD > 512) throw Error('ZK_MAX_FOLD above 512 cannot collect bounties');
+const FEE_ROUTER = (env.FEE_ROUTER || '').trim().toLowerCase();
+if (FEE_ROUTER && !/^0x[0-9a-f]{40}$/.test(FEE_ROUTER)) throw Error('FEE_ROUTER must be an address');
+const ROUTE_EVERY_HEIGHTS = Number(env.ROUTE_EVERY_HEIGHTS || 144);
+const CLAIM_EVERY_HEIGHTS = Number(env.CLAIM_EVERY_HEIGHTS || 144);
 const HOST = env.ZK_HOST || path.join(root, 'zk/script/target/release/wuji-zk-script');
 const WORK = env.ZK_WORK_DIR || path.join(root, 'indexer/data/zk');
 if (!RPC || !CHAIN_ID || !/^0x[0-9a-f]{40}$/.test(INDEX)) throw Error('need RPC, CHAIN_ID and ZK_INDEX');
@@ -83,6 +90,44 @@ function prove(inputFile, outFile) {
 }
 
 let immut, lastProgress = Date.now(), lastHeight = -1, frozenLogged = false;
+let lastRouteHeight = 0, lastClaimHeight = 0;
+
+/// Route accrued FeeRouter balances into RelayerRewards and claim earned keeper bounties.
+export async function maintainRewards(currentHeight = 0) {
+  if (!REWARD_TOKENS.length && !FEE_ROUTER) return [];
+  const rewardsWord = await call(sel('rewards()')).catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
+  const rewardsAddr = '0x' + rewardsWord.slice(-40).toLowerCase();
+  const hasRewards = !/^0x0{40}$/.test(rewardsAddr);
+  const actions = [];
+  if (FEE_ROUTER && currentHeight - lastRouteHeight >= ROUTE_EVERY_HEIGHTS) {
+    lastRouteHeight = currentHeight;
+    for (const token of REWARD_TOKENS) {
+      try {
+        const bal = BigInt(await rpc('eth_call', [{ to: token, data: sel('balanceOf(address)') + uint(BigInt(FEE_ROUTER)) }, 'latest']));
+        if (bal > 0n) {
+          const tx = await chain.sendTo(FEE_ROUTER, 'route(address)', 700_000, [token]);
+          log('route fees', token, bal.toString(), tx.hash);
+          actions.push({ action: 'route', token, hash: tx.hash });
+        }
+      } catch (e) { if (e.rpcTransportError) throw e; log('fee route:', e.message); }
+    }
+  }
+  if (hasRewards && REWARD_TOKENS.length && currentHeight - lastClaimHeight >= CLAIM_EVERY_HEIGHTS) {
+    lastClaimHeight = currentHeight;
+    const worker = chain.senderAddress();
+    for (const token of REWARD_TOKENS) {
+      try {
+        const amt = BigInt(await rpc('eth_call', [{ to: rewardsAddr, data: sel('claimable(address,address)') + uint(BigInt(token)) + uint(BigInt(worker)) }, 'latest']));
+        if (amt > 0n) {
+          const tx = await chain.sendTo(rewardsAddr, 'claim(address)', 300_000, [token]);
+          log('claim bounty', token, amt.toString(), tx.hash);
+          actions.push({ action: 'claim', token, amount: amt.toString(), hash: tx.hash });
+        }
+      } catch (e) { if (e.rpcTransportError) throw e; log('bounty claim:', e.message); }
+    }
+  }
+  return actions;
+}
 // Finalized states seen on chain, kept so a deep reorg can be sealed from one of them (seal.mjs).
 const STATES = path.join(WORK, `sealable-states-${INDEX}.json`);
 const REORG_PROOF = path.join(WORK, `reorg-proof-${INDEX}.json`);
@@ -97,28 +142,74 @@ export async function round(source) {
     try { return BigInt(await call(sel(sig))); }
     catch(e) { if(e.rpcReadError||e.rpcTransportError)throw e;return fallback; }
   };
-  immut ||= {
-    genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
-    interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
-    confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
-    maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
-    maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
-    headerOnly: (await optional('verifier()', 0n)) === 0n,
-    margin: Number(await optional('REORG_MARGIN()', 144n)),
-    maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
-    maxReorgSegmentHeaders: Number(await optional('MAX_REORG_SEGMENT_HEADERS()', 0n)),
-  };
-  // Rule 3 sealed the index: nothing advances any more; pools exit through maintainAccounts (freezePool).
+  if (!immut) {
+    let maxRewardHeights = 0;
+    if (REWARD_TOKENS.length) {
+      const rewardsWord = await call(sel('rewards()')).catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
+      const rewardsAddr = '0x' + rewardsWord.slice(-40).toLowerCase();
+      if (!/^0x0{40}$/.test(rewardsAddr)) {
+        const mh = await rpc('eth_call', [{ to: rewardsAddr, data: sel('MAX_HEIGHTS()') }, 'latest'])
+          .catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x100'; });
+        maxRewardHeights = Number(BigInt(mh));
+        if (maxRewardHeights > 0 && MAX_FOLD > maxRewardHeights) {
+          log(`clamping ZK_MAX_FOLD (${MAX_FOLD}) to on-chain RelayerRewards.MAX_HEIGHTS (${maxRewardHeights})`);
+        }
+      }
+    }
+    immut = {
+      genesis: Number(BigInt(await call(sel('GENESIS_HEIGHT()')))),
+      interval: Number(BigInt(await call(sel('CHECKPOINT_INTERVAL()')))),
+      confirmations: Number(BigInt(await call(sel('CONFIRMATIONS()')))),
+      maxHeaders: Number(BigInt(await call(sel('MAX_HEADERS()')))),
+      maxProofHeaders: Number(await optional('MAX_PROOF_HEADERS()', 0n)),
+      headerOnly: (await optional('verifier()', 0n)) === 0n,
+      bond: await optional('DISPUTE_BOND()', 0n),
+      margin: Number(await optional('REORG_MARGIN()', 144n)),
+      maxReorgHeaders: Number(await optional('MAX_REORG_HEADERS()', 800n)),
+      maxReorgSegmentHeaders: Number(await optional('MAX_REORG_SEGMENT_HEADERS()', 0n)),
+      maxRewardHeights,
+    };
+  }
+  const rewardHeaderCap = REWARD_TOKENS.length && immut.maxRewardHeights > 0 ? immut.confirmations + immut.maxRewardHeights : Infinity;
+  // Rule 3 sealed the index: nothing advances any more; unwind any pending proof bonds, pools exit via maintainAccounts.
   if ((await optional('frozen()', 0n)) === 1n) {
+    if (!immut.headerOnly) {
+      let frozenPending = Number(await optional('pendingCount()', 0n));
+      while (frozenPending > 0) {
+        const n = Math.min(frozenPending, CANCEL_FROZEN_BATCH);
+        await chain.simulate(INDEX, 'cancelFrozen(uint256)(uint256)', String(n));
+        const ctx = await send('cancelFrozen(uint256)', cancelFrozenGas(n), String(n));
+        log(`cancelFrozen(${n}) gas ${ctx.gas} ${ctx.hash}`);
+        const left = Number(await optional('pendingCount()', 0n));
+        if (left >= frozenPending) break;
+        frozenPending = left;
+      }
+      const worker = chain.senderAddress();
+      const owedWord = await call(sel('owed(address)') + uint(BigInt(worker)))
+        .catch(e => { if (e.rpcReadError || e.rpcTransportError) throw e; return '0x0'; });
+      const owed = BigInt(owedWord);
+      if (owed > 0n) {
+        await chain.simulate(INDEX, 'withdraw()(uint256)');
+        const wtx = await send('withdraw()', 200_000);
+        log(`withdraw frozen bond ${owed} gas ${wtx.gas} ${wtx.hash}`);
+      }
+    }
     if (!frozenLogged) log('index is frozen (a deep reorg was sealed); nothing to fold');
     frozenLogged = true;
     return { action: 'frozen' };
   }
   // Batches past their challenge window become what consumers read; anyone may do this, so the keeper does.
-  const pending = Number(await optional('pendingCount()', 0n));
+  let pending = Number(await optional('pendingCount()', 0n));
   if (pending > 0 && BigInt(await call(sel('finalize(uint256)') + uint(8))) > 0n) {
-    const tx = await send('finalize(uint256)', 1_500_000, '8');
+    const tx = await send('finalize(uint256)', 4_500_000, '8');
     log(`finalize gas ${tx.gas} ${tx.hash}`);
+    pending = Number(await optional('pendingCount()', 0n));
+    const worker = chain.senderAddress();
+    const owed = BigInt(await call(sel('owed(address)') + uint(BigInt(worker))));
+    if (owed > 0n) {
+      const wtx = await send('withdraw()', 200_000);
+      log(`withdraw prover bond ${owed} gas ${wtx.gas} ${wtx.hash}`);
+    }
   }
   // Never prove on top of a pending batch that does not match the chain: that proof would be removed with
   // it. (A forgery claiming a real hash with a wrong U still links, so the header check below cannot tell.)
@@ -131,7 +222,8 @@ export async function round(source) {
   }
   const raw = await call(sel('continuity()'));
   const start = decodeContinuity(raw);
-  if (immut.headerOnly) {
+  // Save finalized states and check for sealable deep reorgs on both header-only indexes and idle ZkWujiIndex queues.
+  if (immut.headerOnly || pending === 0) {
     saveState(STATES, raw);
     const timed = { tip: () => within(source.tip(), 'Bitcoin tip'), at: h => within(source.at(h), `Bitcoin header ${h}`) };
     const planning = { tip: start, states: loadStates(STATES), source: timed, confirmations: immut.confirmations, margin: immut.margin };
@@ -167,6 +259,7 @@ export async function round(source) {
       return { ...plan, action: 'reorg-wait' };
     }
   }
+  if (REWARD_TOKENS.length) await maintainRewards(start.height);
   if (start.height !== lastHeight) { lastHeight = start.height; lastProgress = Date.now(); }
   const tip = await within(source.tip(), 'Bitcoin tip');
   const available = tip - start.height;
@@ -190,16 +283,26 @@ export async function round(source) {
     if (available <= immut.confirmations || (available < immut.confirmations + MIN_FOLD && waited < MAX_WAIT_MIN)) {
       return { action: 'wait', height: start.height, available };
     }
-    const n = Math.min(available, immut.confirmations + MAX_FOLD, immut.maxHeaders);
+    const n = Math.min(available, immut.confirmations + MAX_FOLD, immut.maxHeaders, rewardHeaderCap);
     const headers = await fetchHeaders(n);
     const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.join(''), tokens);
     log(`foldHeaders ${n} headers (folds ${n - immut.confirmations}) gas ${tx.gas} ${tx.hash}`);
     return { action: 'headers', ...tx, headers: n };
   }
   if (available <= immut.confirmations || (available < MIN_BATCH && waited < MAX_WAIT_MIN)) {
+    if (!immut.headerOnly && pending === 0 && available > 0) {
+      const seenTime = Number(await optional('seenTime()', 0n));
+      if (seenTime > 0 && Math.floor(Date.now() / 1000) - seenTime > 12 * 3600) {
+        const tailCount = Math.min(available, immut.maxHeaders);
+        const tail = await fetchHeaders(tailCount);
+        const tx = await send('refreshSeen(bytes)', headerGas(tailCount), '0x' + tail.join(''));
+        log(`refreshSeen ${tailCount} headers gas ${tx.gas} ${tx.hash}`);
+        return { action: 'refresh-seen', ...tx, headers: tailCount };
+      }
+    }
     return { action: 'wait', height: start.height, available };
   }
-  const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders);
+  const count = Math.min(available, MAX_BATCH, immut.maxProofHeaders, rewardHeaderCap);
   const headers = await fetchHeaders(count);
   const input = {
     start, headers: '0x' + headers.join(''),
@@ -214,7 +317,7 @@ export async function round(source) {
   try {
     const p = await prove(inFile, outFile);
     log(`proved in ${p.seconds.toFixed(0)} s, folds to ${p.newHeight}`);
-    const tx = await send('foldProof(bytes,bytes,address[])', 1_500_000, p.proof, p.journal, tokens);
+    const tx = await chain.send('foldProof(bytes,bytes,address[])', 1_500_000, [p.proof, p.journal, tokens], immut.bond);
     log(`foldProof ${tag} gas ${tx.gas} ${tx.hash}`);
     return { action: 'proof', ...tx, headers: count, newHeight: p.newHeight };
   } catch (e) {
@@ -222,7 +325,7 @@ export async function round(source) {
     if (!FALLBACK) throw e;
     // The header path runs only from the finalized state; while batches are pending it would revert.
     if (pending > 0) throw Error('proof path failed with batches pending; header fallback waits for them');
-    const n = Math.min(count, immut.maxHeaders);
+    const n = Math.min(count, immut.maxHeaders, rewardHeaderCap);
     const tx = await send('foldHeaders(bytes,address[])', headerGas(n), '0x' + headers.slice(0, n).join(''), tokens);
     log(`fallback foldHeaders ${n} headers gas ${tx.gas} ${tx.hash}`);
     return { action: 'headers', ...tx, headers: n };
@@ -246,7 +349,20 @@ export async function maintainAccounts(source, pools = ACCOUNTS) {
       log('restored', n, 'historical headers from public fold', transactionHash);
     } catch (e) { log('header recovery:', e.message); }
   }
-  const headersFor = (from, to, anchorHash) => headerHistory.headersFor(source, from, to, anchorHash, within);
+  const headersFor = async (from, to, anchorHash) => {
+    try {
+      return await headerHistory.headersFor(source, from, to, anchorHash, within);
+    } catch (e) {
+      if (!/historical Bitcoin header unavailable/.test(String(e?.message))) throw e;
+      const n = await recoverFoldLogs({
+        history: headerHistory, index: INDEX, minHeight: from, maxHeight: to, seen: recoveredHeaderTransactions,
+        lookbackBlocks: Number(env.ZK_HEADER_LOOKBACK_BLOCKS || 250_000),
+        rpc: (method, args) => within(rpc(method, args), 'historical fold log scan'),
+      });
+      if (n > 0) log('auto-recovered', n, 'historical headers from on-chain Fold logs');
+      return headerHistory.headersFor(source, from, to, anchorHash, within);
+    }
+  };
   for (const pool of pools) {
     try {
       const r = await maintainPool({

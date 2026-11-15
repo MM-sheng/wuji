@@ -5,6 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {WujiIndex} from "./WujiIndex.sol";
 import {SeriesToken, SeriesTokenDeployer} from "./SeriesToken.sol";
 
@@ -61,6 +62,7 @@ contract WujiVault is ReentrancyGuard {
         require(address(asset_).code.length > 0, "asset not contract");
         require(address(index_).code.length > 0, "index not contract");
         require(notional_ >= 1e6, "notional too small");
+        require(notional_ <= type(uint128).max, "notional too large");
         require(treasury_ != address(0), "treasury");
         asset = asset_;
         index = index_;
@@ -73,7 +75,7 @@ contract WujiVault is ReentrancyGuard {
         index_.fold(256);
         uint64 boundary = index_.nextCheckpointHeight();
         require(boundary > index_.lastHeight(), "index stale: fold first");
-        _open(index_.S(), index_.GENESIS_HEIGHT(), boundary);
+        _open(index_.S(), index_.lastHeight() + 1, boundary);
     }
 
     // ---------------------------------------------------------------- views
@@ -90,14 +92,15 @@ contract WujiVault is ReentrancyGuard {
     function yangShare() public view returns (uint256) {
         Series storage s = series[currentId()];
         if (s.settled) return s.yangShare;
-        int256 s1 = index.checkpointed(s.settlementHeight) ? index.checkpointS(s.settlementHeight) : index.S();
-        return _share(s.s0, s1);
+        if (index.checkpointed(s.settlementHeight)) return _share(s.s0, index.checkpointS(s.settlementHeight));
+        if (index.frozen()) return WAD / 2;
+        return _share(s.s0, index.S());
     }
 
     /// @notice Gross settlement allocations, NOT market prices or early single-sided redemption quotes.
     function values() external view returns (uint256 yangValue, uint256 yinValue) {
         uint256 sh = yangShare();
-        yangValue = NOTIONAL * sh / WAD;
+        yangValue = Math.mulDiv(NOTIONAL, sh, WAD);
         yinValue = NOTIONAL - yangValue;
     }
 
@@ -109,7 +112,7 @@ contract WujiVault is ReentrancyGuard {
             uint256 ns = s.yin.totalSupply();
             if (!s.settled) {
                 // open series only ever holds matched pairs
-                total += ys * NOTIONAL / WAD;
+                total += Math.mulDiv(ys, NOTIONAL, WAD);
             } else {
                 total += _value(ys, s.yangShare) + _value(ns, WAD - s.yangShare);
             }
@@ -144,9 +147,9 @@ contract WujiVault is ReentrancyGuard {
         Series storage s = series[id];
         s.yang.burn(msg.sender, pairs);
         s.yin.burn(msg.sender, pairs);
-        uint256 collateral = pairs * NOTIONAL / WAD;
+        uint256 collateral = Math.mulDiv(pairs, NOTIONAL, WAD);
         uint256 fee = collateral * FEE_BPS / 10_000;
-        asset.safeTransfer(msg.sender, collateral - fee);
+        if (collateral > fee) asset.safeTransfer(msg.sender, collateral - fee);
         if (fee > 0) asset.safeTransfer(treasury, fee);
         emit RedeemedPair(id, msg.sender, pairs, collateral, fee);
     }
@@ -248,11 +251,11 @@ contract WujiVault is ReentrancyGuard {
 
     /// @dev collateral owed for `amount` (wad) tokens worth `share` (wad) of NOTIONAL each; rounds down
     function _value(uint256 amount, uint256 share) internal view returns (uint256) {
-        return amount * NOTIONAL * share / (WAD * WAD);
+        return Math.mulDiv(amount, NOTIONAL * share, WAD * WAD);
     }
 
     function _ceilMul(uint256 pairs, uint256 notional) internal pure returns (uint256) {
-        return (pairs * notional + WAD - 1) / WAD;
+        return Math.mulDiv(pairs, notional, WAD, Math.Rounding.Ceil);
     }
 
     function _ceilBps(uint256 x) internal pure returns (uint256) {
@@ -263,8 +266,17 @@ contract WujiVault is ReentrancyGuard {
     function _symbolOf(address a) internal view returns (string memory) {
         (bool ok, bytes memory r) = a.staticcall(abi.encodeWithSelector(IERC20Metadata.symbol.selector));
         if (ok && r.length >= 64) {
-            string memory sym = abi.decode(r, (string));
-            if (bytes(sym).length > 0 && bytes(sym).length <= 11) return sym;
+            uint256 off;
+            uint256 len;
+            assembly ("memory-safe") {
+                off := mload(add(r, 32))
+                len := mload(add(r, 64))
+            }
+            if (off == 32 && len > 0 && len <= 11 && r.length >= 64 + len) {
+                bytes memory sym = new bytes(len);
+                assembly ("memory-safe") { mcopy(add(sym, 32), add(r, 96), len) }
+                return string(sym);
+            }
         }
         return "TOKEN";
     }

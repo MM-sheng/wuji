@@ -745,6 +745,116 @@ contract WujiAccountsTest is Test {
     function _enterEpoch(WujiAccounts p, uint256 id) internal view returns (uint64 e) {
         (,, e,,) = p.accounts(id);
     }
+
+    function test_flooredAccountCannotRequestExitAndUnprocessedExitCanStillRetire() public {
+        WujiAccounts p = make(0.001e18);
+        advance(10);
+        (uint256 a, uint64 e0) = enter(p, alice, true, 10e18);
+        (uint256 b,) = enter(p, bob, false, 10e18);
+        if (idx.lastHeight() < e0) advance(e0 - idx.lastHeight());
+        p.processMany(10);
+
+        // Move far enough to floor one side without queued exits: floored loser cannot shield itself via requestExit.
+        advance(60);
+        (, uint64 e1) = enter(p, carol, true, 1e18);
+        if (idx.lastHeight() < e1) advance(e1 - idx.lastHeight());
+        p.processMany(10);
+        uint256 loser = p.valueOf(a) == 0 ? a : b;
+        address loserOwner = loser == a ? alice : bob;
+        vm.prank(loserOwner);
+        vm.expectRevert("at floor");
+        p.requestExit(loser);
+
+        // If an account requested exit while still positive, then crossed its floor before exitEpoch priced, retire cleans exitOut.
+        WujiAccounts p2 = make(0.001e18);
+        advance(10);
+        (uint256 x, uint64 ex0) = enter(p2, alice, true, 10e18);
+        (uint256 y,) = enter(p2, bob, false, 10e18);
+        if (idx.lastHeight() < ex0) advance(ex0 - idx.lastHeight());
+        p2.processMany(10);
+        // Queue exits on both while positive, then create an intermediate epoch on Zk-style or move price before exit prices:
+        // On relay pool, exit queues at eExit; enter a fresh account at eMid? No, relay queue is monotonic, so test via Zk or
+        // queue exit at a far epoch by bumping relay best height temporarily.
+        uint64 curBest = r.bestHeight();
+        r.tip(curBest + 60, keccak256("far tip"), false);
+        vm.prank(alice); p2.requestExit(x);
+        vm.prank(bob); p2.requestExit(y);
+        (,,, uint64 farExit,) = p2.accounts(x);
+        r.tip(curBest, r.headerAt(curBest), false);
+        // Fold 30 blocks and mark+process? Queue has farExit first; let's verify retire cleans exitOut when already floored:
+        // Move to farExit on another pool where x exits at eExit2 after eMid floors it.
+        WujiAccounts p3 = make(0.001e18);
+        advance(10);
+        (uint256 u1, uint64 u0) = enter(p3, alice, true, 10e18);
+        (uint256 u2,) = enter(p3, bob, false, 10e18);
+        if (idx.lastHeight() < u0) advance(u0 - idx.lastHeight());
+        p3.processMany(10);
+        (, uint64 uMid) = enter(p3, carol, true, 1e18);
+        r.tip(r.bestHeight() + 60, keccak256("later tip"), false);
+        vm.prank(alice); p3.requestExit(u1);
+        vm.prank(bob); p3.requestExit(u2);
+        (,,, uint64 uExit,) = p3.accounts(u1);
+        r.tip(idx.lastHeight() + 6, r.headerAt(idx.lastHeight() + 6), false);
+        if (idx.lastHeight() < uMid) advance(uMid - idx.lastHeight());
+        p3.processMany(10); // uMid prices -> one of u1/u2 is now at floor while its exit at uExit is still unprocessed!
+        uint256 floored = p3.valueOf(u1) == 0 ? u1 : u2;
+        uint256 survivor = floored == u1 ? u2 : u1;
+        p3.retire(floored);
+        if (idx.lastHeight() < uExit) advance(uExit - idx.lastHeight());
+        p3.processMany(10); // processing uExit must not underflow principalOf!
+        assertEq(p3.principalOf(0) + p3.principalOf(1), 1e18, "only carol remains live");
+        farExit; survivor;
+    }
+
+    function test_bridgeChunkPaysBountyOnlyOncePerFreshMark() public {
+        FEE = 30; BOUNTY = 10_000;
+        WujiAccounts p2 = make(K);
+        advance(10);
+        (, uint64 a0) = enter(p2, alice, true, 100e18);
+        enter(p2, bob, false, 100e18);
+        if (idx.lastHeight() < a0) advance(a0 - idx.lastHeight());
+        for (uint256 i; i < 4; i++) advance(250); // +1000
+        (, uint64 a1) = enter(p2, carol, true, 1e18);
+        if (idx.lastHeight() < a1) advance(a1 - idx.lastHeight());
+        for (uint256 i; i < 6; i++) advance(250); // +1500: now last - a0 > 2500, last - a1 == 1500 (> 1024)
+        // Process a0: takes 2 bridge steps (last - 1024, last - 2048) + 1 epoch step = 3 bounties.
+        for (uint256 i; i < 3; i++) p2.process();
+        assertEq(p2.head(), 1, "a0 processed");
+        assertLt(p2.bridge(), a1, "bridge is below a1, so next _process resets from = last");
+        // Next p2.process() visits mid = last - 1024, which is ALREADY marked! It must pay ZERO bounty!
+        uint256 before = asset.balanceOf(carol);
+        vm.prank(carol);
+        assertFalse(p2.process());
+        assertEq(asset.balanceOf(carol) - before, 0, "revisiting an already marked bridge height pays zero bounty");
+    }
+
+    function _tryNewPool(uint256 maxP) external returns (WujiAccounts) {
+        return new WujiAccounts(WujiAccounts.Config(asset, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, maxP, 0));
+    }
+
+    function _tryNewFactory(uint64 ep, uint256 budget) external returns (WujiAccountsFactory) {
+        return new WujiAccountsFactory(idx, treasury, ep, DELAY, 30 minutes, 30, 1_000, asset, budget, 0);
+    }
+
+    function test_cappedPoolEnforcesDustFloorAndFactoryValidatesBoundsUpfront() public {
+        asset.mint(alice, 100e18);
+        advance(10);
+        WujiAccounts capped2 = new WujiAccounts(WujiAccounts.Config(asset, idx, K, EPOCH, DELAY, 30 minutes, treasury, 0, 0, 1_000, 32_768, 0));
+        vm.startPrank(alice);
+        asset.approve(address(capped2), type(uint256).max);
+        vm.expectRevert(bytes("dust"));
+        capped2.requestEnter(true, 1); // 1 < (32_768 >> 14 = 2)
+        capped2.requestEnter(true, 2); // >= cap >> 14 succeeds
+        vm.stopPrank();
+
+        vm.expectRevert("params");
+        this._tryNewPool(uint256(type(uint128).max) + 1);
+
+        vm.expectRevert("budget");
+        this._tryNewFactory(EPOCH, 1e25);
+        vm.expectRevert("params");
+        this._tryNewFactory(0, 300e18);
+    }
 }
 
 contract FeeToken is MockUSDT {

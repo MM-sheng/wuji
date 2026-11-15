@@ -181,7 +181,9 @@ pub enum Error {
     Difficulty,
     MedianTimePast,
     FutureTime,
+    BadVersion,
     NotEnoughConfirmations,
+    TooManyCheckpoints,
     BatchEmpty,
 }
 
@@ -370,6 +372,13 @@ pub fn verify_batch<const MAX_CHECKPOINTS: usize>(
         if time > max_time {
             return Err(Error::FutureTime);
         }
+        let version = i32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]);
+        if (height >= 227_931 && version < 2)
+            || (height >= 363_725 && version < 3)
+            || (height >= 388_381 && version < 4)
+        {
+            return Err(Error::BadVersion);
+        }
         let target = target_of(bits)?;
         let hash = sha256d(raw);
         // PoW compares the digest read little-endian, i.e. the reversed bytes as a big-endian number.
@@ -396,8 +405,10 @@ pub fn verify_batch<const MAX_CHECKPOINTS: usize>(
             folded = state;
             if height >= genesis_height
                 && (height + 1 - genesis_height) % checkpoint_interval == 0
-                && checkpoint_count < MAX_CHECKPOINTS
             {
+                if checkpoint_count >= MAX_CHECKPOINTS {
+                    return Err(Error::TooManyCheckpoints);
+                }
                 checkpoints[checkpoint_count] = Checkpoint { height, u: state.u };
                 checkpoint_count += 1;
             }

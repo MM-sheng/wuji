@@ -127,3 +127,84 @@ test('perp wallet errors are shown in words a holder can act on',()=>{
  assert.match(c.f({message:'execution reverted',data:{data:enc('relay stale')}}),/不够新/);
  assert.equal(c.f({message:'execution reverted',data:enc('something new')}),'合约拒绝：something new');
 });
+test('blockAtTick rejects XSS or non-integer block numbers and terminal sets CSP',async()=>{
+ assert.match(html,/<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'">/);
+ const src=html.slice(html.indexOf('  let blockCache=new Map();'),html.indexOf("  cv.addEventListener('click'"));
+ let payload={block:'<img src=x onerror=alert(1)>',hash:'aa'.repeat(32)};
+ const c=vm.createContext({GENESIS:1000,API:'http://localhost:8793',Map,Number,String,esc:s=>String(s).replace(/[<>&"]/g,'_'),fetchTimed:async()=>({json:async()=>payload})});
+ vm.runInContext(src+'\nthis.f=blockAtTick;',c);
+ await assert.rejects(()=>c.f(5),/Invalid blockAt payload/);
+ payload={block:123,hash:'javascript:alert(1)'};
+ await assert.rejects(()=>c.f(6),/Invalid blockAt payload/);
+ payload={block:800000,hash:'AA'.repeat(32),ts:1005};
+ const ok=await c.f(7);assert.equal(ok.block,800000);assert.equal(ok.hash,'aa'.repeat(32));
+});
+test('appendPX rejects truncated buffers and NaN/non-positive float samples',()=>{
+ const src=html.slice(html.indexOf('  let PX=new Float32Array(0)'),html.indexOf('  async function fetchSeconds('));
+ const c=vm.createContext({Float32Array,Math,Number});vm.runInContext(src+'\nthis.append=appendPX;this.len=()=>PXN;',c);
+ assert.throws(()=>c.append(new Uint8Array(3).buffer),/Invalid \/seconds buffer/);
+ for(const bad of [NaN,Infinity,-1,0,1e20]){
+  const f=new Float32Array([100,bad]);
+  assert.throws(()=>c.append(f.buffer),/Invalid \/seconds price sample/);
+ }
+ assert.equal(c.len(),0);
+ c.append(new Float32Array([100,101.5]).buffer);
+ assert.equal(c.len(),2);
+});
+test('readZk rejects RPC transport or partial optional-selector failures instead of faking empty queue',async()=>{
+ const src=html.slice(html.indexOf('  // ---------------------------------------------------------------- ZK index'),html.indexOf('  async function doExit('));
+ let mode='rate-limit';
+ const fetchTimed=async(_url,opts)=>{
+  const req=JSON.parse(opts.body);
+  if(req.method==='eth_chainId')return {json:async()=>({jsonrpc:'2.0',id:req.id,result:'0xaa36a7'})};
+  if(req.method==='eth_getBlockByNumber')return {json:async()=>({jsonrpc:'2.0',id:req.id,result:{number:'0x64',hash:word(1),timestamp:'0x65000000'}})};
+  const sel=req.params[0].data.slice(0,10);
+  if(['0x6faf954b','0xe7c51f1b','0xd62aad29'].includes(sel)){
+   if(mode==='rate-limit')return {json:async()=>({jsonrpc:'2.0',id:req.id,error:{code:-32005,message:'Too Many Requests'}})};
+   if(mode==='partial'&&sel==='0x6faf954b')return {json:async()=>({jsonrpc:'2.0',id:req.id,error:{code:3,message:'execution reverted'}})};
+   if(mode==='header-only')return {json:async()=>({jsonrpc:'2.0',id:req.id,error:{code:3,message:'execution reverted'}})};
+   return {json:async()=>({jsonrpc:'2.0',id:req.id,result:word(sel==='0xd62aad29'?86400:0)})};
+  }
+  if(sel==='0x2755cd2d')return {json:async()=>({jsonrpc:'2.0',id:req.id,result:'0x'+[1,800100,0x1d00ffff,1700000000].map(n=>word(n).slice(2)).join('')})};
+  return {json:async()=>({jsonrpc:'2.0',id:req.id,result:word(100)})};
+ };
+ const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:''});return nodes.get(id);};
+ const c=vm.createContext({fetchTimed,WORD:/^0x[0-9a-f]{64}$/i,$:get,esc:s=>String(s),short:s=>s,BigInt,Number,String,Date,Math,Promise});
+ vm.runInContext(src+'\nthis.read=readZk;this.state=()=>({ZK,zkError});',c);
+ await c.read();assert.equal(c.state().ZK,null);assert.match(c.state().zkError,/Too Many Requests/);
+ mode='partial';await c.read();assert.equal(c.state().ZK,null);assert.match(c.state().zkError,/部分缺失/);
+ mode='header-only';await c.read();assert.equal(c.state().zkError,null);assert.equal(c.state().ZK.window,0);assert.equal(c.state().ZK.height,800100);
+});
+test('lookAccount verifies released pools directly via pinned RPC instead of trusting indexer HTTP',async()=>{
+ const relSrc=html.slice(html.indexOf('  function releasedPool('),html.indexOf('  const myIdsKey='));
+ const acctSrc=html.slice(html.indexOf('  async function readPerpAccountOnChain('),html.indexOf("  $('pjLook').onclick="));
+ const valSrc=html.slice(html.indexOf('  const WAD_STR='),html.indexOf('  function validateHead('));
+ const pool=addr(7);let httpCalled=false;
+ const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='pjPool'?pool:'1',innerHTML:'',textContent:''});return nodes.get(id);};
+ const rpcCalls=[];
+ const provider={request:async({method,params})=>{
+  rpcCalls.push({method,params});
+  if(method==='eth_chainId')return '0xaa36a7';
+  if(method==='eth_getBlockByNumber')return {number:'0x64',hash:word(9)};
+  const d=params[0].data;
+  if(d.startsWith('0xf2a40db8'))return '0x'+[addr(4),1,10,0,10n**18n].map(x=>word(x).slice(2)).join('');
+  if(d.startsWith('0xcadf338f'))return word(12n*10n**17n);
+  if(d.startsWith('0xb68f590f'))return word(12n*10n**17n);
+  if(d.startsWith('0xa2e04c67'))return '0x'+[0,0,1].map(x=>word(x).slice(2)).join('');
+  if(d==='0x054f7d9c')return word(0);
+  if(d.startsWith('0x513bed12'))return word(0);
+  if(d.startsWith('0xf9f3de7e'))return '0x'+[0,0,1].map(x=>word(x).slice(2)).join('');
+  throw Error('unexpected '+d);
+ }};
+ const c=vm.createContext({ADDRESS:/^0x[0-9a-fA-F]{40}$/,WORD:/^0x[0-9a-f]{64}$/i,word:v=>BigInt(v),signedWord:v=>BigInt.asIntN(256,BigInt(v)).toString(),
+  addressWord:v=>'0x'+v.slice(-40).toLowerCase(),same:(a,b)=>String(a).toLowerCase()===String(b).toLowerCase(),
+  RELEASES:{s:{chainId:11155111,rpc:'https://rpc.example',accountPools:[{address:pool,asset:addr(8),k_wad:'1'}]}},PERP_RELEASES:[],
+  W:{acct:addr(4),chainId:11155111},eth:()=>provider,rpcURLs:{},ZK_RELEASE:{chainId:11155111,rpc:'https://rpc.example'},walletNetworks:{},
+  exitRPC:()=>{throw Error('should use connected wallet RPC');},API:'http://localhost:8793',fetchTimed:async()=>{httpCalled=true;throw Error('indexer must not be trusted');},
+  $:get,esc:s=>String(s),short:s=>s,wad:s=>Number(s)/1e18,fmtW:s=>(Number(s)/1e18).toFixed(4),cls:()=>'up',BigInt,Number,String,Promise,Object});
+ vm.runInContext(valSrc+relSrc+acctSrc+'\nthis.look=lookAccount;',c);
+ await c.look();
+ assert.equal(httpCalled,false);
+ assert.match(get('pjAcct').innerHTML,/RPC 直读 · 区块 #100/);
+ assert.ok(rpcCalls.filter(x=>x.method==='eth_call').every(x=>x.params[1]==='0x64'));
+});

@@ -21,6 +21,7 @@ import {RelayerRewards} from "./RelayerRewards.sol";
 contract WujiHeaderIndex {
     uint256 public constant POW_LIMIT = 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     uint256 public constant MAX_FUTURE_BLOCK_TIME = 2 hours;
+    uint256 public constant MAX_SEEN_MTP_LEAD = 3 hours;
     uint64 public constant RETARGET_INTERVAL = 2016;
     uint32 public constant TARGET_TIMESPAN = 14 days;
     int256 public constant UNIT = 1.2e13;
@@ -113,7 +114,10 @@ contract WujiHeaderIndex {
         uint64 confirmations
     ) {
         if (anchorHeader.length != 80) revert BadLength();
-        if (checkpointInterval == 0 || genesisHeight == 0 || confirmations == 0) revert ConfigMismatch();
+        if (
+            checkpointInterval == 0 || genesisHeight == 0 || confirmations == 0 || confirmations >= MAX_HEADERS
+                || anchorHeight + 1 != genesisHeight
+        ) revert ConfigMismatch();
         if (address(rewards_) != address(0)) {
             require(
                 rewards_.index() == address(this) && rewards_.GENESIS_HEIGHT() == genesisHeight, "reward index mismatch"
@@ -126,6 +130,7 @@ contract WujiHeaderIndex {
 
         uint32 bits = _read32(anchorHeader, 72);
         uint32 time = _read32(anchorHeader, 68);
+        if (anchorHeight % RETARGET_INTERVAL == 0 && anchorEpochStart != time) revert ConfigMismatch();
         _checkVersion(int32(_read32(anchorHeader, 0)), anchorHeight);
         if (_pow(anchorHeader) > targetOf(bits)) revert BadWork();
         tip = Continuity({
@@ -189,7 +194,7 @@ contract WujiHeaderIndex {
         uint256 committedWork;
         uint64 from;
         uint64 foldTarget;
-        uint32 maxTime;
+        uint256 maxTime;
         uint256 count;
     }
 
@@ -210,10 +215,12 @@ contract WujiHeaderIndex {
         recentTimes = w.committedTimes;
         chainWork = w.committedWork;
         committedAt[w.committed.height] = _commitment(w.committed, w.committedTimes, w.committedWork);
-        // After a replay `w.state` is the last header validated: the newest Bitcoin block this contract has seen.
+        // After a replay `w.state` is the last header validated: cap seenTime against the 11-block MTP so a
+        // single privately mined future-stamped orphan block cannot erase historical lag on consumer pools.
         if (w.state.height > seenHeight) {
             seenHeight = w.state.height;
-            seenTime = w.state.time;
+            uint256 cap = uint256(_median(w.times)) + MAX_SEEN_MTP_LEAD;
+            seenTime = uint256(w.state.time) > cap ? uint32(cap) : w.state.time;
         }
         folded = w.committed.height - w.from + 1;
         if (address(rewards) != address(0)) rewards.credit(msg.sender, w.from, w.committed.height, rewardTokens);
@@ -234,7 +241,7 @@ contract WujiHeaderIndex {
         _snapshot(w);
         w.from = w.state.height + 1;
         w.foldTarget = w.state.height + uint64(w.count) - CONFIRMATIONS;
-        w.maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        w.maxTime = block.timestamp + MAX_FUTURE_BLOCK_TIME;
 
         uint256 n = _boundariesUpTo(w.foldTarget) - _boundariesUpTo(w.state.height);
         heights = new uint64[](n);
@@ -292,7 +299,7 @@ contract WujiHeaderIndex {
 
         uint64 forkBase = state.height;
         bytes32 tipHash = tip.hash;
-        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        uint256 maxTime = block.timestamp + MAX_FUTURE_BLOCK_TIME;
         for (uint256 i = 0; i < headers.length; i += 80) {
             work = _apply(state, times, work, headers[i:i + 80], maxTime);
             // Through the finalized tip means the same chain: that is an extension, not a reorg.
@@ -351,7 +358,7 @@ contract WujiHeaderIndex {
     function _extendReorg(ReorgProof memory p, bytes calldata headers) internal view {
         if (headers.length == 0 || headers.length % 80 != 0) revert BadLength();
         if (headers.length / 80 > MAX_REORG_SEGMENT_HEADERS) revert TooManyHeaders();
-        uint32 maxTime = uint32(block.timestamp + MAX_FUTURE_BLOCK_TIME);
+        uint256 maxTime = block.timestamp + MAX_FUTURE_BLOCK_TIME;
         for (uint256 i; i < headers.length; i += 80) {
             p.work = _apply(p.branch, p.times, p.work, headers[i:i + 80], maxTime);
             if (p.branch.height == p.targetHeight && p.branch.hash == p.targetHash) revert NoReorg();
@@ -374,7 +381,7 @@ contract WujiHeaderIndex {
     // ------------------------------------------------------------------ header rules (identical to the guest)
 
     /// @dev Mutates `state` and `times` in place (they are memory references) and returns the new work.
-    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint32 maxTime)
+    function _apply(Continuity memory state, uint32[11] memory times, uint256 work, bytes calldata raw, uint256 maxTime)
         internal
         pure
         returns (uint256)
@@ -388,7 +395,7 @@ contract WujiHeaderIndex {
             height % RETARGET_INTERVAL == 0 ? retarget(state.bits, state.epochStart, state.time) : state.bits;
         if (bits != expected) revert Difficulty();
         if (time <= _median(times)) revert MedianTimePast();
-        if (time > maxTime) revert FutureTime();
+        if (uint256(time) > maxTime) revert FutureTime();
         _checkVersion(int32(_read32c(raw, 0)), height);
 
         uint256 target = targetOf(bits);

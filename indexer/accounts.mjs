@@ -11,7 +11,8 @@ const SEL = {
   balanceOf: '0x70a08231', RELAY_TIP: '0x59cfd7b0', marked: '0x515f805e', hashAt: '0x7c4b99b8',
   insolvent: '0x22dd3904', settling: '0x0832dce9', claimableOf: '0x513bed12', epochInfo: '0xf9f3de7e',
 };
-const MAX_WALK = 1024;      // WujiAccounts.MAX_WALK: headers per markWithHeaders call
+// <= 512 headers (81,922 hex chars) stays well below Linux MAX_ARG_STRLEN (131,072) for `cast` CLI args and < 8M gas.
+const MAX_WALK = 512;
 const MARK_PER_ROUND = 8;   // bounded historical catch-up ahead of one settlement batch per round
 const word = n => BigInt(n).toString(16).padStart(64, '0');
 const addr = a => a.slice(2).toLowerCase().padStart(64, '0');
@@ -123,14 +124,25 @@ export async function maintainPool({ read, simulate, send, pool, cursor = 1, sca
     if (settling || frozen) return { state, done, cursor };
   }
   // Retirement: scan a window of ids per round so cost stays bounded as the pool grows.
+  // Skip completely when neither side holds live principal; pre-screen valueOf(id) === 0 in bounded parallel chunks
+  // before reading full 6-call account state so closed/healthy accounts cost 1 batched read instead of 6 sequential RTTs.
   const last = state.accountsCreated;
   let id = cursor > last ? 1 : cursor;
-  for (let i = 0; i < Math.min(scan, last); i++, id = id >= last ? 1 : id + 1) {
-    const a = await readAccount(read, pool, id);
-    if (!a.closed && a.status === 'open' && a.atFloor) {
-      try { await simulate(pool, 'retire(uint256)', String(id)); } catch { continue; }
-      await send(pool, 'retire(uint256)', 400_000, String(id)); done.push('retire ' + id);
-      log('retired account', id, 'overshoot', a.overshoot_wad);
+  if (last > 0 && (state.yin_wad !== '0' || state.yang_wad !== '0')) {
+    const windowIds = [];
+    for (let i = 0; i < Math.min(scan, last); i++, id = id >= last ? 1 : id + 1) windowIds.push(id);
+    for (let offset = 0; offset < windowIds.length; offset += 16) {
+      const chunk = windowIds.slice(offset, offset + 16);
+      const values = await Promise.all(chunk.map(aid => read(pool, SEL.valueOf + word(aid)).then(uint)));
+      for (let j = 0; j < chunk.length; j++) {
+        if (values[j] !== 0n) continue;
+        const aid = chunk[j], a = await readAccount(read, pool, aid);
+        if (!a.closed && a.atFloor) {
+          try { await simulate(pool, 'retire(uint256)', String(aid)); } catch { continue; }
+          await send(pool, 'retire(uint256)', 400_000, String(aid)); done.push('retire ' + aid);
+          log('retired account', aid, 'overshoot', a.overshoot_wad);
+        }
+      }
     }
   }
   try {

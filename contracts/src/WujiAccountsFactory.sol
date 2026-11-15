@@ -45,8 +45,15 @@ contract WujiAccountsFactory {
         WujiIndex index_, address treasury_, uint64 epoch, uint64 delay, uint256 maxTipAge, uint256 feeBps,
         uint256 bufferBps, IERC20 asset_, uint256 exposureBudget, uint64 capEra
     ) {
+        require(address(index_).code.length > 0 && address(asset_).code.length > 0, "not contract");
+        require(epoch > 0 && delay >= 1 && maxTipAge > 0 && maxTipAge <= 2 hours, "params");
         require(treasury_ != address(0), "treasury");
-        require(exposureBudget > 0, "budget");
+        require(feeBps <= 100 && bufferBps <= 10_000, "fees");
+        require(
+            exposureBudget > 0 && uint256(K_25) * exposureBudget / (TIERS * 1e18) > 0
+                && uint256(K_5) * exposureBudget / (TIERS * 1e18) <= 1e24,
+            "budget"
+        );
         index = index_; treasury = treasury_; EPOCH = epoch; DELAY = delay; MAX_TIP_AGE = maxTipAge;
         FEE_BPS = feeBps; BUFFER_BPS = bufferBps; ASSET = asset_; EXPOSURE_BUDGET = exposureBudget; CAP_ERA = capEra;
         bytes memory code = type(WujiAccounts).creationCode;

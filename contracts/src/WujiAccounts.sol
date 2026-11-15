@@ -162,7 +162,11 @@ contract WujiAccounts is ReentrancyGuard {
 
     constructor(Config memory c) {
         require(address(c.asset).code.length > 0 && address(c.index).code.length > 0, "not contract");
-        require(c.k > 0 && c.epoch > 0 && c.delay >= 1 && c.maxTipAge > 0 && c.maxTipAge <= 2 hours && c.maxPrincipal > 0, "params");
+        require(
+            c.k > 0 && c.epoch > 0 && c.delay >= 1 && c.maxTipAge > 0 && c.maxTipAge <= 2 hours && c.maxPrincipal > 0
+                && c.maxPrincipal <= type(uint128).max,
+            "params"
+        );
         require(c.treasury != address(0) && c.feeBps <= 100 && c.bufferBps <= 10_000, "fees");
         (bool ok, bytes memory ret) = address(c.index).staticcall(abi.encodeWithSignature("frozen()"));
         INDEX_CAN_FREEZE = ok && ret.length == 32;
@@ -279,7 +283,9 @@ contract WujiAccounts is ReentrancyGuard {
         uint128 fee = _entryFee(amount);
         uint128 principal = amount - fee;
         uint256 queued = yang ? pendingYang : pendingPrincipal - pendingYang;
-        require(uint256(principalOf[yang ? 1 : 0]) + queued + principal <= _capAt(e), "pool full");
+        uint256 cap = _capAt(e);
+        require(uint256(principalOf[yang ? 1 : 0]) + queued + principal <= cap, "pool full");
+        require(MAX_PRINCIPAL == type(uint128).max || principal >= cap >> 14, "dust");
         uint256 before = asset.balanceOf(address(this));
         asset.safeTransferFrom(msg.sender, address(this), amount);
         // Fee-on-transfer and other short-paying tokens would credit principal that never arrived.
@@ -308,6 +314,7 @@ contract WujiAccounts is ReentrancyGuard {
         // Until the entry is priced it may still be refunded by a freeze; an exit queued before that would be
         // subtracted from principal that never joined, underflowing and bricking freezePool.
         require(epochs[a.enterEpoch].processed, "entry pending");
+        require(valueOf(id) > 0, "at floor");
     }
 
     function _exit(uint256 id, uint64 e) internal {
@@ -356,9 +363,7 @@ contract WujiAccounts is ReentrancyGuard {
             require(hash != bytes32(0), "header unavailable");
             value -= _increment(sha256(abi.encodePacked(hash)));
         }
-        if (marked[height]) require(sAt[height] == value, "price mismatch");
-        sAt[height] = value; marked[height] = true;
-        hashAt[height] = height == tipHeight ? index.lastHash() : index.relay().headerAt(height);
+        _saveMark(height, value, height == tipHeight ? index.lastHash() : index.relay().headerAt(height));
         return value;
     }
 
@@ -381,22 +386,23 @@ contract WujiAccounts is ReentrancyGuard {
             value -= _increment(sha256(abi.encodePacked(hash)));
             expect = bytes32(raw[4:36]);
         }
+        _saveMark(height, value, expect);
+    }
+
+    function _saveMark(uint64 height, int256 value, bytes32 hash) internal {
         if (marked[height]) require(sAt[height] == value, "price mismatch");
-        sAt[height] = value; marked[height] = true; hashAt[height] = expect;
+        sAt[height] = value; marked[height] = true; hashAt[height] = hash;
     }
 
     /// @dev Identical to WujiIndex.increment (tested), kept local so an index that only exposes its tip works.
     function _byteSum(bytes32 h) internal pure returns (uint256 x) {
-        x = uint256(h);
-        x = (x & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF)
-            + ((x >> 8) & 0x00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF00FF);
-        x = (x & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF)
-            + ((x >> 16) & 0x0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF0000FFFF);
-        x = (x & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF)
-            + ((x >> 32) & 0x00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF00000000FFFFFFFF);
-        x = (x & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF)
-            + ((x >> 64) & 0x0000000000000000FFFFFFFFFFFFFFFF0000000000000000FFFFFFFFFFFFFFFF);
-        x = (x & 0x00000000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) + (x >> 128);
+        uint256 v = uint256(h);
+        unchecked {
+            for (uint256 i; i < 32; ++i) {
+                x += v & 0xff;
+                v >>= 8;
+            }
+        }
     }
     function _increment(bytes32 R) internal pure returns (int256) { return (int256(_byteSum(R)) - 4080) * 1.2e13; }
 
@@ -421,7 +427,7 @@ contract WujiAccounts is ReentrancyGuard {
                 // No relay history to walk: an epoch below the tip is marked from raw headers first
                 // (`markWithHeaders`); one exactly at the tip is read from the index.
                 if (e != last) return false;
-                sAt[e] = index.S(); marked[e] = true; hashAt[e] = index.lastHash();
+                _saveMark(e, index.S(), index.lastHash());
                 return _price(e, sAt[e]);
             }
             // After a long keeper absence the epoch can lie more than MAX_WALK below the tip. Walk down one
@@ -429,9 +435,10 @@ contract WujiAccounts is ReentrancyGuard {
             uint64 from = bridge >= e && marked[bridge] ? bridge : last;
             if (from - e > MAX_WALK) {
                 uint64 mid = from - uint64(MAX_WALK);
+                bool fresh = !marked[mid] || hashAt[mid] == bytes32(0);
                 mark(mid, from);
                 bridge = mid;
-                _payBounty(msg.sender, type(uint256).max);
+                if (fresh) _payBounty(msg.sender, type(uint256).max);
                 return false;
             }
             mark(e, from);
@@ -593,9 +600,11 @@ contract WujiAccounts is ReentrancyGuard {
 
     /// @notice Value as of the last processed epoch (0 while the entry is pending and not refunded).
     function valueOf(uint256 id) public view returns (uint256) {
+        int256 raw = rawValueOf(id);
+        if (raw <= 0) return 0;
         Account storage a = accounts[id];
-        if (a.owner == address(0) || !epochs[a.enterEpoch].processed || epochs[a.enterEpoch].frozenRefund) return 0;
-        uint256 v = _value(a.principal, _endAcc(a) - _entryAcc(a));
+        uint256 cap = 2 * uint256(a.principal);
+        uint256 v = uint256(raw) > cap ? cap : uint256(raw);
         if (insolvent && !(a.exitEpoch != 0 && epochs[a.exitEpoch].processed)) {
             return Math.mulDiv(v, settlementAssets, settlementLiabilities);
         }
@@ -645,16 +654,18 @@ contract WujiAccounts is ReentrancyGuard {
     function retire(uint256 id) external nonReentrant {
         require(!settling, "settlement pending");
         Account storage a = accounts[id];
-        require(a.owner != address(0) && a.exitEpoch == 0 && !frozen, "not live");
+        require(a.owner != address(0) && (a.exitEpoch == 0 || !epochs[a.exitEpoch].processed), "not live");
         require(epochs[a.enterEpoch].processed && !epochs[a.enterEpoch].frozenRefund, "entry pending");
         require(valueOf(id) == 0, "not at floor");
         uint256 p = a.principal;
-        principalOf[a.yang ? 1 : 0] -= uint128(p);
+        uint256 side = a.yang ? 1 : 0;
+        if (a.exitEpoch != 0) epochs[a.exitEpoch].exitOut[side] -= uint128(p);
+        principalOf[side] -= uint128(p);
         _removeActive(id);
         delete accounts[id];
         openAccounts--;
         emit Retired(id);
-        _payBounty(msg.sender, p * FEE_BPS / 20_000);
+        if (!frozen) _payBounty(msg.sender, p * FEE_BPS / 20_000);
     }
 
     // ---------------------------------------------------------------- frozen state

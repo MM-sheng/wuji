@@ -1,6 +1,7 @@
 // Some chains price new state separately from local EVM execution. Opt-in live estimates must stay
 // below an explicit operator ceiling; a failed estimate must never silently fall back to an undersized tx.
-export async function estimateKeeperGas({rpc,from,to,data,value,fallbackGas,maxGas}) {
+export const EIP_7825_TX_GAS_CAP = 16_777_216;
+export async function estimateKeeperGas({rpc,from,to,data,value,fallbackGas,maxGas=EIP_7825_TX_GAS_CAP}) {
   for(const n of [fallbackGas,maxGas]) if(!Number.isSafeInteger(n)||n<=0) throw Error('invalid keeper gas bound');
   const block=await rpc('eth_getBlockByNumber',['latest',false]);
   const cap=BigInt(maxGas)<BigInt(block.gasLimit)?BigInt(maxGas):BigInt(block.gasLimit);

@@ -100,7 +100,7 @@ contract ZkChallengeHandler is Test {
         for (uint256 k = 0; k < K; k++) {
             if (honest[k].prevHash == head.hash && honest[k].prevU == head.u) {
                 vm.prank(actors[actorSeed % 3]);
-                idx.foldProof(hex"c0ffee", abi.encode(honest[k]), new address[](0));
+                idx.foldProof{value: bond}(hex"c0ffee", abi.encode(honest[k]), new address[](0));
                 return;
             }
         }
@@ -132,7 +132,8 @@ contract ZkChallengeHandler is Test {
             j.newU = head.u + int64(int256(bound(seed >> 64, 0, 1e9))) - 5e8;
             j.newWork = w + seed % 1e30;
         }
-        uint256 id = idx.foldProof(hex"bad0", abi.encode(j), new address[](0));
+        vm.prank(actors[seed % 3]);
+        uint256 id = idx.foldProof{value: bond}(hex"bad0", abi.encode(j), new address[](0));
         ++forgedProposed;
         vm.prank(actors[0]);
         idx.dispute{value: bond}(id, new address[](0));
@@ -223,6 +224,7 @@ contract ZkChallengeHandler is Test {
     function heldBonds() external view returns (uint256 held) {
         for (uint256 id = idx.firstPending(); id < idx.nextBatch(); id++) {
             ZkWujiIndex.Batch memory b = idx.batch(id);
+            held += bond;
             if (b.disputer != address(0) && !b.backed) held += bond;
         }
     }

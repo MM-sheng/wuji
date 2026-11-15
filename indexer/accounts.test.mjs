@@ -135,16 +135,19 @@ test('relay-less pools: ready epochs are marked from headers, highest first, bri
     return calls;
   };
   // 2000 is the tip (read from the index, no headers); 2010 is not folded yet.
+  // Gaps > 512 are bridged in <=512-header steps (<82 KB hex, safely below Linux 131,072-byte MAX_ARG_STRLEN).
   assert.deepEqual(await run({ queue: [500, 1000, 1990, 2000, 2010], folded: 2000 }),
-    [[1990, 2000, 10], [1000, 1990, 990], [500, 1000, 500]]);
-  // One epoch far below the tip: bridged in MAX_WALK steps, each anchored on the mark above it.
+    [[1990, 2000, 10], [1478, 1990, 512], [1000, 1478, 478], [500, 1000, 500]]);
+  // One epoch far below the tip: bridged in MAX_WALK (512) steps, each anchored on the mark above it.
   assert.deepEqual(await run({ queue: [100], folded: 2500 }),
-    [[1476, 2500, 1024], [452, 1476, 1024], [100, 452, 352]]);
+    [[1988, 2500, 512], [1476, 1988, 512], [964, 1476, 512], [452, 964, 512], [100, 452, 352]]);
   // Already marked heights are anchors, not work.
-  assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990] }), [[1000, 1990, 990]]);
-  assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990], missingHash: [1990] }), [[1000, 2000, 1000]]);
-  assert.deepEqual(await run({ queue: [100], folded: 2500, marked: [1476], missingHash: [1476] }),
-    [[1477, 2500, 1023], [453, 1477, 1024], [100, 453, 353]]);
+  assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990] }),
+    [[1478, 1990, 512], [1000, 1478, 478]]);
+  assert.deepEqual(await run({ queue: [1000, 1990], folded: 2000, marked: [1990], missingHash: [1990] }),
+    [[1488, 2000, 512], [1000, 1488, 488]]);
+  assert.deepEqual(await run({ queue: [100], folded: 2500, marked: [1988], missingHash: [1988] }),
+    [[1989, 2500, 511], [1477, 1989, 512], [965, 1477, 512], [453, 965, 512], [100, 453, 353]]);
 
   // maintainPool asks for a header source rather than sending processMany that could not progress.
   const f = fixture({ queue: [1008], folded: 1010 });
@@ -200,4 +203,14 @@ test('nonretryable HTTP read failure is not an absent optional field',async()=>{
  const f=fixture(),error=Object.assign(Error('HTTP 401'),{rpcReadError:true,rpcTransportError:false});
  const read=(to,data)=>to===pool&&data==='0x7dd7307d'?Promise.reject(error):f.read(to,data);
  await assert.rejects(maintainPool({...f,read,pool}),e=>e===error);assert.deepEqual(f.sends,[]);
+});
+test('empty-principal pools skip retirement RPC scans and non-floored accounts avoid 6-call reads',async()=>{
+ let acctReads=0;
+ const empty=fixture({yin:0n,yang:0n,folded:1007});
+ const countRead=base=>(to,data)=>{if(data.startsWith('0xf2a40db8'))acctReads++;return base(to,data);};
+ await maintainPool({...empty,read:countRead(empty.read),pool});
+ assert.equal(acctReads,0,'pool with zero live principal must not scan historical accounts');
+ const healthy=fixture({folded:1007});
+ await maintainPool({...healthy,read:countRead(healthy.read),pool});
+ assert.equal(acctReads,0,'healthy non-zero valueOf(id) must skip full readAccount');
 });

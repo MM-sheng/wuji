@@ -24,6 +24,10 @@ const env = process.env;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const SOURCE_TIMEOUT_MS = Number(env.ZK_SOURCE_TIMEOUT_S || 120) * 1000;
 const within = (promise, what) => withinMs(promise, SOURCE_TIMEOUT_MS, what);
+// Empirical _replay cost is ~21k gas/header; clearing up to MAX_PENDING (32) batches uses up to ~180k pre-refund
+// gas/batch when 8-token lists and cold owed[] slots are populated; cap every tx strictly below EIP-7825 (16,777,216).
+const verifyGas = count => Math.min(16_000_000, 600_000 + 28_000 * count);
+const queueClearGas = removed => Math.min(16_000_000, 500_000 + 250_000 * removed);
 
 /// One watcher round. `chain` is a contractClient; `sources` are two independent Bitcoin sources
 /// ({tip(), at(h) → {header, hash}}); `dryRun` returns the planned actions without sending them.
@@ -54,7 +58,20 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
     const count = b.to.height - start.height + config.confirmations;
     const tip = await within(primary.tip(), 'Bitcoin tip');
     if (tip < start.height + count) {
-      log(`batch ${id}: source tip ${tip} is short of ${start.height + count}; cannot check yet`);
+      const otherTip = typeof second?.tip === 'function' ? await within(second.tip(), 'second Bitcoin tip') : tip;
+      const maxTip = Math.max(tip, otherTip);
+      if (disputed && !b.backed && now > b.respondBy) {
+        await act(`reject unbacked batch ${id}`, 'reject(uint256)', queueClearGas(next - id), [String(id)]);
+        break;
+      }
+      // A forged proof claiming non-existent future heights (> maxTip + 2) or nearing finalAt before
+      // headers exist on Bitcoin must be disputed immediately so it cannot finalize unchallenged.
+      if (!disputed && now < b.finalAt && (start.height + count > maxTip + 2 || now + 3600 >= b.finalAt)) {
+        log(`batch ${id}: claims height ${start.height + count} beyond Bitcoin tips (${tip}, ${otherTip}); disputing`);
+        await act(`dispute batch ${id}`, 'dispute(uint256,address[])', 300_000, [String(id), '[]'], bond);
+      } else {
+        log(`batch ${id}: source tip ${tip} is short of ${start.height + count}; cannot check yet`);
+      }
       break;
     }
     const headers = [];
@@ -84,22 +101,22 @@ export async function watch({ chain, sources: [primary, second], dryRun = false 
       // Refute at once with the real headers (no need to wait out the response window); for the oldest
       // batch this also folds the real state, so forged proofs at the head of the queue cannot hold the index.
       try {
-        await act(`refute batch ${id} with ${count} headers`, 'refute(uint256,bytes,address[])', 600_000 + 120_000 * count,
+        const refuteGas = Math.min(16_000_000, verifyGas(count) + 250_000 * (next - id));
+        await act(`refute batch ${id} with ${count} headers`, 'refute(uint256,bytes,address[])', refuteGas,
           [String(id), '0x' + headers.join(''), '[]']);
       } catch (e) {
         log(`refute batch ${id} failed: ${e.message}`);
-        if (disputed && !b.backed && now > b.respondBy) await act(`reject batch ${id}`, 'reject(uint256)', 3_000_000, [String(id)]);
+        if (disputed && !b.backed && now > b.respondBy) await act(`reject batch ${id}`, 'reject(uint256)', queueClearGas(next - id), [String(id)]);
       }
       break; // everything after it is built on it
     }
     log(`batch ${id} (${start.height + 1}..${b.to.height}) matches the chain${disputed ? ' (disputed)' : `; final at ${new Date(b.finalAt * 1000).toISOString().slice(0, 16)}Z`}`);
     if (disputed && !b.backed && now <= b.respondBy) {
-      const gas = 600_000 + 120_000 * count;
-      await act(`back batch ${id} with ${count} headers`, 'back(uint256,bytes)', gas, [String(id), '0x' + headers.join('')]);
+      await act(`back batch ${id} with ${count} headers`, 'back(uint256,bytes)', verifyGas(count), [String(id), '0x' + headers.join('')]);
     }
     if (id === first && (b.backed || (!disputed && now >= b.finalAt))) ready = true;
   }
-  if (ready) await act('finalize', 'finalize(uint256)', 1_500_000, ['8']);
+  if (ready) await act('finalize', 'finalize(uint256)', 4_500_000, ['8']);
   return actions;
 }
 
