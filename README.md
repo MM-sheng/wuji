@@ -35,6 +35,8 @@ derived from Bitcoin proof-of-work headers and can be independently recomputed. 
 the intended model; it is not a proof of unbiased mining, independence from every asset, or investment returns.
 There is no owner, governance or upgrade key. Paired YANG/YIN vaults are one application of this public index.
 
+Read the English [technical whitepaper v1.0](docs/WHITEPAPER_EN.md) ([PDF](docs/WHITEPAPER_EN.pdf)), which covers the
+current source and the Sepolia v3 deployment.
 Read the current Chinese [whitepaper v0.3](docs/WHITEPAPER.md) for the header-v3 scope, changing account exposure, delayed exits and deterministic insolvency close.
 The committed [PDF](docs/WHITEPAPER.pdf) is a historical copy and does **not** include these corrections.
 [Arithmetic scope and optional PDF rendering](docs/tools/README.md).

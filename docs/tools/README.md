@@ -1,6 +1,6 @@
 # Whitepaper reproduction
 
-The current editable paper is [WHITEPAPER.md](../WHITEPAPER.md), v0.3 (2026-10-23), describing the
+The current editable Chinese paper is [WHITEPAPER.md](../WHITEPAPER.md), v0.3.1 (2026-11-20), describing the
 Sepolia header-v3 source `03f6256`. The committed [WHITEPAPER.pdf](../WHITEPAPER.pdf) is a **historical**
 rendering and does not contain the v0.3 corrections; do not distribute it as the current protocol specification.
 The [fixed r4 kit](../../verification/header-v3/README.md) remains the external verification entry and has
@@ -56,3 +56,24 @@ identifier, not a signature or audit approval. Relative links in the PDF require
 the external bibliography links are directly usable.
 
 See [T6_REPORT.md](../tasks/T6_REPORT.md) for verification and open items.
+
+## English whitepaper
+
+[WHITEPAPER_EN.md](../WHITEPAPER_EN.md) (v1.0, 2026-11-20) describes contract source `4d63357` and the Sepolia
+header-v3 deployment (`03f6256`). Every number in it is a contract constant, a recorded measurement, or a
+stated model; the 25 pricing margins, the variance figures and the height-800000 vector were recomputed
+independently for it. Render the PDF with zero npm dependencies, using a local Chrome or Chromium:
+
+```bash
+node docs/tools/render-whitepaper-en.mjs                 # writes docs/WHITEPAPER_EN.pdf
+node docs/tools/render-whitepaper-en.mjs /tmp/wp.pdf --html /tmp/wp.html
+node docs/tools/render-whitepaper-en.mjs /tmp/wp.pdf --theme modern   # earlier A4 design
+```
+
+The default `classic` theme follows the layout of the Bitcoin whitepaper: US Letter, Times, a centred title,
+a run-in indented abstract, plain numbered headings, continuous flow, `[n]` references and a bare page number.
+
+`CHROME=/path/to/binary` overrides the browser. Fonts come from the host system (Times New Roman and Courier New for
+`classic`; Charter, Helvetica Neue and SF Mono for `modern`), so line breaks and PDF bytes depend on the machine. The `modern` footer carries the first 12 hex
+digits of the Markdown's SHA-256. The committed PDF was rendered with Chrome 158 on macOS. Only the Markdown
+constructs the paper uses are supported. After any edit, look at every page of the output.
