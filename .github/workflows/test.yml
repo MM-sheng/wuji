@@ -15,7 +15,7 @@ jobs:
           node-version: 22.22.0
       - run: forge test --root contracts
       - run: forge build --root contracts --sizes
-      - run: node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs
+      - run: node --test indexer/*.test.mjs scripts/*.test.mjs apps/terminal/*.test.mjs apps/site/*.test.mjs
       # The zk crate is the single source of truth for the guest's rules; it must be as green as the
       # Solidity it mirrors. The example regenerates the journal fixture, so a drift in either the rules
       # or the ABI encoding fails here rather than at proof-submission time.
